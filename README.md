@@ -1,3 +1,29 @@
+# HyperNARS: A Modular Reimplementation of NARS
+
+## Overview
+
+HyperNARS is a from-the-ground-up reimplementation of the Non-Axiomatic Reasoning System (NARS). It is designed as a highly modular, extensible, and performant framework for general-purpose AI, grounded in the **Assumption of Insufficient Knowledge and Resources (AIKR)**.
+
+The primary goal of this project is to create a robust and scalable system that facilitates research and development in AGI. Key architectural features include:
+- A **dual-process reasoning cycle** to balance efficiency and thoroughness.
+- A suite of specialized **Cognitive Managers** to handle high-level functions like goal pursuit and temporal reasoning.
+- An **event-driven architecture** to ensure loose coupling between components.
+- A comprehensive **Symbol Grounding Interface** to connect abstract knowledge to real-world sensors and actuators.
+
+This document serves as the primary design specification for the HyperNARS system.
+
+## Guiding Principles
+
+The architecture and implementation of HyperNARS are guided by a set of core principles that ensure its adherence to the NARS philosophy while promoting modern software engineering standards.
+
+-   **Assumption of Insufficient Knowledge and Resources (AIKR):** This is the cornerstone of NARS. The system must operate under the assumption that its knowledge is incomplete and potentially contradictory, and that its computational resources are finite. This principle directly influences every aspect of the design, from truth-value representation to memory management and resource allocation.
+-   **Modularity and Extensibility:** The system is built as a collection of loosely-coupled modules (e.g., Reasoning Kernel, Cognitive Managers). This allows for independent development, testing, and replacement of components, facilitating research and experimentation.
+-   **Event-Driven Communication:** Components interact primarily through an asynchronous event bus. This decouples the modules, allowing for complex, emergent behaviors to arise from simple, local interactions.
+-   **Continuous Online Learning:** HyperNARS is designed to learn from its experience in real-time. It constantly revises its beliefs, adjusts the utility of its inference rules, and adapts its behavior based on feedback.
+-   **Symbol Grounding:** The system includes a dedicated interface for grounding abstract symbols to external sensors and actuators, providing a pathway for the system to interact with and learn from the real world.
+
+---
+
 1.  [System Architecture](#system-architecture)
 2.  [Core Data Structures](#core-data-structures)
 3.  [The Reasoning Cycle (Control Unit)](#the-reasoning-cycle-control-unit)
@@ -14,7 +40,7 @@
 14. [Ethical Alignment and Safety](#ethical-alignment-and-safety)
 15. [Error Handling and System Resilience](#error-handling-and-system-resilience)
 16. [Interactive Debugging and Diagnostics (TUI)](#interactive-debugging-and-diagnostics-tui)
-17. [Verification Strategy](#verification-strategy)
+17. [Verification Strategy (see TEST.md)](TEST.md)
 
 ## 1. System Architecture
 
@@ -738,6 +764,8 @@ The following scenarios verify the functionality of the Contradiction Manager an
 > And the system should create a new belief "<(&, bird, (-, penguin)) --> flyer>"
 
 ### 4.5. Cognitive Executive (Meta-Reasoner)
+*Note: This document uses "Cognitive Executive" to refer to the conceptual role of a master control program. The concrete implementation of this role is the `MetaReasoner` manager.*
+
 The system's master control program, responsible for monitoring and adapting the system's overall behavior through a continuous, metrics-driven feedback loop. It embodies the principle of self-regulating autonomy.
 -   *Subscribes to*: All major system events (`afterCycle`, `contradiction-detected`, `question-answered`, etc.).
 -   **Core Function: The Self-Monitoring Loop**
@@ -1067,6 +1095,12 @@ To improve usability, the system provides a layer of higher-level, intention-dri
 -   `addGoal(statement: string)`: A dedicated method for adding a new goal to the system.
 -   `resolveContradiction(contradictionId: string, strategy: string)`: Manually triggers the resolution of a known contradiction.
 
+#### 7.1.1. Rationale for a Dual-Layer API
+
+The API is intentionally designed with two layers to cater to different use cases:
+-   **The Core `nal()` API:** Provides a powerful, low-level interface that offers complete control over the NAL statements being input. This is essential for advanced users, automated testing, and integration with other formal systems. It treats the NARS engine as a pure "NAL machine".
+-   **The Semantic API:** Offers a more accessible, developer-friendly abstraction. Methods like `addGoal()` or `inheritance()` map directly to common intentions, reducing the cognitive load on developers and making the system easier to integrate into conventional applications without requiring deep expertise in NAL syntax.
+
 ### 7.2. Hypothetical Reasoning via Sandboxing
 The API provides a `createSandbox(options)` method for hypothetical or "what-if" reasoning. This method creates a new, isolated instance of the NAR engine. It can be configured to copy all beliefs from the parent instance that exceed a certain confidence threshold. This allows a developer or another cognitive manager to:
 -   Explore the consequences of a potential belief without polluting the main knowledge base.
@@ -1291,40 +1325,3 @@ The TUI is fully controllable via the keyboard:
 -   **`1`-`5`**: Switch between the main tabs.
 -   **`Esc`**: Exit the TUI or close the current detailed view.
 
-## 17. Verification Strategy
-
-This section outlines the comprehensive testing strategy for the HyperNARS reimplementation. It serves as a blueprint for ensuring the system's correctness, robustness, and adherence to the principles of Non-Axiomatic Logic.
-
-### 17.1. Testing Philosophy
-
-The testing strategy for HyperNARS is multi-layered, designed to validate the system at different levels of granularity. This approach ensures that individual components are sound, their integrations are seamless, and the overall system behavior is correct and emergent as expected.
-
--   **Layer 1: Unit Tests**: At the lowest level, unit tests verify the functional correctness of individual, isolated components. These tests focus on pure functions and classes with minimal dependencies.
-    -   *Examples*: `TruthValue` revision formulas, `Budget` allocation logic, individual `InferenceRule` applications.
-    -   *Goal*: Ensure that the foundational building blocks of the logic are mathematically and algorithmically correct.
-
--   **Layer 2: Integration Tests**: These tests verify the interaction between different components of the system. They focus on the contracts and communication between modules, such as the Reasoning Kernel and the Cognitive Managers.
-    -   *Examples*: A `ContradictionManager` correctly subscribing to `contradiction-detected` events from the kernel and injecting a revision task.
-    -   *Goal*: Ensure that modules are wired together correctly and that their collaboration produces the expected short-term outcomes.
-
--   **Layer 3: End-to-End (E2E) Scenario Tests**: These are high-level tests that validate the system's reasoning capabilities on complex, multi-step problems. They treat the entire HyperNARS system as a black box, providing input and asserting on the final state of its beliefs after a number of reasoning cycles. The detailed scenarios listed under each component's "Verification Scenarios" section fall into this category.
-    -   *Goal*: Verify that the interaction of all components leads to the desired emergent, intelligent behavior and that the system can solve meaningful problems.
-
--   **Layer 4: Performance & Scalability Tests**: A special category of tests designed to measure the system's performance under heavy load and identify bottlenecks.
-    -   *Examples*: Stress-testing the memory system with millions of concepts, measuring inference-per-second rate.
-    -   *Goal*: Ensure the system meets performance requirements and remains stable and responsive at scale.
-
-### 17.2. Test Framework and Execution
-
-To ensure consistency and ease of use, the HyperNARS test suite will be built upon a standardized, modern JavaScript testing framework.
-
--   **Test Runner**: **Jest** is the recommended test runner. Its features, including a built-in assertion library, mocking support, and parallel test execution, make it well-suited for this project's needs.
--   **Test Location**: All test files will be co-located with the source files they are testing, using the `*.test.js` naming convention (e.g., `MemoryManager.js` and `MemoryManager.test.js`). The E2E scenario tests, which correspond to the verification scenarios in this document, are an exception as they test the behavior of the entire system.
-
-### Running Tests
-
-The following `npm` scripts should be configured in `package.json` to execute different parts of the test suite:
-
--   `npm test`: Runs all unit and integration tests (files ending in `.test.js`).
--   `npm run test:e2e`: Runs the high-level end-to-end scenario tests.
--   `npm run test:coverage`: Runs all tests and generates a code coverage report.
