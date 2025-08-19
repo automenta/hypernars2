@@ -1,5 +1,3 @@
-# HyperNARS Test Suite Blueprint: DESIGN.tests.md
-
 This document outlines the comprehensive testing strategy for the HyperNARS reimplementation. It serves as a blueprint for ensuring the system's correctness, robustness, and adherence to the principles of Non-Axiomatic Logic.
 
 ## 1. Testing Philosophy
