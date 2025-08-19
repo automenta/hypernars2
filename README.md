@@ -8,7 +8,9 @@ The primary goal of this project is to create a robust and scalable system that 
 - A **dual-process reasoning cycle** to balance efficiency and thoroughness.
 - A suite of specialized **Cognitive Managers** to handle high-level functions like goal pursuit and temporal reasoning.
 - An **event-driven architecture** to ensure loose coupling between components.
-- A comprehensive **Symbol Grounding Interface** to connect abstract knowledge to real-world sensors and actuators.
+- A **unified knowledge representation** in a metagraph Atomspace, where reasoning rules are data.
+- A **programmable reasoning engine** based on the MeTTa interpreter.
+- A deep, flexible approach to **neural-symbolic integration** via Specialized Spaces.
 
 This document serves as the primary design specification for the HyperNARS system.
 
@@ -17,10 +19,10 @@ This document serves as the primary design specification for the HyperNARS syste
 The architecture and implementation of HyperNARS are guided by a set of core principles that ensure its adherence to the NARS philosophy while promoting modern software engineering standards.
 
 -   **Assumption of Insufficient Knowledge and Resources (AIKR):** This is the cornerstone of NARS. The system must operate under the assumption that its knowledge is incomplete and potentially contradictory, and that its computational resources are finite. This principle directly influences every aspect of the design, from truth-value representation to memory management and resource allocation.
--   **Modularity and Extensibility:** The system is built as a collection of loosely-coupled modules (e.g., Reasoning Kernel, Cognitive Managers). This allows for independent development, testing, and replacement of components, facilitating research and experimentation.
+-   **Unification of Code and Data**: Inspired by OpenCog Hyperon, the system represents facts, goals, and reasoning procedures as **Atoms** within a common **Atomspace**. This enables deep introspection and self-modification, as the system's own operational logic is accessible as data to be reasoned about and rewritten.
+-   **Modularity and Extensibility:** The system is built as a collection of loosely-coupled modules. The concept of **Specialized Spaces** allows for different knowledge stores and computational engines (e.g., neural networks) to be plugged into the core reasoning process.
 -   **Event-Driven Communication:** Components interact primarily through an asynchronous event bus. This decouples the modules, allowing for complex, emergent behaviors to arise from simple, local interactions.
--   **Continuous Online Learning:** HyperNARS is designed to learn from its experience in real-time. It constantly revises its beliefs, adjusts the utility of its inference rules, and adapts its behavior based on feedback.
--   **Symbol Grounding:** The system includes a dedicated interface for grounding abstract symbols to external sensors and actuators, providing a pathway for the system to interact with and learn from the real world.
+-   **Continuous Online Learning:** The system is designed to learn from its experience in real-time. By representing its own logic as MeTTa expressions, it can constantly revise not just its beliefs, but the very rules it uses to reason.
 
 ---
 
@@ -28,7 +30,7 @@ The architecture and implementation of HyperNARS are guided by a set of core pri
 2.  [Core Data Structures](#core-data-structures)
 3.  [The Reasoning Cycle (Control Unit)](#the-reasoning-cycle-control-unit)
 4.  [Cognitive Managers](#cognitive-managers)
-5.  [Inference Engine](#inference-engine)
+5.  [Reasoning via MeTTa Interpretation](#reasoning-via-metta-interpretation)
 6.  [Memory System](#memory-system)
 7.  [I/O and Public API](#io-and-public-api)
 8.  [Symbol Grounding and Embodiment](#symbol-grounding-and-embodiment)
@@ -61,7 +63,7 @@ The Reasoning Kernel will emit events at key points in the reasoning cycle. Cogn
 -   **`belief-added`**: Fired when a new belief is added to a concept.
     -   **Payload**: `{ belief: Belief }`
 -   **`contradiction-detected`**: Fired by the Memory System when a new task or belief directly contradicts an existing belief.
-    -   **Payload**: `{ statement: Statement, belief1: Belief, belief2: Belief }`
+    -   **Payload**: `{ atom: Atom, belief1: Belief, belief2: Belief }`
 -   **`concept-activated`**: Fired when a concept's activation level changes.
     -   **Payload**: `{ concept: Concept, activation: number }`
 -   **`concept-created`**: Fired when a new concept is created in memory.
@@ -96,12 +98,12 @@ graph TD
         subgraph ControlInference [ ]
             direction LR
             ControlUnit(Control Unit / Cycle)
-            InferenceEngine(Inference Engine / NAL)
+            MeTTaInterpreter(MeTTa Interpreter)
         end
-        MemorySystem(Memory System / Concept Graph)
+        MemorySystem(Atomspace)
     end
 
-    subgraph Grounding [Symbol Grounding Interface]
+    subgraph Grounding [Symbol Grounding & Specialized Spaces]
         direction TB
         GroundingInterface(Interface)
     end
@@ -110,10 +112,10 @@ graph TD
     CogManagers -- "Injects Tasks" --> Kernel
     Kernel -- "Emits Events" --> CogManagers
     Kernel -- "Accesses/Modifies" --> MemorySystem
-    InferenceEngine -- "Applies Rules" --> MemorySystem
-    ControlUnit -- "Orchestrates" --> InferenceEngine
+    MeTTaInterpreter -- "Rewrites" --> MemorySystem
+    ControlUnit -- "Orchestrates" --> MeTTaInterpreter
     Kernel -- "Grounding Requests" --> Grounding
-    Grounding -- "Grounded Knowledge" --> Kernel
+    Grounding -- "Grounded Knowledge / Specialized Spaces" --> Kernel
 
     classDef default fill:#fff,stroke:#333,stroke-width:1.5px;
     classDef layer fill:#f8f8f8,stroke:#666,stroke-width:2px,stroke-dasharray: 3 3;
@@ -124,80 +126,109 @@ A core design principle is modularity, allowing different implementations of key
 
 For example, a user can configure the system to use a `SimpleMemoryManager` for lightweight tasks or an `AdvancedMemoryManager` with more sophisticated forgetting algorithms for complex, long-running scenarios. This allows the system's footprint and complexity to be tailored to the specific application.
 
-### 1.2. Cognitive Manager Roles
+### 1.2. Specialized Spaces and Unified Querying
+
+A key innovation inspired by OpenCog Hyperon is the concept of **Specialized Spaces**. The system is not limited to a single, monolithic knowledge store. Instead, it uses a `Space` API that allows multiple, heterogeneous knowledge stores to be treated as a unified whole. The MeTTa interpreter can query across these spaces, allowing for deep integration between symbolic reasoning, neural networks, and other computational paradigms.
+
+-   **Default Atomspace**: This is the primary, in-memory metagraph described in Section 2. It holds the core symbolic knowledge and procedural rules of the system.
+
+-   **Distributed Atomspace (DAS)**: For large-scale applications, the system can use a Distributed Atomspace that runs across multiple machines. This space is backed by scalable databases (e.g., MongoDB, Redis) and provides persistence and massive knowledge capacity, without changing how the MeTTa interpreter queries it.
+
+-   **Neural Atomspace**: This powerful concept provides a bridge for true neural-symbolic integration. A large language model (LLM) or other deep neural network can be wrapped in the `Space` API, making it appear as a queryable Atomspace. This allows the MeTTa interpreter to perform pattern matching on the neural network's latent representations, effectively "querying" the model's knowledge. This is a significant advancement over a simple symbol grounding interface, as it allows symbolic reasoning to interact with the neural model's knowledge in a structured way. For example, a query could ask the LLM to find relationships between concepts, with the results being seamlessly integrated into the symbolic reasoning process.
+
+-   **Custom Grounded Spaces**: The architecture also supports custom spaces that can wrap any external data source or API, such as a traditional SQL database, a file system, or a web API.
+
+This architecture allows the system to leverage the strengths of different technologies. The MeTTa interpreter acts as a universal "cognitive assembler," orchestrating computation and knowledge retrieval across symbolic, sub-symbolic, and external data stores.
+
+### 1.3. Cognitive Manager Roles
 
 The Cognitive Managers are specialized, pluggable modules that handle complex, cross-cutting concerns. They operate by subscribing to events from the Reasoning Kernel and can inject new tasks back into the system to influence its behavior. Their detailed functionality is described in Section 4.
 
-## 2. Core Data Structures
+## 2. Core Data Structures: The Atomspace
 
-The core data structures will be designed as **immutable** objects where possible to ensure functional purity, thread safety, and predictable state management.
+The core of the system is the **Atomspace**, a weighted, typed metagraph that serves as the universal knowledge store. All knowledge, including declarative facts, procedures, and even the system's own code, is represented as a collection of **Atoms**. This unified representation is fundamental to the system's capacity for deep reflection and self-modification. The core data structures are designed as **immutable** objects where possible to ensure functional purity and thread safety.
 
 ```typescript
-// A Term is the basic unit of meaning, representing an entity or concept.
-// It can be an atomic identifier (string) or a CompoundTerm.
-type Term = string | CompoundTerm;
+// The supertype for all elements in the Atomspace.
+// An Atom can be a Symbol, a Variable, a GroundedAtom, or an ExpressionAtom.
+type Atom = SymbolAtom | VariableAtom | GroundedAtom | ExpressionAtom;
 
-// A CompoundTerm is a structure composed of other terms, connected by an operator.
-// This allows for representing complex subjects/predicates, e.g., "all birds except penguins".
-// Example: The term "(&, bird, (-, penguin))" in the statement "<(&, bird, (-, penguin)) --> flyer>"
-interface CompoundTerm {
-    readonly operator: 'conjunction' | 'negation' | 'set' | 'product'; // and other potential operators
-    readonly terms: Term[];
-    // A unique, canonical string representation used for hashing.
+// A unique identifier, like 'cat' or 'fly'.
+// Conceptually equivalent to a node in a graph.
+interface SymbolAtom {
+    readonly type: 'Symbol';
+    readonly name: string; // e.g., "bird"
+    toString(): string;
+}
+
+// A placeholder used in patterns for querying and in rules.
+// Always prefixed with a '$' (e.g., '$x').
+interface VariableAtom {
+    readonly type: 'Variable';
+    readonly name: string; // e.g., "$x"
+    toString(): string;
+}
+
+// An atom that wraps a piece of external data or executable code.
+// This is a primary mechanism for symbol grounding.
+interface GroundedAtom<T = any> {
+    readonly type: 'Grounded';
+    readonly data: T; // Can be a number, a string, a function, or a complex object.
+    toString(): string;
+}
+
+// A sequence of other Atoms, representing a relationship or a piece of code.
+// This is the primary type of hyperedge in the Atomspace.
+// The former `Statement` is now just a specific kind of ExpressionAtom.
+interface ExpressionAtom {
+    readonly type: 'Expression';
+    // The sequence of Atoms. The first atom often denotes the expression's type or operator.
+    // e.g., `(Inheritance bird animal)` is represented as `[Symbol('Inheritance'), Symbol('bird'), Symbol('animal')]`
+    readonly children: Atom[];
+    // A unique, canonical string representation used for hashing and lookup.
+    // e.g., "(Inheritance bird animal)"
     readonly key: string;
     toString(): string;
 }
 
-// A statement of a relationship between terms. It is the primary type of hyperedge in the Concept Hypergraph.
-interface Statement {
-    // A unique, canonical string representation of the statement, used for hashing.
-    // The key MUST be generated consistently regardless of term order for symmetric statements.
-    readonly key: string;
-    // An array of terms involved in the statement, in a defined order.
-    readonly terms: Term[];
-    // The type of copula connecting the terms.
-    readonly copula: 'inheritance' | 'similarity' | 'implication' | 'equivalence' | 'conjunction' | 'before' | 'after' | 'during' | 'concurrent_with';
-    // Returns a human-readable string, e.g., "(bird --> animal)".
-    toString(): string;
-}
+// Example: Representing a NAL statement as an ExpressionAtom
+// The statement "<bird --> animal>" becomes:
+const bird = { type: 'Symbol', name: 'bird', ... };
+const animal = { type: 'Symbol', name: 'animal', ... };
+const inheritanceStatement: ExpressionAtom = {
+    type: 'Expression',
+    children: [{type: 'Symbol', name: 'Inheritance'}, bird, animal],
+    key: '(Inheritance bird animal)',
+    ...
+};
 
-// Example Implementation of Statement subtypes for clarity.
-class InheritanceStatement implements Statement {
-    readonly key: string;
-    readonly terms: Term[];
-    readonly copula = 'inheritance';
-    constructor(subject: Term, predicate: Term) {
-        this.terms = [subject, predicate];
-        this.key = `(${subject} --> ${predicate})`;
-    }
-    toString = () => this.key;
-}
-class SimilarityStatement implements Statement {
-    readonly key: string;
-    readonly terms: Term[];
-    readonly copula = 'similarity';
-    constructor(term1: Term, term2: Term) {
-        // Sort terms to ensure canonical key for symmetric relation
-        const sortedTerms = [term1, term2].sort();
-        this.terms = sortedTerms;
-        this.key = `(${sortedTerms[0]} <-> ${sortedTerms[1]})`;
-    }
-    toString = () => this.key;
-}
-class ConjunctionStatement implements Statement {
-    readonly key: string;
-    readonly terms: Term[];
-    readonly copula = 'conjunction';
-    // Terms are sorted to ensure canonical representation, e.g., (&&, A, B) is same as (&&, B, A)
-    constructor(terms: Term[]) {
-        this.terms = terms.sort();
-        this.key = `(&&, ${this.terms.join(', ')})`;
-    }
-    toString = () => this.key;
-}
+// Example: Representing a procedural rule as an ExpressionAtom
+// The rule "<(*, <#preconditions>, <#operation>)> ==> <effect>" becomes a nested expression:
+const proceduralRule: ExpressionAtom = {
+    type: 'Expression',
+    children: [
+        {type: 'Symbol', name: 'Implication'},
+        {
+            type: 'Expression',
+            children: [
+                {type: 'Symbol', name: 'And'},
+                {type: 'Symbol', name: '#preconditions'},
+                {type: 'Symbol', name: '#operation'}
+            ],
+            ...
+        },
+        {type: 'Symbol', name: 'effect'}
+    ],
+    ...
+};
+```
 
+### 2.1. Epistemic and Attentional Values
 
-// Represents the epistemic value of a statement, grounded in evidence.
+Each Atom in the Atomspace can be annotated with various values that guide the reasoning process. The two most important are `TruthValue` and `Budget`.
+
+```typescript
+// Represents the epistemic value of an Atom, grounded in evidence.
 class TruthValue {
     readonly f: number; // frequency in [0, 1]
     readonly c: number; // confidence in (0, 1)
@@ -348,22 +379,50 @@ class Budget {
     }
 }
 
-// An immutable pairing of a Statement and its epistemic value.
+// An immutable pairing of a an Atom and its epistemic value.
 interface Belief {
-    readonly statement: Statement;
+    readonly atom: Atom;
     readonly truth: TruthValue;
     readonly timestamp: number; // Creation time for temporal analysis.
 }
 
-// A work unit for the system, containing a statement to be processed.
+// A work unit for the system, containing an atom to be processed.
 interface Task {
-    readonly statement: Statement;
+    readonly atom: Atom;
     readonly budget: Budget;
     readonly parentBeliefs: Belief[]; // Provenance/derivation history.
     readonly stamp: Stamp; // Derivational stamp to prevent infinite loops.
 }
+```
 
-### 2.1. The Derivational Stamp
+### 2.2. Dynamic and Gradual Typing
+
+A powerful feature of the MeTTa-based architecture is its approach to typing. The core Atomspace is fundamentally **untyped**. This provides maximum flexibility and avoids the rigidity of a predefined, static type system.
+
+However, rich and complex type systems can be defined *within* MeTTa itself. Type declarations and type-checking rules are simply `ExpressionAtoms` that live in the Atomspace alongside all other data. This allows for a **gradual typing** approach, where parts of the knowledge base can be strictly typed while others remain untyped.
+
+This is accomplished using a special `:` operator, which is used to declare the type of an Atom.
+
+```metta
+// Declare 'Nat' as a type.
+(: Nat Type)
+
+// Declare 'Z' (zero) as a 'Nat'.
+(: Z Nat)
+
+// Declare 'S' (successor) as a function from Nat to Nat.
+(: S (-> Nat Nat))
+
+// The type of an expression can be inferred by the interpreter.
+// For example, the interpreter can deduce that '(S Z)' has the type 'Nat'.
+```
+
+This approach has several advantages:
+-   **Flexibility**: The system is not constrained by a hard-coded type system. New types and type rules can be learned and introduced at runtime.
+-   **Expressiveness**: It can represent advanced type concepts like dependent types (where types depend on values) and probabilistic types.
+-   **Introspection**: Because types are just atoms, the system can reason about its own type system, check for inconsistencies, and even invent new type theories.
+
+### 2.3. The Derivational Stamp
 
 To prevent infinite reasoning loops (e.g., A -> B, B -> A) and redundant derivations, each `Task` carries a `Stamp`. The stamp records the IDs of the parent beliefs and tasks that contributed to its creation. Before an inference rule is applied, the system checks if the stamps of the two premises (the task and the belief) overlap. If they do, the inference is blocked, as it would mean re-deriving information from its own lineage.
 
@@ -385,10 +444,11 @@ Two primary implementations of the `Stamp` can be considered:
 
 The choice between these two represents a classic trade-off between logical perfection and resource efficiency, a core theme in NARS. The system could even be configured to use one or the other based on the desired operational profile.
 
-// A node in the memory graph, representing a single Term.
+### 2.4. The Concept
+// A node in the memory graph, representing a single Atom.
 class Concept {
-    readonly term: Term;
-    // All beliefs directly related to this concept, indexed by statement key.
+    readonly term: Atom;
+    // All beliefs directly related to this concept, indexed by atom key.
     readonly beliefs: Map<string, Belief>;
     // A queue of tasks to be processed, prioritized by budget.
     readonly taskQueue: PriorityQueue<Task>;
@@ -415,13 +475,13 @@ class Concept {
 
     // Adds a new belief, revising if a related one exists.
     addBelief(belief: Belief): void {
-        const key = belief.statement.key;
+        const key = belief.atom.key;
         if (this.beliefs.has(key)) {
             const existingBelief = this.beliefs.get(key)!;
             // Check for contradiction before revising
             if (this.isContradictory(belief.truth, existingBelief.truth)) {
                 kernel.events.emit('contradiction-detected', {
-                    statement: belief.statement,
+                    atom: belief.atom,
                     belief1: existingBelief,
                     belief2: belief
                 });
@@ -539,13 +599,18 @@ function reflexiveReasoningCycle(kernel) {
     if (!belief) continue; // No relevant belief found.
     cycleContext.belief = belief;
 
-    // 3. Perform Local Inference.
-    let derivedTasks = kernel.inferenceEngine.applyAllRules(cycleContext.task, cycleContext.belief);
+    // 3. Perform Local Inference by executing MeTTa expressions.
+    // The MeTTa interpreter will find matching expressions in the Atomspace
+    // and execute them to produce new tasks.
+    let derivedTasks = kernel.mettaInterpreter.run(cycleContext.task, cycleContext.belief);
     cycleContext.derivedTasks = derivedTasks;
 
     // 4. Process and Store Derived Tasks.
     for (let derivedTask of cycleContext.derivedTasks) {
-      let targetConcept = kernel.memory.getOrCreateConcept(derivedTask.statement.terms[0]);
+      // The target concept is determined by the structure of the derived atom.
+      // For an expression like (Inheritance A B), the main concept is 'A'.
+      let targetConceptTerm = derivedTask.atom.children[1] || derivedTask.atom;
+      let targetConcept = kernel.memory.getOrCreateConcept(targetConceptTerm);
       targetConcept.addTask(derivedTask);
     }
 
@@ -630,7 +695,7 @@ function selectBeliefForTask(concept, task) {
     let maxRelevance = -1;
 
     for (let belief of concept.beliefs.values()) {
-        if (hasCommonTerms(task.statement, belief.statement)) {
+        if (hasCommonTerms(task.atom, belief.atom)) {
             // Calculate relevance (simple version: use confidence)
             let relevance = belief.truth.confidence;
             if (relevance > maxRelevance) {
@@ -650,19 +715,16 @@ The Cognitive Managers are specialized, pluggable modules that handle complex, c
 The Goal Manager is responsible for the entire lifecycle of goal-oriented behavior, from receiving a high-level goal to decomposing it into actionable steps and monitoring its progress. It operates as a sophisticated planner and execution monitor.
 -   *Subscribes to*: `belief-updated`, `belief-added`, `afterCycle`.
 -   **Goal Lifecycle**: Manages goals with a defined lifecycle (`active`, `waiting`, `achieved`, `abandoned`). Goals can have deadlines and are abandoned if not met in time.
--   **Action - The Execution Loop**:
-    1.  **Prioritization**: In each cycle, the manager identifies the most urgent active goal based on its priority and proximity to its deadline.
-    2.  **Satisfaction Check**: It first checks if the goal is already satisfied by querying the system's belief base against a configurable `achievedThreshold`.
-    3.  **Action Selection**: If the goal is not met, it searches for known procedural rules (`<(*, Pre, Op)> ==> <Effect>`) where the `Effect` matches the current goal. It scores all applicable actions based on a utility calculation: `score = (reliability * goal_utility) - (action_cost)`. `Reliability` is the confidence of the procedural rule, and `action_cost` is derived from the budget of the operation.
-    4.  **Execution & Sub-goaling**:
-        - If a suitable action is found and its preconditions are met, the manager triggers the `OperationalRule` to execute it.
-        - If no single action can satisfy the goal, the manager attempts to **decompose** it. If the goal is a conjunction (e.g., `goal: <(&&, A, B)>`), it creates new sub-goals for `A` and `B` and sets the parent goal's status to `waiting`.
-        - If preconditions for a selected action are not met, it generates new, high-priority sub-goals to satisfy those preconditions.
--   *Injects*: New sub-goals to decompose complex problems or satisfy the preconditions for an action. It also injects high-priority tasks to find information relevant to its current goal.
--   **Procedural Skill Acquisition**: Beyond executing known procedures, a key function of the Goal Manager is to learn new ones. The system learns by observing the consequences of its operations. The learning process is as follows:
-    1.  **Babbling/Exploration**: The system may execute an operation without a known outcome, either randomly or because it is part of a high-level exploration goal.
-    2.  **Consequence Monitoring**: After executing an operation (e.g., `#op`), the Goal Manager monitors the system for significant changes in its belief state in the subsequent cycles.
-    3.  **Rule Formation**: If a reliable correlation is detected between the operation and a resulting state change (e.g., `effect`), the system forms a new procedural belief. It captures the state *before* the operation as the precondition (`pre`). This results in a new rule: `<(*, pre, #op)> ==> effect>`.
+-   **Goal Formulation and Pursuit**:
+    1.  **Goal Injection**: The manager's primary role is to formulate a high-level goal as a MeTTa expression and inject it as a high-priority task into the Atomspace. For example, a goal to open a door would be injected as `(Goal (is_open door))`.
+    2.  **Interpreter-Driven Execution**: The MeTTa interpreter then takes over. It will naturally search the Atomspace for `Implication` expressions whose consequent matches the goal. This process may chain multiple rules, automatically exploring the problem space.
+    3.  **Sub-goaling**: If the interpreter finds a rule but its preconditions are not met, the `Goal Manager` can be configured to observe this partial success and inject the preconditions as new, high-priority sub-goals. For example, if opening a door requires it to be unlocked first, the manager would inject `(Goal (is_unlocked door))`.
+    4.  **Monitoring**: The manager subscribes to `belief-added` and `belief-updated` events to monitor the state of the Atomspace and determine if a goal has been achieved.
+-   *Injects*: High-priority `(Goal ...)` tasks into the Atomspace.
+-   **Procedural Skill Acquisition**: The process of learning new skills remains similar, but the output is a new MeTTa `Implication` atom that is added to the Atomspace.
+    1.  **Babbling/Exploration**: The system executes a grounded operation, e.g., `(#push_button)`.
+    2.  **Consequence Monitoring**: The `Goal Manager` observes the effects, e.g., a new belief `(light is_on)` appears.
+    3.  **Rule Formation**: The manager forms a new procedural rule as a MeTTa expression and asserts it into the Atomspace: `(Implication (#push_button) (light is_on))`. This new rule is now available for the MeTTa interpreter to use in future reasoning.
     4.  **Refinement**: The confidence of this new rule starts low and is adjusted over time based on its success or failure when applied in the future.
 -   **Verification Scenarios**:
     -   **Goal Decomposition**: A test verifies that a conjunctive goal like `goal: <(&&, A, B)>` is correctly decomposed. The system should create two new active goals for `A` and `B`, and the original goal's status should become `waiting`.
@@ -720,23 +782,20 @@ Provides a comprehensive framework for understanding and reasoning about time, m
 ### 4.3. Learning Engine
 Responsible for abstracting knowledge and forming new concepts.
 -   *Subscribes to*: `concept-created`, `belief-added`, `afterInference`.
--   *Action*: Detects patterns and correlations across concepts to form higher-level abstractions or new inference rules. It provides performance statistics on existing inference rules to the `CognitiveExecutive` to aid in self-optimization.
--   *Injects*: Tasks representing new concepts or learned rules.
+-   *Action*: Detects patterns and correlations across the Atomspace to form higher-level abstractions. Its most critical function is to learn new **MeTTa expressions** that function as novel inference rules or heuristics. It also provides performance statistics on existing MeTTa rules to the `CognitiveExecutive` to aid in self-optimization.
+-   *Injects*: New `ExpressionAtoms` into the Atomspace, particularly new `=` expressions that define new rewrite rules for the MeTTa interpreter.
 -   **Verification Scenario: Meta-Learning Verification of a New Inference Rule (ML-01)**
     > Given the system's LearningEngine is active and monitoring derivation patterns
-    > And the system repeatedly observes the following pattern:
-    >   | premise1                                    | premise2                                    | conclusion                                  |
-    >   | "<{X} --> (location, west_of, {Y})>"        | "<{Y} --> (location, west_of, {Z})>"        | "<{X} --> (location, west_of, {Z})>"        |
-    >   | "<{A} --> (location, west_of, {B})>"        | "<{B} --> (location, west_of, {C})>"        | "<{A} --> (location, west_of, {C})>"        |
-    >   | "<{E} --> (location, west_of, {F})>"        | "<{F} --> (location, west_of, {G})>"        | "<{E} --> (location, west_of, {G})>"        |
+    > And the system repeatedly observes derivations of the form: `(Location $x west_of $y)` and `(Location $y west_of $z)` leads to `(Location $x west_of $z)`
     > When the LearningEngine's pattern detection threshold is met
-    > Then the system should create and register a new InferenceRule named "CUSTOM_TRANSITIVE_LOCATION_WEST_OF"
+    > Then the system should assert a new MeTTa rule into the Atomspace, such as:
+    > `(= (Location $x west_of $z) (match &self (, (Location $x west_of $y) (Location $y west_of $z))))`
     > And when the system is later given the premises:
-    >   | statement                                   | truth       |
-    >   | "<(new_york) --> (location, west_of, (london))>" | <%1.0,0.9%> |
-    >   | "<(london) --> (location, west_of, (beijing))>" | <%1.0,0.9%> |
-    > And the new rule "CUSTOM_TRANSITIVE_LOCATION_WEST_OF" is applied
-    > Then a new task for "<(new_york) --> (location, west_of, (beijing))>" should be derived
+    >   | atom                                | truth       |
+    >   | "(Location new_york west_of london)"  | <%1.0,0.9%> |
+    >   | "(Location london west_of beijing)" | <%1.0,0.9%> |
+    > And the MeTTa interpreter runs
+    > Then a new task for `(Location new_york west_of beijing)` should be derived
 
 ### 4.4. Contradiction Manager
 The Contradiction Manager implements sophisticated strategies for resolving contradictions. When a `contradiction-detected` event is fired, the manager analyzes the evidence, source reliability, and recency of the conflicting beliefs to decide on a resolution strategy.
@@ -750,7 +809,7 @@ The choice of strategy can be determined by the `CognitiveExecutive` based on th
 -   **`EvidenceWeightedStrategy`**: A more comprehensive merge, this strategy calculates a new truth value and budget by taking a weighted average of *all* conflicting beliefs. The weight for each belief is its evidence strength. This results in a single new belief that represents the consensus of all available evidence.
 -   **`RecencyBiasedStrategy`**: A simple but effective strategy that resolves a conflict by keeping only the most recent belief and discarding all others. This is useful in dynamic environments where newer information is more likely to be correct.
 -   **`SourceReliabilityStrategy`**: Similar to `EvidenceWeightedStrategy`, but the weight for each belief is determined by the historical reliability of its source, modulated by the belief's priority. This allows the system to trust information from sources that have been proven trustworthy in the past.
--   **`SpecializationStrategy`**: Instead of merging or deleting beliefs, this strategy resolves a contradiction by creating a more specific, contextual belief. For example, if the system believes `<bird --> flyer>` but encounters a strong contradiction with `<penguin --> not_a_flyer>`, this strategy might generate a new belief like `<(&, bird, (-, penguin)) --> flyer>`, resolving the conflict by creating a more nuanced rule. This is a key mechanism for learning and refining knowledge.
+-   **`SpecializationStrategy`**: Instead of merging or deleting beliefs, this strategy resolves a contradiction by creating a more specific, contextual MeTTa expression. For example, if the system believes `(Inheritance bird flyer)` but encounters a strong contradiction with `(Inheritance penguin (Not flyer))`, this strategy might generate a new, more nuanced rule like `(Inheritance (And bird (Not penguin)) flyer)`, resolving the conflict. This is a key mechanism for learning and refining knowledge.
 
 #### Verification Scenarios
 The following scenarios verify the functionality of the Contradiction Manager and its various strategies.
@@ -786,23 +845,23 @@ The system's master control program, responsible for monitoring and adapting the
     2.  **Detect Issues**: It compares these live metrics against configurable thresholds to identify operational issues (e.g., `'high-contradictions'`, `'low-inference-rate'`).
     3.  **Adapt Parameters**: Based on the detected issues, it performs real-time adjustments to core system parameters. For example, if `'high-contradictions'` is detected, it might increase the `inferenceThreshold` to make the system more skeptical. If `'low-inference-rate'` is detected, it might lower the `budgetThreshold` to allow more tasks to be processed.
     4.  **Adjust Resource Allocation**: It dynamically shifts the global resource allocation between major subsystems (`derivation`, `memory`, `temporal`). For instance, if the contradiction rate is high, it may allocate more resources to memory management and revision.
-    5.  **Adjust Reasoning Focus**: It sets a global "focus" for the system, such as `'question-answering'` or `'contradiction-resolution'`, which can be used by other components (like the `DerivationEngine`) to prioritize certain types of operations.
--   *Injects*: High-level control tasks or directly calls configuration methods on the kernel to enact its adaptations.
+-   **Adjust Reasoning Focus**: It sets a global "focus" for the system, such as `'question-answering'` or `'contradiction-resolution'`, which can be used by other components (like the MeTTa Interpreter) to prioritize certain types of operations. This can be done by dynamically modifying the MeTTa expressions that control rule priorities.
+-   *Injects*: High-level control tasks, or directly modifies the MeTTa expressions that constitute the system's own operational parameters and heuristics.
 -   **Verification Scenarios**:
     -   **Scenario: Meta-Reasoning Causes System Adaptation**
         > Given the system has a `MetaReasoner` cognitive manager installed
-        > And the system's default "doubt" parameter is 0.1
+        > And the system has a MeTTa expression `(= (DoubtParameter) 0.1)`
         > And the system experiences a sudden spike of over 50 contradictory events within a short time frame
         > When the `MetaReasoner`'s `analyzeSystemHealth` function is triggered
-        > Then the system's "doubt" parameter should be increased to a value greater than 0.1
+        > Then the `MetaReasoner` should inject a task to update the doubt parameter, e.g., by replacing the existing expression with `(= (DoubtParameter) 0.2)`
         > And a new goal should be injected to investigate the cause of the high contradiction rate
     -   **Scenario: Self-Optimization of Inference Rules (META-02)**
         > Given the system's `MetaReasoner` is active
-        > And the `AbductionRule` has generated 20 tasks in the last 100 cycles
+        > And a MeTTa rule for abduction, `(= (Abduce $s $p $m) ...)` has generated 20 tasks in the last 100 cycles
         > And 18 of those tasks resulted in beliefs that were later contradicted
         > When the `MetaReasoner` analyzes rule performance
-        > Then the system should form a belief like `<(rule, 'AbductionRule') --> (has_utility, 'low')>` with high confidence
-        > And the system should adjust a configuration parameter to lower the default budget quality for tasks derived from `AbductionRule`
+        > Then the system should form a belief like `(has_utility (Abduce $s $p $m) low)` with high confidence
+        > And it should modify the budget allocation rules (which are also MeTTa expressions) to assign lower quality budgets to tasks derived from this abduction rule.
     -   **Scenario: Self-Optimization of System Parameters (META-05)**
         > Given the `CognitiveExecutive` is active
         > And the system's `inferenceThreshold` is initially 0.3
@@ -821,221 +880,134 @@ Generates human-readable explanations for the system's conclusions.
 ### 4.7. Test Generation Manager
 Proactively ensures the system's reasoning capabilities are robust by identifying and filling gaps in its test coverage.
 -   *Subscribes to*: `afterCycle`, `rule-utility-updated`.
--   *Action*: Periodically analyzes metrics to find under-utilized inference rules or concepts with low activity. It then formulates premises that would specifically trigger these rules.
+-   *Action*: Periodically analyzes metrics to find under-utilized MeTTa rules or concepts with low activity. It then formulates premises that would specifically trigger these rules.
 -   *Injects*: Goals to execute under-tested components, logging the proposed test case for developer review. This is a key part of the system's "dogfooding" capability, allowing it to help improve its own quality.
 -   **Verification Scenario: Self-Generation of a New Test Case (META-03)**
     > Given the system's `TestGenerationManager` is active
     > And the system has run for 1000 cycles
-    > And the `InductionRule` has been used 0 times, while other rules were used > 50 times
+    > And the MeTTa rule for Induction `(= (Induce ...))` has been used 0 times.
     > When the `TestGenerationManager` analyzes rule usage frequency
-    > Then the system should generate a new goal: `goal: <(execute, (rule, 'InductionRule'))>.`
-    > And in pursuit of this goal, the system should log a "Proposed Test Case" containing the necessary premises (e.g., `nal("<raven --> is_black>.")`, `nal("<raven --> is_bird>.")`) and the expected conclusion (`nalq("<bird --> is_black>.")`).
+    > Then the system should generate a new goal: `(Goal (ExecuteRule (Induce $s $p)))`
+    > And in pursuit of this goal, the system should log a "Proposed Test Case" containing the necessary premises in MeTTa syntax, e.g., `(Inheritance raven is_black)` and `(Inheritance raven is_bird)`, and the expected conclusion `(Inheritance bird is_black)`.
 
 ### 4.8. Codebase Integrity Manager
 A specialized manager for self-analysis, responsible for ingesting the system's own source code and design documents to reason about their structure and consistency.
--   *Subscribes to*: This manager is typically triggered by a high-level goal, e.g., `goal: <(analyze, 'self.design')>`.
--   *Action*: Uses grounded functions to parse source files (`.js`), design documents (`.md`), and test specifications. It creates NAL beliefs representing the system's architecture, code quality metrics (e.g., cyclomatic complexity), and test statuses. It then compares this knowledge against a set of baked-in consistency rules (e.g., from `AGENTS.md`).
--   *Injects*: Goals to resolve detected inconsistencies between design and implementation, or to refactor code that violates quality guidelines. The output is a human-readable report or patch file.
+-   *Subscribes to*: This manager is typically triggered by a high-level goal, e.g., `(Goal (analyze self.design))`.
+-   *Action*: Uses grounded functions to parse source files (`.js`), design documents (`.md`), and test specifications. It creates Atoms representing the system's architecture, code quality metrics, and test statuses. It then compares this knowledge against a set of baked-in consistency rules, which are themselves MeTTa expressions.
+-   *Injects*: Goals to resolve detected inconsistencies. The output is a human-readable report or patch file.
 -   **Verification Scenarios**:
     -   **Scenario: Self-Analysis of the Design Document (META-01)**
-        > Given the system has ingested a version of its DESIGN.md file containing conflicting statements: `"<... 'RealTime_Dashboard') --> (has_property, 'fast')>."` and `"<... 'RealTime_Dashboard') --> (has_property, 'slow')>."`
-        > And the system knows that `(<((<X --> (has_property, P)>. & <X --> (has_property, !P)>.) ==> <X --> (is, 'inconsistent')>.)`
-        > When the system is given the goal `nalq("<?x --> (is, 'inconsistent')>.")`
-        > Then the system should produce an answer where `x` is `(feature, 'RealTime_Dashboard')`
+        > Given the system has ingested its DESIGN.md file, creating atoms like `(has_property RealTime_Dashboard fast)` and `(has_property RealTime_Dashboard slow)`
+        > And the system knows the MeTTa rule: `(= (is_inconsistent $x) (match &self (, (has_property $x $p1) (has_property $x (Not $p1)))))`
+        > When the system is given the goal `(Goal (is_inconsistent ?x))`
+        > Then the system should produce an answer where `?x` is `RealTime_Dashboard`
     -   **Scenario: Self-Governing Evolution Identifies and Proposes Fixes (META-04)**
         > Given the `CodebaseIntegrityManager` is active and has ingested `DESIGN.md` (with a flaw), `AGENTS.md` (with a 'no comments' rule), and a mock source file `src/core/Memory.js` (with a comment).
-        > When the system is given the goal: `goal: <(system) --> (has, 'self_consistency')>.`
+        > When the system is given the goal: `(Goal (has_self_consistency system))`
         > Then it should generate goals to resolve the design inconsistency and remove the source code comment.
         > And it should produce a structured "patch" object in its logs proposing the necessary changes to the files.
 
 ### 4.9. Multi-Agent Communication Manager
 Facilitates communication and coordination between multiple independent HyperNARS agents.
 -   *Subscribes to*: `goal-received-from-agent`, `belief-received-from-agent`.
--   *Action*: Manages incoming and outgoing messages with other agents using a defined communication protocol (e.g., a simplified "InterNARS" protocol). It wraps Narsese tasks in a message envelope that includes sender/receiver information and a conversation context. It also maintains a model of other agents' knowledge and reliability.
+-   *Action*: Manages incoming and outgoing messages with other agents using a defined communication protocol. It wraps MeTTa expressions in a message envelope that includes sender/receiver information and a conversation context. It also maintains a model of other agents' knowledge and reliability.
 -   *Injects*: Tasks received from other agents, with budgets adjusted based on the perceived reliability of the source agent. It can also generate goals to ask other agents for information it lacks.
 -   **Verification Scenario: Collaborative Problem Solving**
     > Given Agent_A and Agent_B are two separate HyperNARS instances
-    > And Agent_A knows `<A --> B>`
-    > And Agent_B knows `<B --> C>`
-    > And Agent_A has the goal `goal: <A --> C>` but cannot solve it
-    > When Agent_A's Multi-Agent Manager sends a broadcast query for `nalq("<B --> C>.")`
-    > And Agent_B receives the query and sends its belief `<B --> C>` back to Agent_A
-    > Then Agent_A should receive the belief and be able to derive `<A --> C>`, achieving its goal.
+    > And Agent_A knows `(Implication A B)`
+    > And Agent_B knows `(Implication B C)`
+    > And Agent_A has the goal `(Goal (Implication A C))` but cannot solve it
+    > When Agent_A's Multi-Agent Manager sends a broadcast query for `(Implication B C)`
+    > And Agent_B receives the query and sends its belief `(Implication B C)` back to Agent_A
+    > Then Agent_A should receive the belief and be able to derive `(Implication A C)`, achieving its goal.
 
-## 5. Inference Engine
+## 5. Reasoning via MeTTa Interpretation
 
-The Inference Engine is a stateless, extensible component responsible for applying Non-Axiomatic Logic (NAL) rules to derive new knowledge from existing beliefs.
+The reasoning process is driven by the **MeTTa (Meta-Type-Talk) Interpreter**. This replaces a traditional, static inference engine with a dynamic, programmable reasoning core. In this paradigm, inference rules are not a fixed set of algorithms but are themselves **Atoms** in the Atomspace. Reasoning is the process of evaluating MeTTa expressions, which involves pattern matching against the entire Atomspace and rewriting it.
 
 ### 5.1. Core Principles
--   **Extensible Rule System**: The engine uses a central registry, `Map<string, InferenceRule>`, where new rules can be added at runtime via `kernel.inferenceEngine.registerRule(rule)`. This allows for the system's reasoning capabilities to be expanded or modified.
--   **Self-Optimizing Rule Application**: The engine employs a sophisticated, metrics-driven mechanism to manage resource allocation under AIKR. Instead of a static utility, each rule's effectiveness is dynamically tracked and used to guide the reasoning process.
-    -   **Rule Priority**: Each rule has a dynamic `priority` score. This score is a function of the rule's historical `successRate` (how often it produces useful results) and its `applicability` in the current context.
-    -   **Performance-Based Adaptation**: The `CognitiveExecutive` periodically analyzes performance statistics (e.g., `successes / attempts`, `computationalCost`) provided by the `LearningEngine` for each rule. It then updates each rule's `successRate` and overall `priority`. This creates a feedback loop where effective rules are prioritized over time.
-    -   **Weighted Probabilistic Selection**: When applying rules, the engine does not deterministically pick the highest-priority rule. Instead, it performs a weighted random selection (a "roulette-wheel" selection) based on the priorities of all applicable rules. This balances exploiting known-good rules with exploring potentially useful but less-proven ones.
-    -   **Top-Down Modulation**: The `CognitiveExecutive` can provide a `dynamicFactor` to temporarily boost or suppress the priority of certain rules based on the system's current high-level goals or reasoning focus (e.g., prioritizing abductive rules when in a "hypothesis generation" mode).
+-   **Unification of Code and Data**: Inference rules, facts, and goals are all represented as `ExpressionAtoms` in the Atomspace. This allows the system to reason *about* its own reasoning processes, and to learn, modify, and create new inference rules dynamically.
+-   **Pattern Matching and Rewriting**: The core operation of the MeTTa interpreter is `match`. It queries the Atomspace for expressions that unify with a given pattern. This single, powerful mechanism drives all forms of reasoning.
+-   **Expressive and Extensible Logic**: The system is not tied to a single logic. By defining different sets of MeTTa expressions, it can implement Probabilistic Logic Networks (PLN), classical logic, temporal logic, and other formalisms. The `LearningEngine`'s primary role becomes the discovery and promotion of new, useful MeTTa expressions (i.e., new rules).
 
-### 5.2. Baseline Inference Rule Set
-The system is bootstrapped with a comprehensive set of NAL rules:
--   **InheritanceRule**: Handles deduction, abduction, and induction for `-->` statements.
--   **SimilarityRule**: Handles analogy for `<->` statements.
--   **ImplicationRule**: Handles deduction and abduction for `==>` statements (higher-order).
--   **EquivalenceRule**: Handles logic for `<=>` statements (higher-order).
--   **ConjunctionRule**: Handles introduction and elimination of conjunctions (`&&`).
--   **ConsequentConjunctionRule**: A specialized rule for implications with conjunctive consequents.
--   **ForwardImplicationRule**: A specialized rule for forward-chaining implication.
--   **TemporalRelationRule**: Handles transitivity for temporal statements.
--   **MetaLearningRule**: A rule for learning about the system's own operations.
+### 5.2. NAL Inference as MeTTa Expressions
 
-### 5.3. Inference Rule Categories
-The engine will support a comprehensive set of NAL rules, including but not limited to:
-
--   **Syllogistic & Conditional Rules (NAL Levels 1-5)**: Deduction, Abduction, Induction, Exemplification, Comparison, Analogy.
--   **Compositional/Structural Rules (NAL Level 6)**: Intersection, Union.
--   **Temporal Rules (NAL Level 7)**: Primarily handled by the `TemporalReasoner` manager and the `TemporalRelationRule`.
--   **Procedural & Operational Rules (NAL Levels 8-9)**: For learning and executing skills. These rules connect declarative knowledge to actions.
--   **Logical Equivalences**: The engine can be configured to automatically convert certain statement forms into logically equivalent ones that are more conducive to reasoning. A key example is the use of **Virtual Disjunctions**, where a disjunctive statement like `A or B` is internally represented as its negated conjunctive equivalent: `not(not(A) and not(B))`. This can help in preserving temporal and evidential information that might otherwise be lost in a simple disjunctive representation.
-
-### 5.4. Inference Rule Interface & Example
-
-All rules must implement the `InferenceRule` interface.
-
-```typescript
-interface InferenceRule {
-  // A unique name for the rule (e.g., "NAL_DEDUCTION_FORWARD")
-  readonly name: string;
-  // The dynamic priority of the rule, updated by the Cognitive Executive.
-  priority: number;
-  // The historical success rate of the rule.
-  successRate: number;
-  // A function that checks if the rule is applicable in the current context.
-  condition(event: object): boolean;
-
-  // Checks if the rule can be applied to the given premises.
-  canApply(task: Task, belief: Belief): boolean;
-
-  // Applies the rule and returns a new derived Task, or null if not applicable.
-  apply(task: Task, belief: Belief, kernel: any /* Kernel */): Task | null;
-}
-```
+The existing NAL rule set can be elegantly expressed in MeTTa. The `=` symbol is used to define a rewrite rule. When the interpreter evaluates an expression, it searches for a matching `=` rule in the Atomspace and applies it.
 
 #### Example: The Deduction Rule
-(Content unchanged)
+The NAL deduction rule (`{<M --> P>, <S --> M>} |- <S --> P>`) can be implemented as a MeTTa expression. The `match` operation finds the two premises and constructs the conclusion.
+
+```metta
+(= (Deduce $s $m $p)
+   (match &self
+          (, (Inheritance $m $p)  // Premise 1: <M --> P>
+             (Inheritance $s $m)) // Premise 2: <S --> M>
+          (Inheritance $s $p)))   // Conclusion: <S --> P>
+```
+When the system needs to perform deduction, it can evaluate an expression like `(Deduce tweety bird animal)`, which would trigger this rule. A more general approach is to make this part of the main reasoning loop, constantly matching patterns.
 
 #### Example: The Abduction Rule
-(Content unchanged)
+Abduction (`{<P --> M>, <S --> M>} |- <S --> P>`) can be expressed similarly, demonstrating how different reasoning patterns are just different MeTTa expressions.
 
-#### Example: The Induction Rule
-(Content unchanged)
-
-#### Example: The Operational Rule
-Procedural knowledge is represented by implication statements where the antecedent describes preconditions and an operation, and the consequent describes the expected effect. Operations are special terms, often marked with a `#` prefix, that must be grounded to executable functions in the external environment via the Symbol Grounding Interface.
-
--   **Logical Form**: `(<(*, <#preconditions>, <#operation>)> ==> <effect>)`
-    -   `#preconditions`: A `CompoundTerm` representing the conditions that must be true for the operation to be applicable. This can be a complex conjunction of statements, including negations and temporal relations.
-    -   `#operation`: A grounded term representing the action to take.
-    -   `effect`: A statement describing the expected outcome of the operation.
--   **Example**: `(<(*, (&, <SELF --> (is_at, door)>, <door --> (is, unlocked)>), <#open_door>)> ==> <door --> (is, open)>)`
-    - This rule states: "If I am at the door AND the door is unlocked, then executing the `open_door` operation will result in the door being open."
-
-The `OperationalRule` is responsible for triggering these actions when the system has a goal that matches the rule's effect.
-
-```typescript
-class OperationalRule implements InferenceRule {
-    readonly name = "NAL_OPERATIONAL";
-    priority = 0.9; // High priority as it leads to action
-
-    canApply(task: Task, belief: Belief): boolean {
-        // This rule applies if the task is a GOAL.
-        // The belief must be a procedural implication.
-        const goal = task.statement;
-        const proceduralRule = belief.statement;
-
-        if (task.type !== 'goal' || proceduralRule.copula !== 'implication') {
-            return false;
-        }
-
-        // The goal must match the effect of the rule.
-        const effect = proceduralRule.terms[1];
-        return goal.key === effect.key;
-    }
-
-    apply(task: Task, belief: Belief, kernel: any /* Kernel */): Task | null {
-        if (!this.canApply(task, belief)) return null;
-
-        const proceduralRule = belief.statement; // (<(*, Pre, Op)> ==> Eff)
-        const compoundAntecedent = proceduralRule.terms[0]; // (*, Pre, Op)
-        const preconditions = compoundAntecedent.terms[0];   // Pre
-        const operation = compoundAntecedent.terms[1];      // Op
-
-        // 1. Check if all preconditions are met in the system's belief base.
-        // This involves querying the memory for high-confidence beliefs matching
-        // each component of the `preconditions` term.
-        const preconditionsMet = kernel.memory.query(preconditions); // Simplified
-
-        if (!preconditionsMet) {
-            // If preconditions are not met, the system can generate a new subgoal
-            // to achieve the preconditions.
-            const newGoalTask = kernel.createTask({
-                type: 'goal',
-                statement: preconditions,
-                // Budget derived from the original goal
-            });
-            return newGoalTask;
-        }
-
-        // 2. If preconditions are met, trigger the grounded operation.
-        // The operation term (e.g., "#open_door") must be registered in the
-        // Symbol Grounding Interface.
-        const handler = kernel.symbolGrounding.getHandler(operation.key);
-        if (handler) {
-            // The handler is executed. It might return immediately or asynchronously.
-            // This connects reasoning to action in the external world.
-            handler();
-            // The system might also create a belief that the action was taken.
-            const actionBelief = kernel.createBelief({
-                statement: `<${operation} --> executed>.`
-            });
-            kernel.memory.addBelief(actionBelief);
-        }
-
-        // The rule itself doesn't return a new task in this case, as its
-        // purpose is to trigger an external effect.
-        return null;
-    }
-}
+```metta
+(= (Abduce $s $p $m)
+   (match &self
+          (, (Inheritance $p $m)  // Premise 1: <P --> M>
+             (Inheritance $s $m)) // Premise 2: <S --> M>
+          (Inheritance $s $p)))   // Conclusion: <S --> P> (as a hypothesis)
 ```
+The truth-value calculation functions for these rules would be implemented as `GroundedAtoms` and called during the rewrite process.
 
-### 5.5. Verification Scenarios
+#### Example: The Operational (Procedural) Rule
+Procedural knowledge is represented as an `Implication` expression that links preconditions and an operation to an effect. The `GoalManager` can trigger these by creating a task that the MeTTa interpreter resolves.
+
+A rule like `(<(*, (&, <SELF --> (is_at, door)>, <door --> (is, unlocked)>), <#open_door>)> ==> <door --> (is, open)>)` is stored in the Atomspace as:
+```metta
+(Implication
+    (And
+        (Inheritance SELF (is_at door))
+        (Inheritance door (is unlocked))
+        (#open_door)
+    )
+    (Inheritance door (is open))
+)
+```
+When the system has a goal `(Goal (Inheritance door (is open)))`, the MeTTa interpreter can match this against the conclusion of the `Implication` and subsequently try to solve for the preconditions. The `#open_door` symbol is a `GroundedAtom` that wraps the actual function to execute the action in the environment.
+
+### 5.3. Verification Scenarios
+
+The verification scenarios are updated to use the MeTTa-style syntax.
 
 **Scenario: Basic Inference about Flyers**
-> Given the system knows the following:
->   | statement                                 | truth          | priority |
->   | "((bird && animal) --> flyer)"            | "<%0.9,0.8%>"  |          |
->   | "(penguin --> (bird && !flyer))"          |                | "#0.95#" |
->   | "(tweety --> bird)"                       |                |          |
+> Given the system knows the following Atoms:
+>   | atom                                | truth          |
+>   | "(Inheritance (And bird animal) flyer)" | "<%0.9,0.8%>"  |
+>   | "(Inheritance penguin (And bird (Not flyer)))" | "<%1.0,0.9%>" |
+>   | "(Inheritance tweety bird)"         | "<%1.0,0.9%>" |
+> And the system has a MeTTa rule for deduction
 > When the system runs for 50 steps
-> Then the system should believe that "<tweety --> flyer>" with an expectation greater than 0.4
+> Then the system should believe that "(Inheritance tweety flyer)" with an expectation greater than 0.4
 
 **Scenario: Cross-Modal Reasoning via Symbol Grounding (CM-01)**
 > Given the system has a symbol "image_sensor_output" grounded to a mock image recognition API
-> And the system knows that "<cat --> mammal>" with high confidence
+> And the system knows that "(Inheritance cat mammal)" with high confidence
 > And the mock API is configured to return the string "cat" when it receives the input "image_123.jpg"
-> When the system is given the procedural task "<(process_image, 'image_123.jpg') ==> <report_content>>"
-> And the symbol "process_image" is grounded to a handler that calls the mock API and injects the result as a new belief
+> When the system is given the procedural task `(Implication (process_image "image_123.jpg") (report_content))`
+> And the symbol "process_image" is grounded to a handler that calls the mock API and injects the result as a new belief, e.g. `(Equivalence "image_123.jpg" cat)`
 > And the system runs for 100 steps
-> Then the system should derive a new belief "<'image_123.jpg' --> mammal>"
+> Then the system should derive a new belief "(Inheritance 'image_123.jpg' mammal)"
 
 ## 6. Memory System
 
 The Memory System is the core of the system's knowledge base, structured as a dynamic concept graph and managed by several competing algorithms to adhere to AIKR. It is implemented as a component-based architecture, delegating specific responsibilities to sub-managers like a `ForgettingManager` and an `ImportanceManager`.
 
--   **Concept Hypergraph**: The memory is structured as a **hypergraph**, a generalization of a graph in which an edge can join any number of vertices.
-    -   **Vertices**: The vertices of the hypergraph are the `Concept` objects, each representing a unique `Term`.
-    -   **Hyperedges**: The hyperedges are the `Statement` objects. A `Statement` represents a relationship that can connect two or more `Concepts`. While a standard inheritance statement like `<bird --> animal>` can be seen as a simple edge, the hypergraph model becomes essential for representing more complex, compositional knowledge. For example, a statement like `<(&&, mammal, has_wings) --> bat>` is a single hyperedge that connects three distinct concepts (`mammal`, `has_wings`, `bat`).
-    -   This structure is "implicit" because the hyperedges (statements/beliefs) are stored within the `Concept` objects they are connected to, rather than in a separate, global edge list. This maintains the principle of locality. Concepts are stored in a central hash map, indexed by their `Term` for O(1) average-time lookup.
+-   **Atomspace as a Metagraph**: The memory is structured as a **metagraph**, a generalization of a hypergraph.
+    -   **Vertices**: The vertices of the metagraph are the `Concept` objects, each representing a unique `Atom`.
+    -   **Hyperedges**: The hyperedges are the `ExpressionAtom` objects. An `ExpressionAtom` represents a relationship that can connect two or more `Concepts`. For example, the expression `(Inheritance (And mammal has_wings) bat)` is a single hyperedge that connects three distinct concepts.
+    -   This structure is "implicit" because the hyperedges (beliefs) are stored within the `Concept` objects they are connected to, rather than in a separate, global edge list. This maintains the principle of locality. Concepts are stored in a central hash map, indexed by their `Atom`'s key for O(1) average-time lookup.
 
-    **Hypergraph Visualization:**
-    The following diagram illustrates how a complex belief is represented as a single hyperedge connecting multiple concepts. The central diamond represents the hyperedge for the statement `(<(&&, mammal, has_wings) --> bat>)`.
+    **Metagraph Visualization:**
+    The following diagram illustrates how a complex belief is represented as a single hyperedge connecting multiple concepts. The central diamond represents the hyperedge for the expression `(Implication (And mammal has_wings) bat)`.
 
     ```mermaid
     graph TD
@@ -1104,8 +1076,8 @@ The Memory System is the core of the system's knowledge base, structured as a dy
 The public API will be designed to be clean, language-agnostic, and powerful. It will be event-driven and asynchronous.
 
 -   **Core Input/Output API**:
-    -   `nal(statement: string, options?: object): Promise<InputResult>`: Asynchronously inputs a raw NAL statement string. This is the low-level entry point.
-    -   `nalq(question: string, options?: object): Promise<Answer>`: Asks a NAL question.
+    -   `add_atom(atom_string: string, options?: object): Promise<InputResult>`: Asynchronously inputs a MeTTa expression string into the Atomspace. This is the low-level entry point.
+    -   `query(query_string: string, options?: object): Promise<Answer>`: Asks a question by providing a MeTTa expression with variables as a query pattern.
     -   `on(event: 'answer' | 'contradiction' | 'goal-achieved', callback: (data: object) => void): void`: Subscribes to system events.
 -   **Control & Configuration API**:
     -   `run(steps?: number): Promise<void>`: Runs the reasoning cycle for a number of steps (or indefinitely if no argument is provided).
@@ -1117,18 +1089,17 @@ The public API will be designed to be clean, language-agnostic, and powerful. It
     -   `explain(statement: string, options?: ExplainOptions): Promise<Explanation>`: Returns a rich, structured explanation for a belief.
 
 ### 7.1. The Semantic API Layer
-To improve usability, the system provides a layer of higher-level, intention-driven API methods that wrap the raw `nal()` input. This "semantic API" allows developers to interact with the system more naturally without needing to construct complex NAL strings manually. Examples include:
--   `inheritance(subject: string, predicate: string)`: Creates a simple inheritance belief.
--   `implication(antecedent: string, consequent: string)`: Creates an implication belief.
--   `temporalSequence(events: string[])`: Creates a series of sequential temporal beliefs.
--   `addGoal(statement: string)`: A dedicated method for adding a new goal to the system.
--   `resolveContradiction(contradictionId: string, strategy: string)`: Manually triggers the resolution of a known contradiction.
+To improve usability, the system provides a layer of higher-level, intention-driven API methods that wrap the raw `add_atom()` and `query()` inputs. This "semantic API" allows developers to interact with the system more naturally without needing to construct MeTTa expression strings manually.
+
+-   `tell(expression: Atom)`: A high-level method to assert a new belief. For example, `tell(Inheritance('bird', 'animal'))` would call `add_atom("(Inheritance bird animal)")`.
+-   `ask(query: Atom)`: A high-level method to ask a question. For example, `ask(Inheritance('bird', new Variable('$what')))` would call `query("(Inheritance bird $what)")`.
+-   `addGoal(goal_expression: Atom)`: A dedicated method for adding a new goal to the system, which wraps the goal in a `Goal` expression, e.g., `addGoal(Is('door', 'open'))` calls `add_atom("(Goal (Is door open))")`.
 
 #### 7.1.1. Rationale for a Dual-Layer API
 
 The API is intentionally designed with two layers to cater to different use cases:
--   **The Core `nal()` API:** Provides a powerful, low-level interface that offers complete control over the NAL statements being input. This is essential for advanced users, automated testing, and integration with other formal systems. It treats the NARS engine as a pure "NAL machine".
--   **The Semantic API:** Offers a more accessible, developer-friendly abstraction. Methods like `addGoal()` or `inheritance()` map directly to common intentions, reducing the cognitive load on developers and making the system easier to integrate into conventional applications without requiring deep expertise in NAL syntax.
+-   **The Core API (`add_atom`, `query`):** Provides a powerful, low-level interface that offers complete control over the MeTTa expressions being input. This is essential for advanced users, automated testing, and integration with other formal systems.
+-   **The Semantic API (`tell`, `ask`, `addGoal`):** Offers a more accessible, developer-friendly abstraction. These methods map directly to common intentions, reducing the cognitive load on developers and making the system easier to integrate into conventional applications without requiring deep expertise in MeTTa syntax.
 
 ### 7.2. Hypothetical Reasoning via Sandboxing
 The API provides a `createSandbox(options)` method for hypothetical or "what-if" reasoning. This method creates a new, isolated instance of the NAR engine. It can be configured to copy all beliefs from the parent instance that exceed a certain confidence threshold. This allows a developer or another cognitive manager to:
@@ -1167,17 +1138,19 @@ For applications in robotics and real-time control systems, the standard request
 
 ## 8. Symbol Grounding and Embodiment
 
-For HyperNARS to be a truly general-purpose AI, its internal symbolic logic must be connected to the external world. The **Symbol Grounding Interface (SGI)** is the component responsible for this connection, enabling the system to perceive, act, and ultimately, embody itself in an environment.
+For the system to be a truly general-purpose AI, its internal symbolic logic must be connected to the external world. This is achieved through **Specialized Spaces** (as described in Section 1.2) and **Grounded Atoms**. This approach replaces a simple API with a more deeply integrated framework for perception, action, and embodiment.
 
-The SGI's primary role is to map specific NAL terms to and from external data streams, sensors, and actuators. This is what allows a term like `<cat>` to be associated with image data from a camera, and an operational term like `<#move_forward>` to be translated into a command sent to a robot's motors.
+The system's primary method for grounding is two-fold:
+1.  **Grounded Atoms**: Specific `Atom`s can be "grounded" to external data or executable code. For example, an `ExpressionAtom` like `(#open_door)` can contain a `GroundedAtom` that wraps the native function to control a robot's actuator. The MeTTa interpreter can execute these grounded atoms directly.
+2.  **Specialized Spaces**: For more complex integrations, a whole subsystem (like a vision system based on a neural network or an external database) can be wrapped in the `Space` API. This allows the MeTTa interpreter to query the external system using the same `match` primitive it uses for its own internal knowledge.
 
 ### 8.1. The Sensorimotor Loop
 
-The SGI facilitates a continuous **sensorimotor loop**, which forms the basis of the system's interaction with its environment:
-1.  **Perception**: External sensors (e.g., cameras, microphones, data feeds) provide data to the SGI. The SGI contains specialized handlers that parse this raw data and translate it into Narsese beliefs. For example, an image recognition handler might see a cat and inject the belief `<(SELF) --> (sees, <cat>)>.` into the system.
-2.  **Reasoning**: The core reasoning engine processes these new perceptual beliefs, integrating them with its existing knowledge, forming new goals, and making decisions.
-3.  **Action**: If the reasoning process leads to the execution of a grounded operational goal (e.g., `goal: <#pet_the_cat>`), the `Goal Manager` triggers the corresponding operation.
-4.  **Actuation**: The SGI receives the operational command. Its actuator handlers translate the symbolic command (`#pet_the_cat`) into a concrete action in the external world (e.g., sending a signal to a robotic arm).
+This integrated approach facilitates a continuous **sensorimotor loop**:
+1.  **Perception**: An external sensor, like a camera, provides data. A specialized **Neural Space** for vision processing, which is a type of Atomspace, processes this data. The reasoning kernel can then query this space, finding an atom like `(Instance "image_123.jpg" Cat)`. This belief is then added to the main Atomspace.
+2.  **Reasoning**: The MeTTa interpreter processes these new perceptual atoms, integrating them with existing knowledge, forming new goals, and making decisions by rewriting the Atomspace.
+3.  **Action**: If the reasoning process leads to the execution of a grounded operational goal (e.g., `(Goal (pet_cat))`), the `Goal Manager` identifies this and prepares to execute the relevant action.
+4.  **Actuation**: The `GoalManager` triggers the execution of a `GroundedAtom` like `(#pet_the_cat)`, which contains the code to send a concrete command to a robotic arm.
 5.  **Feedback**: The consequences of the action are observed by the sensors in the next perception step, closing the loop and providing the basis for reinforcement learning.
 
 ### 8.2. Global Operator Registry
