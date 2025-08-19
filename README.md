@@ -1,9 +1,3 @@
-# HyperNARS New Implementation: DESIGN.md
-
-This document provides the detailed technical blueprint for the new, clean-room reimplementation of the HyperNARS reasoning system.
-
-## Table of Contents
-
 1.  [System Architecture](#system-architecture)
 2.  [Core Data Structures](#core-data-structures)
 3.  [The Reasoning Cycle (Control Unit)](#the-reasoning-cycle-control-unit)
