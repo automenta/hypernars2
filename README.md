@@ -54,18 +54,18 @@ Communication is primarily handled via an **asynchronous event bus**. The Reason
 ### Event-Based Communication
 The Reasoning Kernel will emit events at key points in the reasoning cycle. Cognitive Managers subscribe to these events to perform their functions. Below are the core events and their data payloads:
 
--   **`task-selected`**: Fired when a task is chosen from a concept's task queue for processing.
+-   **`task-selected`**: Fired when a task is chosen from the Atomspace for processing.
     -   **Payload**: `{ task: Task }`
 -   **`belief-updated`**: Fired when a belief's truth-value is updated after revision with another belief.
     -   **Payload**: `{ belief: Belief, oldTruth: TruthValue }`
--   **`belief-added`**: Fired when a new belief is added to a concept.
+-   **`belief-added`**: Fired when a new belief is added to the Atomspace.
     -   **Payload**: `{ belief: Belief }`
 -   **`contradiction-detected`**: Fired by the Memory System when a new task or belief directly contradicts an existing belief.
-    -   **Payload**: `{ statement: Statement, belief1: Belief, belief2: Belief }`
--   **`concept-activated`**: Fired when a concept's activation level changes.
-    -   **Payload**: `{ concept: Concept, activation: number }`
--   **`concept-created`**: Fired when a new concept is created in memory.
-    -   **Payload**: `{ concept: Concept }`
+    -   **Payload**: `{ statement: ExpressionAtom, belief1: Belief, belief2: Belief }`
+-   **`atom-activated`**: Fired when an atom's activation level changes.
+    -   **Payload**: `{ atom: Atom, activation: number }`
+-   **`atom-created`**: Fired when a new atom is created in memory.
+    -   **Payload**: `{ atom: Atom }`
 -   **`system-idle`**: Fired when the reasoning cycle has no tasks to process.
     -   **Payload**: `{ idleDuration: number }` // duration in milliseconds
 
@@ -98,7 +98,7 @@ graph TD
             ControlUnit(Control Unit / Cycle)
             InferenceEngine(Inference Engine / NAL)
         end
-        MemorySystem(Memory System / Concept Graph)
+        MemorySystem(Memory System / Atomspace)
     end
 
     subgraph Grounding [Symbol Grounding Interface]
@@ -128,73 +128,81 @@ For example, a user can configure the system to use a `SimpleMemoryManager` for 
 
 The Cognitive Managers are specialized, pluggable modules that handle complex, cross-cutting concerns. They operate by subscribing to events from the Reasoning Kernel and can inject new tasks back into the system to influence its behavior. Their detailed functionality is described in Section 4.
 
-## 2. Core Data Structures
+### 1.3. Specialized and Distributed Spaces
 
-The core data structures will be designed as **immutable** objects where possible to ensure functional purity, thread safety, and predictable state management.
+A key architectural enhancement inspired by OpenCog Hyperon is the move from a single monolithic memory system to a collection of **Specialized Spaces**. The system can interface with multiple `Space` objects, each optimized for a different type of knowledge or computation. All spaces adhere to a common API, allowing the Reasoning Kernel to interact with them in a uniform way.
+
+This provides a powerful framework for scalability and neural-symbolic integration:
+
+-   **In-Memory Atomspace**: The primary space for high-speed symbolic and logical reasoning, as described in Section 6. It holds the core set of active atoms and their contexts.
+-   **Distributed Atomspace (DAS)**: For massive scalability, the system can connect to a DAS that spans multiple machines. The DAS can hold a vast, long-term knowledge base, with the in-memory Atomspace acting as a high-speed cache. This allows the system to scale to billions or trillions of atoms.
+-   **Neural Spaces**: To achieve deep neural-symbolic integration, external neural networks (like LLMs or image recognition models) can be wrapped in a `Neural Space`. The Reasoning Kernel can then query the neural network as if it were just another knowledge space. For example, a query to a `Neural Space` wrapping an LLM could translate a MeTTa expression into a natural language question and return the answer.
+-   **Grounded Spaces**: For embodied agents, a `Grounded Space` can provide an interface to external environments, such as a physics simulator or a robot's sensorimotor hardware. This allows the system to reason directly about and interact with the state of the external world.
+
+## 2. Core Data Structures: The Atomspace and MeTTa
+
+The system's knowledge is represented in a **Metagraph** called the **Atomspace**, a concept adapted from OpenCog Hyperon. The core data structures are defined by the **MeTTa (Meta-Type-Talk)** language, a flexible language for representing and transforming knowledge. All data structures are designed as **immutable** objects where possible to ensure functional purity and thread safety.
+
+### 2.1. Atoms: The Building Blocks of Knowledge
+
+The fundamental unit in the Atomspace is the `Atom`. Atoms are globally unique, immutable, and serve as the vertices and hyperedges of the knowledge metagraph.
 
 ```typescript
-// A Term is the basic unit of meaning, representing an entity or concept.
-// It can be an atomic identifier (string) or a CompoundTerm.
-type Term = string | CompoundTerm;
+// An Atom is the basic unit of meaning. It can be a Symbol, Variable, GroundedAtom, or an Expression.
+type Atom = SymbolAtom | VariableAtom | GroundedAtom | ExpressionAtom;
 
-// A CompoundTerm is a structure composed of other terms, connected by an operator.
-// This allows for representing complex subjects/predicates, e.g., "all birds except penguins".
-// Example: The term "(&, bird, (-, penguin))" in the statement "<(&, bird, (-, penguin)) --> flyer>"
-interface CompoundTerm {
-    readonly operator: 'conjunction' | 'negation' | 'set' | 'product'; // and other potential operators
-    readonly terms: Term[];
+// A Symbol is a named identifier, like 'cat' or 'inheritance'.
+interface SymbolAtom {
+    readonly type: 'Symbol';
+    readonly name: string;
+}
+
+// A Variable is a placeholder used in patterns and rules, e.g., '$x'.
+interface VariableAtom {
+    readonly type: 'Variable';
+    readonly name: string;
+}
+
+// A GroundedAtom wraps external, non-symbolic data or executable code.
+// This is the core of the Symbol Grounding mechanism.
+interface GroundedAtom {
+    readonly type: 'Grounded';
+    // The data can be any external object, function, or value.
+    readonly data: any;
+    // A string representation for display and hashing.
+    toString(): string;
+}
+
+// An Expression is a sequence of other Atoms, forming a tuple-like structure.
+// This is the primary way to represent complex knowledge, statements, and rules.
+// Example: (inheritance (Symbol 'cat') (Symbol 'animal'))
+interface ExpressionAtom {
+    readonly type: 'Expression';
+    // An ordered array of Atoms.
+    readonly children: Atom[];
     // A unique, canonical string representation used for hashing.
     readonly key: string;
     toString(): string;
 }
+```
 
-// A statement of a relationship between terms. It is the primary type of hyperedge in the Concept Hypergraph.
-interface Statement {
-    // A unique, canonical string representation of the statement, used for hashing.
-    // The key MUST be generated consistently regardless of term order for symmetric statements.
-    readonly key: string;
-    // An array of terms involved in the statement, in a defined order.
-    readonly terms: Term[];
-    // The type of copula connecting the terms.
-    readonly copula: 'inheritance' | 'similarity' | 'implication' | 'equivalence' | 'conjunction' | 'before' | 'after' | 'during' | 'concurrent_with';
-    // Returns a human-readable string, e.g., "(bird --> animal)".
-    toString(): string;
-}
+### 2.2. From NAL Statements to MeTTa Expressions
 
-// Example Implementation of Statement subtypes for clarity.
-class InheritanceStatement implements Statement {
-    readonly key: string;
-    readonly terms: Term[];
-    readonly copula = 'inheritance';
-    constructor(subject: Term, predicate: Term) {
-        this.terms = [subject, predicate];
-        this.key = `(${subject} --> ${predicate})`;
-    }
-    toString = () => this.key;
-}
-class SimilarityStatement implements Statement {
-    readonly key: string;
-    readonly terms: Term[];
-    readonly copula = 'similarity';
-    constructor(term1: Term, term2: Term) {
-        // Sort terms to ensure canonical key for symmetric relation
-        const sortedTerms = [term1, term2].sort();
-        this.terms = sortedTerms;
-        this.key = `(${sortedTerms[0]} <-> ${sortedTerms[1]})`;
-    }
-    toString = () => this.key;
-}
-class ConjunctionStatement implements Statement {
-    readonly key: string;
-    readonly terms: Term[];
-    readonly copula = 'conjunction';
-    // Terms are sorted to ensure canonical representation, e.g., (&&, A, B) is same as (&&, B, A)
-    constructor(terms: Term[]) {
-        this.terms = terms.sort();
-        this.key = `(&&, ${this.terms.join(', ')})`;
-    }
-    toString = () => this.key;
-}
+The traditional NARS `Statement` is represented as an `ExpressionAtom` in MeTTa. The `copula` is typically the first `SymbolAtom` in the expression, and the terms follow. This makes the knowledge representation more uniform and extensible.
+
+**Example Mappings:**
+
+-   A NAL Inheritance statement `<cat --> animal>` becomes a MeTTa expression:
+    `(Inheritance (Symbol "cat") (Symbol "animal"))`
+
+-   A higher-order statement like `(<cat --> animal> ==> <mammal --> animal>)` can be represented by nesting expressions:
+    `(Implication (Expression (Inheritance (Symbol "cat") (Symbol "animal"))) (Expression (Inheritance (Symbol "mammal") (Symbol "animal"))))`
+
+This structure, where expressions can contain other expressions, is what makes the Atomspace a **Metagraph**.
+
+### 2.3. Formal Foundations
+
+The design of MeTTa and the Atomspace is influenced by formal systems like **Type Theory** and **Category Theory**. While MeTTa itself is untyped at its core, it is powerful enough to define complex, dependent, and even probabilistic type systems within itself. This allows for a high degree of formal verification and mathematical rigor, without imposing a rigid type system on the core logic.
 
 
 // Represents the epistemic value of a statement, grounded in evidence.
@@ -348,22 +356,50 @@ class Budget {
     }
 }
 
-// An immutable pairing of a Statement and its epistemic value.
+// An immutable pairing of an ExpressionAtom (a statement) and its epistemic value.
 interface Belief {
-    readonly statement: Statement;
+    readonly statement: ExpressionAtom;
     readonly truth: TruthValue;
     readonly timestamp: number; // Creation time for temporal analysis.
 }
 
-// A work unit for the system, containing a statement to be processed.
+// A work unit for the system, containing an Atom to be processed.
 interface Task {
-    readonly statement: Statement;
+    readonly atom: Atom;
     readonly budget: Budget;
     readonly parentBeliefs: Belief[]; // Provenance/derivation history.
     readonly stamp: Stamp; // Derivational stamp to prevent infinite loops.
 }
 
-### 2.1. The Derivational Stamp
+### 2.4. Atom Context: Bridging Global Knowledge with Local Processing
+
+To balance the global, unified nature of the Atomspace with the NARS principle of localized, attention-driven processing, each `Atom` is associated with an `AtomContext`. This context holds the transient, activation-dependent information related to the atom, such as its local beliefs and tasks.
+
+```typescript
+// The context associated with each unique Atom in the Atomspace.
+// This re-introduces the concept of a "Concept" from NARS as a local
+// processing hub for a given Atom.
+class AtomContext {
+    readonly atom: Atom;
+    // All beliefs directly related to this atom, indexed by statement key.
+    readonly beliefs: Map<string, Belief>;
+    // A queue of tasks to be processed, prioritized by budget.
+    readonly taskQueue: PriorityQueue<Task>;
+    // The current activation level of the atom.
+    activation: number;
+    // Max number of beliefs/tasks to store. Can be dynamic.
+    capacity: number;
+
+    // Methods for adding/selecting beliefs and tasks, and for forgetting,
+    // would be similar to the original Concept class, but operating on Atoms.
+    addBelief(belief: Belief): void { /* ... */ }
+    addTask(task: Task): void { /* ... */ }
+    selectTask(): Task | null { /* ... */ }
+    private forget(): void { /* ... */ }
+}
+```
+
+### 2.5. The Derivational Stamp
 
 To prevent infinite reasoning loops (e.g., A -> B, B -> A) and redundant derivations, each `Task` carries a `Stamp`. The stamp records the IDs of the parent beliefs and tasks that contributed to its creation. Before an inference rule is applied, the system checks if the stamps of the two premises (the task and the belief) overlap. If they do, the inference is blocked, as it would mean re-deriving information from its own lineage.
 
@@ -384,121 +420,6 @@ Two primary implementations of the `Stamp` can be considered:
     -   **Cons**: Probabilistic. It can produce false positives (reporting an overlap where none exists), which would incorrectly block a valid inference path. The rate of false positives can be tuned by adjusting the size of the filter and the number of hash functions, but it can never be zero. It does not preserve the full derivation path.
 
 The choice between these two represents a classic trade-off between logical perfection and resource efficiency, a core theme in NARS. The system could even be configured to use one or the other based on the desired operational profile.
-
-// A node in the memory graph, representing a single Term.
-class Concept {
-    readonly term: Term;
-    // All beliefs directly related to this concept, indexed by statement key.
-    readonly beliefs: Map<string, Belief>;
-    // A queue of tasks to be processed, prioritized by budget.
-    readonly taskQueue: PriorityQueue<Task>;
-    // The current activation level of the concept.
-    activation: number;
-    // Max number of beliefs/tasks to store. Can be dynamic.
-    capacity: number;
-
-    /**
-     * A helper function to determine if two truth values are contradictory.
-     * This is based on a configurable threshold.
-     * @param t1 The first truth value.
-     * @param t2 The second truth value.
-     * @param threshold The minimum confidence for both beliefs to be considered for contradiction.
-     * @returns True if they are contradictory, false otherwise.
-     */
-    isContradictory(t1: TruthValue, t2: TruthValue, threshold: number = 0.51): boolean {
-        // Contradictory if they are on opposite sides of the 0.5 frequency mark
-        // and both have a confidence greater than the threshold.
-        const oppositeFrequency = (t1.f > 0.5 && t2.f < 0.5) || (t1.f < 0.5 && t2.f > 0.5);
-        const sufficientConfidence = t1.c > threshold && t2.c > threshold;
-        return oppositeFrequency && sufficientConfidence;
-    }
-
-    // Adds a new belief, revising if a related one exists.
-    addBelief(belief: Belief): void {
-        const key = belief.statement.key;
-        if (this.beliefs.has(key)) {
-            const existingBelief = this.beliefs.get(key)!;
-            // Check for contradiction before revising
-            if (this.isContradictory(belief.truth, existingBelief.truth)) {
-                kernel.events.emit('contradiction-detected', {
-                    statement: belief.statement,
-                    belief1: existingBelief,
-                    belief2: belief
-                });
-                return; // The Contradiction Manager will handle resolution.
-            }
-            // Revise with existing belief
-            const newTruth = TruthValue.revise(existingBelief.truth, belief.truth);
-            const newBelief = { ...existingBelief, truth: newTruth, timestamp: Date.now() };
-            this.beliefs.set(key, newBelief);
-            kernel.events.emit('belief-updated', { belief: newBelief, oldTruth: existingBelief.truth });
-        } else {
-            // Add new belief, forgetting if at capacity
-            if (this.beliefs.size >= this.capacity) {
-                this.forget(this.beliefs);
-            }
-            this.beliefs.set(key, belief);
-            kernel.events.emit('belief-added', { belief });
-        }
-    }
-
-    // Adds a task to the priority queue.
-    addTask(task: Task): void {
-        if (this.taskQueue.length >= this.capacity) {
-            this.forget(this.taskQueue);
-        }
-        this.taskQueue.enqueue(task, task.budget.priority);
-    }
-
-    // Selects the highest-priority task from the queue.
-    selectTask(): Task | null {
-        return this.taskQueue.dequeue();
-    }
-
-    // Internal forgetting mechanism for a given collection (beliefs or tasks).
-    private forget(collection: Map<string, Belief> | PriorityQueue<Task>): void {
-        let lowestRelevance = Infinity;
-        let keyToForget: string | null = null;
-
-        if (collection instanceof Map) { // Forgetting a belief from the beliefs Map
-            for (const [key, belief] of collection.entries()) {
-                // Relevance for beliefs = confidence * activation
-                const relevance = belief.truth.c * this.activation;
-                if (relevance < lowestRelevance) {
-                    lowestRelevance = relevance;
-                    keyToForget = key;
-                }
-            }
-            if (keyToForget) {
-                collection.delete(keyToForget);
-            }
-        } else { // Forgetting a task from the taskQueue (PriorityQueue)
-            // This is conceptually simple but can be inefficient. A practical implementation
-            // might use a data structure that allows for efficient removal of low-priority items.
-            // For this blueprint, we describe the logic.
-            const tempArray = collection.toArray(); // Assume PriorityQueue can be exported to an array
-            if (tempArray.length === 0) return;
-
-            let itemToForget: Task | null = null;
-            tempArray.forEach(task => {
-                // Relevance for tasks = priority * activation
-                const relevance = task.budget.priority * this.activation;
-                if (relevance < lowestRelevance) {
-                    lowestRelevance = relevance;
-                    itemToForget = task;
-                }
-            });
-
-            // Reconstruct the queue without the forgotten item
-            collection.clear(); // Assume clear() method
-            tempArray.forEach(task => {
-                if (task !== itemToForget) {
-                    collection.enqueue(task, task.budget.priority);
-                }
-            });
-        }
-    }
-}
 ```
 
 ## 3. The Reasoning Cycle: A Dual-Process Control Unit
@@ -523,30 +444,32 @@ function reflexiveReasoningCycle(kernel) {
     // HOOK: beforeCycle (read-only context)
     kernel.hooks.run('beforeCycle', cycleContext);
 
-    // 1. Select a Concept and a Task from memory.
-    let { concept, task } = kernel.memory.selectTaskFromOverallExperience();
-    if (!task || !concept) {
+    // 1. Select an Atom's Context and then a Task from its local queue.
+    let { atomContext, task } = kernel.memory.selectTaskFromOverallExperience();
+    if (!task || !atomContext) {
         kernel.events.emit('system-idle', { idleDuration: 100 });
         kernel.wait(100); // Wait if no task is available.
         continue;
     }
     cycleContext.task = task;
-    cycleContext.concept = concept;
+    cycleContext.atomContext = atomContext;
     kernel.events.emit('task-selected', { task });
 
-    // 2. Select a Belief from the chosen Concept to interact with the Task.
-    let belief = concept.selectBeliefForTask(task);
+    // 2. Select a Belief from the chosen Atom's context to interact with the Task.
+    let belief = atomContext.selectBeliefForTask(task);
     if (!belief) continue; // No relevant belief found.
     cycleContext.belief = belief;
 
-    // 3. Perform Local Inference.
-    let derivedTasks = kernel.inferenceEngine.applyAllRules(cycleContext.task, cycleContext.belief);
+    // 3. Perform Local Inference using the MeTTa interpreter.
+    let derivedTasks = kernel.inferenceEngine.match(cycleContext.task, cycleContext.belief);
     cycleContext.derivedTasks = derivedTasks;
 
     // 4. Process and Store Derived Tasks.
     for (let derivedTask of cycleContext.derivedTasks) {
-      let targetConcept = kernel.memory.getOrCreateConcept(derivedTask.statement.terms[0]);
-      targetConcept.addTask(derivedTask);
+      // Find or create the context for the target atom and add the task.
+      let targetAtom = derivedTask.atom.children[0]; // Simplified assumption
+      let targetContext = kernel.memory.getOrCreateContext(targetAtom);
+      targetContext.addTask(derivedTask);
     }
 
     // 5. System-level cleanup and updates.
@@ -588,49 +511,49 @@ The functions `selectTaskFromOverallExperience()` and `selectBeliefForTask()` ar
 
 **`selectTaskFromOverallExperience()`**
 
-This function implements a two-level selection process to balance global priorities with local context.
+This function implements the NARS-style two-level selection process to balance global priorities with local context.
 
-1.  **Concept Selection**: First, a concept is chosen from the entire memory. This is not a uniform random selection. Instead, it's a weighted "roulette-wheel" selection where each concept's chance of being chosen is proportional to its activation level. This ensures that more active, currently relevant concepts are processed more frequently.
-2.  **Task Selection**: Once a concept is selected, the highest-priority task is dequeued from its `taskQueue`.
+1.  **Atom Selection**: First, an `AtomContext` is chosen from the entire memory. This is not a uniform random selection. Instead, it's a weighted "roulette-wheel" selection where each context's chance of being chosen is proportional to its `activation` level. This ensures that more active, currently relevant atoms are processed more frequently.
+2.  **Task Selection**: Once a context is selected, the highest-priority `Task` is dequeued from its local `taskQueue`.
 
 ```pseudocode
 function selectTaskFromOverallExperience(memory) {
-    // 1. Select a concept using a roulette-wheel method based on activation.
-    let totalActivation = memory.concepts.sum(c => c.activation);
+    // 1. Select an AtomContext using a roulette-wheel method based on activation.
+    let totalActivation = memory.contexts.sum(c => c.activation);
     let randomPoint = Math.random() * totalActivation;
     let currentSum = 0;
-    let selectedConcept = null;
-    for (let concept of memory.concepts) {
-        currentSum += concept.activation;
+    let selectedContext = null;
+    for (let context of memory.contexts) {
+        currentSum += context.activation;
         if (currentSum >= randomPoint) {
-            selectedConcept = concept;
+            selectedContext = context;
             break;
         }
     }
 
-    if (!selectedConcept) return { concept: null, task: null };
+    if (!selectedContext) return { atomContext: null, task: null };
 
-    // 2. Select the best task from that concept's queue.
-    let task = selectedConcept.selectTask();
-    return { concept: selectedConcept, task: task };
+    // 2. Select the best task from that context's local queue.
+    let task = selectedContext.selectTask();
+    return { atomContext: selectedContext, task: task };
 }
 ```
 
 **`selectBeliefForTask(task)`**
 
-Given a task, the concept must select a relevant belief to interact with. Relevance is key to fostering meaningful inferences.
+Given a task, the `AtomContext` must select a relevant belief from its local belief cache to interact with. Relevance is key to fostering meaningful inferences.
 
-1.  **Candidate Selection**: Identify all beliefs in the concept that are "structurally relevant" to the task. This means they share at least one common term.
-2.  **Relevance Scoring**: Score each candidate belief. A simple relevance score can be `belief.truth.confidence * structural_similarity_score`. A more advanced score could consider recency or other factors.
+1.  **Candidate Selection**: Identify all beliefs in the `atomContext.beliefs` that are "structurally relevant" to the task's atom. This means they share at least one common `SymbolAtom`.
+2.  **Relevance Scoring**: Score each candidate belief. A simple relevance score can be `belief.truth.confidence * structural_similarity_score`.
 3.  **Best Belief Selection**: Select the belief with the highest relevance score.
 
 ```pseudocode
-function selectBeliefForTask(concept, task) {
+function selectBeliefForTask(atomContext, task) {
     let bestBelief = null;
     let maxRelevance = -1;
 
-    for (let belief of concept.beliefs.values()) {
-        if (hasCommonTerms(task.statement, belief.statement)) {
+    for (let belief of atomContext.beliefs.values()) {
+        if (hasCommonSymbols(task.atom, belief.statement)) {
             // Calculate relevance (simple version: use confidence)
             let relevance = belief.truth.confidence;
             if (relevance > maxRelevance) {
@@ -862,159 +785,80 @@ Facilitates communication and coordination between multiple independent HyperNAR
     > And Agent_B receives the query and sends its belief `<B --> C>` back to Agent_A
     > Then Agent_A should receive the belief and be able to derive `<A --> C>`, achieving its goal.
 
-## 5. Inference Engine
+## 5. Inference Engine: The MeTTa Interpreter
 
-The Inference Engine is a stateless, extensible component responsible for applying Non-Axiomatic Logic (NAL) rules to derive new knowledge from existing beliefs.
+The Inference Engine is a **MeTTa (Meta-Type-Talk) Interpreter**. This represents a fundamental shift from a system with a fixed set of inference rules to a system where **reasoning is a programmable and self-modifiable process**. Inference is achieved by executing `ExpressionAtom`s found within the Atomspace itself. This allows the system's reasoning capabilities to evolve and be dynamically extended at runtime.
 
-### 5.1. Core Principles
--   **Extensible Rule System**: The engine uses a central registry, `Map<string, InferenceRule>`, where new rules can be added at runtime via `kernel.inferenceEngine.registerRule(rule)`. This allows for the system's reasoning capabilities to be expanded or modified.
--   **Self-Optimizing Rule Application**: The engine employs a sophisticated, metrics-driven mechanism to manage resource allocation under AIKR. Instead of a static utility, each rule's effectiveness is dynamically tracked and used to guide the reasoning process.
-    -   **Rule Priority**: Each rule has a dynamic `priority` score. This score is a function of the rule's historical `successRate` (how often it produces useful results) and its `applicability` in the current context.
-    -   **Performance-Based Adaptation**: The `CognitiveExecutive` periodically analyzes performance statistics (e.g., `successes / attempts`, `computationalCost`) provided by the `LearningEngine` for each rule. It then updates each rule's `successRate` and overall `priority`. This creates a feedback loop where effective rules are prioritized over time.
-    -   **Weighted Probabilistic Selection**: When applying rules, the engine does not deterministically pick the highest-priority rule. Instead, it performs a weighted random selection (a "roulette-wheel" selection) based on the priorities of all applicable rules. This balances exploiting known-good rules with exploring potentially useful but less-proven ones.
-    -   **Top-Down Modulation**: The `CognitiveExecutive` can provide a `dynamicFactor` to temporarily boost or suppress the priority of certain rules based on the system's current high-level goals or reasoning focus (e.g., prioritizing abductive rules when in a "hypothesis generation" mode).
+### 5.1. Core Principle: Inference as Program Execution
 
-### 5.2. Baseline Inference Rule Set
-The system is bootstrapped with a comprehensive set of NAL rules:
--   **InheritanceRule**: Handles deduction, abduction, and induction for `-->` statements.
--   **SimilarityRule**: Handles analogy for `<->` statements.
--   **ImplicationRule**: Handles deduction and abduction for `==>` statements (higher-order).
--   **EquivalenceRule**: Handles logic for `<=>` statements (higher-order).
--   **ConjunctionRule**: Handles introduction and elimination of conjunctions (`&&`).
--   **ConsequentConjunctionRule**: A specialized rule for implications with conjunctive consequents.
--   **ForwardImplicationRule**: A specialized rule for forward-chaining implication.
--   **TemporalRelationRule**: Handles transitivity for temporal statements.
--   **MetaLearningRule**: A rule for learning about the system's own operations.
+The core of the MeTTa interpreter is the `match` operation. This is a powerful pattern-matching function that searches the Atomspace for expressions that unify with a given query pattern. The results of a match can then be used to construct and execute new expressions.
 
-### 5.3. Inference Rule Categories
-The engine will support a comprehensive set of NAL rules, including but not limited to:
+-   **From Rules to Executable Expressions**: Instead of a static `InferenceRule` registry, the system's logical rules are stored as `ExpressionAtom`s in the Atomspace. These expressions define how to transform some atoms into others.
+-   **Self-Modification**: Because the rules are just another form of knowledge in the Atomspace, the system can reason about, learn, and create new inference rules. The `Learning Engine` can add new `(= ...)` expressions to the Atomspace, effectively teaching the system new ways to reason.
+-   **Unification**: The pattern matcher uses unification, allowing variables in both the query and the stored expressions. This enables flexible, bi-directional reasoning (e.g., both forward and backward chaining) from a single rule definition.
 
--   **Syllogistic & Conditional Rules (NAL Levels 1-5)**: Deduction, Abduction, Induction, Exemplification, Comparison, Analogy.
--   **Compositional/Structural Rules (NAL Level 6)**: Intersection, Union.
--   **Temporal Rules (NAL Level 7)**: Primarily handled by the `TemporalReasoner` manager and the `TemporalRelationRule`.
--   **Procedural & Operational Rules (NAL Levels 8-9)**: For learning and executing skills. These rules connect declarative knowledge to actions.
--   **Logical Equivalences**: The engine can be configured to automatically convert certain statement forms into logically equivalent ones that are more conducive to reasoning. A key example is the use of **Virtual Disjunctions**, where a disjunctive statement like `A or B` is internally represented as its negated conjunctive equivalent: `not(not(A) and not(B))`. This can help in preserving temporal and evidential information that might otherwise be lost in a simple disjunctive representation.
+### 5.2. Representing NAL Rules in MeTTa
 
-### 5.4. Inference Rule Interface & Example
-
-All rules must implement the `InferenceRule` interface.
-
-```typescript
-interface InferenceRule {
-  // A unique name for the rule (e.g., "NAL_DEDUCTION_FORWARD")
-  readonly name: string;
-  // The dynamic priority of the rule, updated by the Cognitive Executive.
-  priority: number;
-  // The historical success rate of the rule.
-  successRate: number;
-  // A function that checks if the rule is applicable in the current context.
-  condition(event: object): boolean;
-
-  // Checks if the rule can be applied to the given premises.
-  canApply(task: Task, belief: Belief): boolean;
-
-  // Applies the rule and returns a new derived Task, or null if not applicable.
-  apply(task: Task, belief: Belief, kernel: any /* Kernel */): Task | null;
-}
-```
+Standard Non-Axiomatic Logic (NAL) rules are expressed as MeTTa programs. The equality operator `(= ...)` is used to define rewrite rules. When the interpreter evaluates an expression, it searches for a matching equality expression to reduce it.
 
 #### Example: The Deduction Rule
-(Content unchanged)
+
+The NAL deduction rule (`(<S --> M>., <M --> P>.) |- <S --> P>`) is implemented as a MeTTa expression that matches two `Inheritance` beliefs and generates a third.
+
+```metta
+// This rule defines forward-chaining deduction.
+(= (deduction $s $m $p)
+   (match &self
+          (, (Inheritance $s $m)  // Find a belief "(S --> M)"
+             (Inheritance $m $p)) // Find a belief "(M --> P)"
+          (Inheritance $s $p)))   // Conclude "(S --> P)"
+
+// To trigger this rule, another part of the system would execute:
+// !(deduction (Symbol "tweety") (Symbol "bird") (Symbol "animal"))
+```
+The interpreter would search for beliefs like `(Inheritance tweety bird)` and `(Inheritance bird animal)` and, if found, would generate the new expression `(Inheritance tweety animal)`. The truth value of this new expression would be calculated using the NAL deduction formula.
 
 #### Example: The Abduction Rule
-(Content unchanged)
 
-#### Example: The Induction Rule
-(Content unchanged)
+Abduction (`(<P --> M>., <S --> M>.) |- <S --> P>`) is represented similarly, demonstrating the flexibility of pattern matching.
 
-#### Example: The Operational Rule
-Procedural knowledge is represented by implication statements where the antecedent describes preconditions and an operation, and the consequent describes the expected effect. Operations are special terms, often marked with a `#` prefix, that must be grounded to executable functions in the external environment via the Symbol Grounding Interface.
-
--   **Logical Form**: `(<(*, <#preconditions>, <#operation>)> ==> <effect>)`
-    -   `#preconditions`: A `CompoundTerm` representing the conditions that must be true for the operation to be applicable. This can be a complex conjunction of statements, including negations and temporal relations.
-    -   `#operation`: A grounded term representing the action to take.
-    -   `effect`: A statement describing the expected outcome of the operation.
--   **Example**: `(<(*, (&, <SELF --> (is_at, door)>, <door --> (is, unlocked)>), <#open_door>)> ==> <door --> (is, open)>)`
-    - This rule states: "If I am at the door AND the door is unlocked, then executing the `open_door` operation will result in the door being open."
-
-The `OperationalRule` is responsible for triggering these actions when the system has a goal that matches the rule's effect.
-
-```typescript
-class OperationalRule implements InferenceRule {
-    readonly name = "NAL_OPERATIONAL";
-    priority = 0.9; // High priority as it leads to action
-
-    canApply(task: Task, belief: Belief): boolean {
-        // This rule applies if the task is a GOAL.
-        // The belief must be a procedural implication.
-        const goal = task.statement;
-        const proceduralRule = belief.statement;
-
-        if (task.type !== 'goal' || proceduralRule.copula !== 'implication') {
-            return false;
-        }
-
-        // The goal must match the effect of the rule.
-        const effect = proceduralRule.terms[1];
-        return goal.key === effect.key;
-    }
-
-    apply(task: Task, belief: Belief, kernel: any /* Kernel */): Task | null {
-        if (!this.canApply(task, belief)) return null;
-
-        const proceduralRule = belief.statement; // (<(*, Pre, Op)> ==> Eff)
-        const compoundAntecedent = proceduralRule.terms[0]; // (*, Pre, Op)
-        const preconditions = compoundAntecedent.terms[0];   // Pre
-        const operation = compoundAntecedent.terms[1];      // Op
-
-        // 1. Check if all preconditions are met in the system's belief base.
-        // This involves querying the memory for high-confidence beliefs matching
-        // each component of the `preconditions` term.
-        const preconditionsMet = kernel.memory.query(preconditions); // Simplified
-
-        if (!preconditionsMet) {
-            // If preconditions are not met, the system can generate a new subgoal
-            // to achieve the preconditions.
-            const newGoalTask = kernel.createTask({
-                type: 'goal',
-                statement: preconditions,
-                // Budget derived from the original goal
-            });
-            return newGoalTask;
-        }
-
-        // 2. If preconditions are met, trigger the grounded operation.
-        // The operation term (e.g., "#open_door") must be registered in the
-        // Symbol Grounding Interface.
-        const handler = kernel.symbolGrounding.getHandler(operation.key);
-        if (handler) {
-            // The handler is executed. It might return immediately or asynchronously.
-            // This connects reasoning to action in the external world.
-            handler();
-            // The system might also create a belief that the action was taken.
-            const actionBelief = kernel.createBelief({
-                statement: `<${operation} --> executed>.`
-            });
-            kernel.memory.addBelief(actionBelief);
-        }
-
-        // The rule itself doesn't return a new task in this case, as its
-        // purpose is to trigger an external effect.
-        return null;
-    }
-}
+```metta
+// Abduction: Inferring a possible cause.
+(= (abduction $s $p $m)
+   (match &self
+          (, (Inheritance $p $m)  // Given a general rule "(P --> M)"
+             (Inheritance $s $m)) // and a specific observation "(S --> M)"
+          (Inheritance $s $p)))   // Hypothesize a specific case "(S --> P)"
 ```
 
-### 5.5. Verification Scenarios
+#### Example: The Operational (Action) Rule
 
-**Scenario: Basic Inference about Flyers**
-> Given the system knows the following:
->   | statement                                 | truth          | priority |
->   | "((bird && animal) --> flyer)"            | "<%0.9,0.8%>"  |          |
->   | "(penguin --> (bird && !flyer))"          |                | "#0.95#" |
->   | "(tweety --> bird)"                       |                |          |
-> When the system runs for 50 steps
-> Then the system should believe that "<tweety --> flyer>" with an expectation greater than 0.4
+Procedural knowledge is defined by linking a set of preconditions and an operation to an expected effect. The MeTTa interpreter can use these rules to form plans.
+
+```metta
+// Rule: If you are at a door and it's unlocked, opening it makes it open.
+(= (achieve-goal (is-open door))
+   (match &self
+          (, (is-at SELF door)
+             (is-unlocked door))
+          (execute #open_door))) // GroundedAtom for the action
+
+// The `execute` function would be a GroundedAtom that triggers the
+// corresponding handler in the Symbol Grounding Interface.
+```
+This approach makes the entire reasoning process transparent and extensible. New, complex reasoning strategies can be added to the system simply by adding new MeTTa expressions to the Atomspace.
+
+### 5.3. Verification Scenarios
+
+**Scenario: Basic Inference via MeTTa Execution**
+> Given the Atomspace contains the following beliefs:
+>   | expression                                | truth          |
+>   | `(Inheritance (Symbol "tweety") (Symbol "bird"))` | "<%0.9,0.9%>"  |
+>   | `(Inheritance (Symbol "bird") (Symbol "flyer"))`  | "<%0.9,0.9%>"  |
+> And the Atomspace contains the MeTTa deduction rule:
+> `(= (deduce $s $m $p) (match &self (, (Inheritance $s $m) (Inheritance $m $p)) (Inheritance $s $p)))`
+> When the system executes the task `(deduce (Symbol "tweety") (Symbol "bird") (Symbol "flyer"))`
+> Then a new belief `(Inheritance (Symbol "tweety") (Symbol "flyer"))` should be added to the Atomspace.
 
 **Scenario: Cross-Modal Reasoning via Symbol Grounding (CM-01)**
 > Given the system has a symbol "image_sensor_output" grounded to a mock image recognition API
@@ -1025,59 +869,53 @@ class OperationalRule implements InferenceRule {
 > And the system runs for 100 steps
 > Then the system should derive a new belief "<'image_123.jpg' --> mammal>"
 
-## 6. Memory System
+## 6. Memory System: The Atomspace
 
-The Memory System is the core of the system's knowledge base, structured as a dynamic concept graph and managed by several competing algorithms to adhere to AIKR. It is implemented as a component-based architecture, delegating specific responsibilities to sub-managers like a `ForgettingManager` and an `ImportanceManager`.
+The Memory System is the core of the system's knowledge base. It is structured as a dynamic **Atomspace**, a distributed knowledge **Metagraph** inspired by OpenCog Hyperon. It is managed by several competing algorithms to adhere to AIKR and is implemented as a component-based architecture, delegating responsibilities to sub-managers like a `ForgettingManager` and an `ImportanceManager`.
 
--   **Concept Hypergraph**: The memory is structured as a **hypergraph**, a generalization of a graph in which an edge can join any number of vertices.
-    -   **Vertices**: The vertices of the hypergraph are the `Concept` objects, each representing a unique `Term`.
-    -   **Hyperedges**: The hyperedges are the `Statement` objects. A `Statement` represents a relationship that can connect two or more `Concepts`. While a standard inheritance statement like `<bird --> animal>` can be seen as a simple edge, the hypergraph model becomes essential for representing more complex, compositional knowledge. For example, a statement like `<(&&, mammal, has_wings) --> bat>` is a single hyperedge that connects three distinct concepts (`mammal`, `has_wings`, `bat`).
-    -   This structure is "implicit" because the hyperedges (statements/beliefs) are stored within the `Concept` objects they are connected to, rather than in a separate, global edge list. This maintains the principle of locality. Concepts are stored in a central hash map, indexed by their `Term` for O(1) average-time lookup.
+-   **The Atomspace Metagraph**: The memory is a **metagraph**, where `Atom`s serve as both the vertices and the hyperedges. This is a crucial distinction from a simple graph or hypergraph, as it allows `Expression`s (hyperedges) to be pointed to by other `Expression`s, enabling higher-order reasoning and a fully self-referential knowledge base.
+    -   **Vertices and Hyperedges**: All knowledge, from simple `Symbol`s to complex `Expression`s, are represented as `Atom`s in the Atomspace. An `ExpressionAtom` like `(Inheritance cat animal)` is a hyperedge connecting the `SymbolAtom`s `Inheritance`, `cat`, and `animal`.
+    -   **Higher-Order Representation**: A more complex expression, like `(Implication (Inheritance cat animal) (Similarity cat dog))`, is a higher-order hyperedge that connects one `ExpressionAtom` to another. This allows the system to reason about its own knowledge.
+    -   All Atoms are stored in a central, indexed repository for efficient retrieval. The structure is "implicit" in that the connections are defined by the `Expression`s themselves, rather than a separate edge list.
 
-    **Hypergraph Visualization:**
-    The following diagram illustrates how a complex belief is represented as a single hyperedge connecting multiple concepts. The central diamond represents the hyperedge for the statement `(<(&&, mammal, has_wings) --> bat>)`.
+    **Metagraph Visualization:**
+    The following diagram illustrates how a higher-order belief is represented as a single hyperedge (`Implication`) connecting two other hyperedges (`Inheritance` and `Similarity`).
 
     ```mermaid
     graph TD
-        subgraph "Concept Hypergraph Example"
-            A("Concept: mammal")
-            B("Concept: has_wings")
-            C("Concept: bat")
+        subgraph "Atomspace Metagraph Example"
+            Implication("Implication")
+            Inheritance("Inheritance")
+            Similarity("Similarity")
+            cat("cat")
+            animal("animal")
+            dog("dog")
 
-            Hyperedge{ }
-
-            A -- "antecedent" --> Hyperedge
-            B -- "antecedent" --> Hyperedge
-            Hyperedge -- "consequent" --> C
-
-            subgraph Legend
-                direction LR
-                L1("Concept")
-                L2{ }
-                L1---L2("Hyperedge (Statement)")
-            end
+            Implication -- term --> Inheritance
+            Implication -- term --> Similarity
+            Inheritance -- term --> cat
+            Inheritance -- term --> animal
+            Similarity -- term --> cat
+            Similarity -- term --> dog
         end
-
-        style Hyperedge fill:#ccf,stroke:#333,stroke-width:2px,rx:5px,ry:5px
-        style L2 fill:#ccf,stroke:#333,stroke-width:2px,rx:5px,ry:5px
     ```
 
     #### Verification Scenarios
-    **Scenario: Hypergraph Stress Test for Performance and Stability (HG-01)**
-    > Given the system is configured with a `MAX_CONCEPTS` limit of 2,000,000
-    > And the system is populated with 1,000,000 random but structurally valid beliefs
+    **Scenario: Metagraph Stress Test for Performance and Stability (HG-01)**
+    > Given the system is configured with a `MAX_ATOMS` limit of 2,000,000
+    > And the Atomspace is populated with 1,000,000 random but structurally valid Atoms
     > When the system runs for 10,000 reasoning steps
     > Then the system should not crash and should remain responsive to API calls
-    > And when a question `nalq("<concept_X --> ?what>.")` is asked about a highly connected concept
+    > And when a query `(match &self (Inheritance <concept_X> $what) $what)` is executed on a highly connected concept
     > Then the system should return an answer within 1 second
 
--   **Activation Spreading**: This is the mechanism for managing the system's focus of attention. When a concept is accessed, a portion of its activation energy is spread to related concepts.
-    -   `Activation_new(C) = Activation_old(C) * (1 - decay_rate) + Sum(Activation_in(S, C))`
-    -   `Activation_in(S, C)` is the activation transferred from a source concept `S` to target `C`. This is calculated as: `Activation_in = task.budget.priority * belief.truth.confidence * relevance_factor`, where `relevance_factor` can be a constant or a function of the type of connection. The activation is then distributed among all connected concepts.
-    -   `decay_rate` is a system parameter that determines how quickly concepts lose activation over time.
+-   **Activation Spreading**: This is the mechanism for managing the system's focus of attention. When an Atom is accessed, a portion of its activation energy is spread to related Atoms.
+    -   `Activation_new(A) = Activation_old(A) * (1 - decay_rate) + Sum(Activation_in(S, A))`
+    -   `Activation_in(S, A)` is the activation transferred from a source Atom `S` to target `A`. This is calculated as: `Activation_in = task.budget.priority * belief.truth.confidence * relevance_factor`, where `relevance_factor` can be a constant or a function of the type of connection. The activation is then distributed among all connected Atoms.
+    -   `decay_rate` is a system parameter that determines how quickly Atoms lose activation over time.
 
--   **Indexing Strategies for Efficient Retrieval**: To quickly find relevant information within the vast concept graph, the Memory System employs several specialized index data structures. These indexes are crucial for performance, allowing the system to avoid slow, linear scans of its knowledge base.
-    -   **Term-based Index (`TrieIndex`)**: A Trie (prefix tree) is used to index all concept terms. This allows for highly efficient prefix-based searches, which are essential for features like autocompleting queries in a user interface or finding all terms within a certain category (e.g., searching for `animal:*`). Each node in the Trie can store a set of `Concept` IDs, enabling rapid retrieval of all terms matching a given prefix.
+-   **Indexing Strategies for Efficient Retrieval**: To quickly find relevant information within the vast Atomspace, the Memory System employs several specialized index data structures. These indexes are crucial for performance, allowing the system to avoid slow, linear scans of its knowledge base.
+    -   **Atom-based Index (`TrieIndex`)**: A Trie (prefix tree) is used to index all `SymbolAtom`s. This allows for highly efficient prefix-based searches, which are essential for features like autocompleting queries or finding all atoms within a certain category (e.g., searching for `animal:*`). Each node in the Trie can store a set of `Atom` IDs, enabling rapid retrieval of all atoms matching a given prefix.
     -   **Structural Index (`StructuralIndex`)**: This index groups statements (hyperedges) based on their structure. It uses a key composed of the statement's copula and its arity (number of terms), e.g., `"inheritance:2"` or `"conjunction:3"`. This enables the inference engine to quickly retrieve all statements of a particular form, which is fundamental for pattern-matching in inference rules. For example, when looking for premises for a deduction, it can directly query for all `inheritance:2` statements.
     -   **Temporal Index (`TemporalIndex`)**: To reason about events in time, the system requires an index that can efficiently query for events that overlap with a given time interval. While the current implementation uses a simple array for this purpose (which is inefficient), the design specifies that a more advanced data structure, such as an **Interval Tree**, should be used. This would allow for `O(log n + k)` query time (where `n` is the number of events and `k` is the number of reported results), which is essential for a responsive `TemporalReasoner`.
 
@@ -1167,24 +1005,25 @@ For applications in robotics and real-time control systems, the standard request
 
 ## 8. Symbol Grounding and Embodiment
 
-For HyperNARS to be a truly general-purpose AI, its internal symbolic logic must be connected to the external world. The **Symbol Grounding Interface (SGI)** is the component responsible for this connection, enabling the system to perceive, act, and ultimately, embody itself in an environment.
+For the system to be a truly general-purpose AI, its internal symbolic logic must be connected to the external world. The **Symbol Grounding** mechanism is responsible for this connection, enabling the system to perceive, act, and ultimately, embody itself in an environment.
 
-The SGI's primary role is to map specific NAL terms to and from external data streams, sensors, and actuators. This is what allows a term like `<cat>` to be associated with image data from a camera, and an operational term like `<#move_forward>` to be translated into a command sent to a robot's motors.
+This is achieved through **Grounded Atoms**. As defined in Section 2, a `GroundedAtom` is a special type of `Atom` that wraps a piece of external data or executable host-language code (e.g., a Python function or a value from a sensor).
 
-### 8.1. The Sensorimotor Loop
+### 8.1. Grounded Atoms as the Bridge to Reality
 
-The SGI facilitates a continuous **sensorimotor loop**, which forms the basis of the system's interaction with its environment:
-1.  **Perception**: External sensors (e.g., cameras, microphones, data feeds) provide data to the SGI. The SGI contains specialized handlers that parse this raw data and translate it into Narsese beliefs. For example, an image recognition handler might see a cat and inject the belief `<(SELF) --> (sees, <cat>)>.` into the system.
-2.  **Reasoning**: The core reasoning engine processes these new perceptual beliefs, integrating them with its existing knowledge, forming new goals, and making decisions.
-3.  **Action**: If the reasoning process leads to the execution of a grounded operational goal (e.g., `goal: <#pet_the_cat>`), the `Goal Manager` triggers the corresponding operation.
-4.  **Actuation**: The SGI receives the operational command. Its actuator handlers translate the symbolic command (`#pet_the_cat`) into a concrete action in the external world (e.g., sending a signal to a robotic arm).
+-   **Perception**: A sensor (e.g., a camera) can be wrapped in a `GroundedAtom`. When the system "executes" this atom, it calls the underlying sensor function, which might return a `GroundedAtom` containing the image data. Another grounded "image recognition" atom could then process this data and insert a symbolic belief like `(Sees SELF (Symbol "cat"))` into the Atomspace.
+-   **Action**: An actuator (e.g., a robot's motor) is also wrapped in a `GroundedAtom`. When the MeTTa interpreter executes an expression containing this atom, such as `(execute #move_forward)`, the `#move_forward` `GroundedAtom`'s underlying function is called, causing the robot to move.
+
+### 8.2. The Sensorimotor Loop
+
+This mechanism facilitates a continuous **sensorimotor loop**:
+1.  **Perception**: `GroundedAtom`s representing sensors inject new beliefs into the Atomspace.
+2.  **Reasoning**: The MeTTa interpreter processes these new perceptual beliefs, integrating them with existing knowledge, forming new goals, and making decisions.
+3.  **Action**: If the reasoning process leads to the execution of a grounded operational goal (e.g., `(achieve-goal (is-petting cat))`), the system may execute an expression containing an action-oriented `GroundedAtom` like `#pet_the_cat`.
+4.  **Actuation**: The `GroundedAtom`'s code is executed, producing an effect in the external world.
 5.  **Feedback**: The consequences of the action are observed by the sensors in the next perception step, closing the loop and providing the basis for reinforcement learning.
 
-### 8.2. Global Operator Registry
-
-To manage the system's capabilities, the SGI maintains a **Global Operator Registry**. This is a central map of all known executable operations (terms prefixed with `#`).
--   **Registration**: When the system initializes, or when a new capability is added, its corresponding operator is registered with the SGI. This includes the operator's NAL term and a handler function that can execute it.
--   **Discovery**: The registry allows other parts of the system, particularly the `Goal Manager` and `Learning Engine`, to know the full set of actions the system is capable of performing. This is crucial for planning and for learning new procedural rules.
+The concept of a "Global Operator Registry" is no longer needed, as the set of all possible actions is simply the set of all executable `GroundedAtom`s currently defined in the Atomspace. This makes the system more dynamic, as new capabilities can be added simply by adding new `GroundedAtom`s to the knowledge base.
 
 ### 8.3. Natural Language Processing (NLP) Interface
 
@@ -1193,7 +1032,30 @@ A critical application of symbol grounding is understanding and generating human
 -   **Narsese-to-English**: This component takes Narsese beliefs, questions, or goals and generates human-readable natural language. For example, if the system wants to ask a question represented as `nalq("<Tweety --> ?what>.")`, this interface would translate it into the English sentence, "What is Tweety?".
 -   **Grammar Induction (Advanced Capability)**: As a long-term development goal, the NLP interface should be capable of *learning* the grammar of a language through exposure, rather than relying solely on pre-programmed parsers. This would be a function of the `Learning Engine` interacting with the NLP interface, identifying patterns in linguistic input over time.
 
-## 9. Extension Points
+## 9. Integration with Large Language Models (LLMs)
+
+The architecture is designed for deep, synergistic integration with Large Language Models (LLMs). Rather than treating LLMs as standalone oracles, the system integrates them as a specialized **Neural Space**. This allows the system to leverage the powerful pattern-matching and generative capabilities of LLMs for perception and communication, while using the core symbolic Atomspace for rigorous reasoning, memory, and maintaining a consistent world model.
+
+### 9.1. LLMs as a Neural Space
+
+An LLM can be wrapped in a `Neural Space` object, making it accessible through the same standard `Space` API as the main Atomspace. This enables a powerful hybrid reasoning process:
+
+1.  **Symbolic Control of LLMs**: The MeTTa interpreter can formulate a query as a symbolic `ExpressionAtom`.
+2.  **Query Translation**: The `Neural Space` handler translates this symbolic query into a natural language prompt suitable for the LLM.
+3.  **LLM Processing**: The prompt is sent to the LLM, which generates a response.
+4.  **Semantic Grounding**: The `Neural Space` handler parses the LLM's text response, translating it back into symbolic `Atom`s (beliefs, expressions) that can be added to the main Atomspace.
+
+### 9.2. Overcoming LLM Limitations
+
+This architecture directly addresses several known limitations of LLMs:
+
+-   **Hallucination and Factuality**: Beliefs generated by the LLM are not blindly trusted. They are injected into the Atomspace with an initial truth value and are subject to the same logical scrutiny and revision process as any other belief. If an LLM-generated belief contradicts a high-confidence belief in the Atomspace, it can be revised or rejected.
+-   **Reasoning and Planning**: Multi-step reasoning and complex problem-solving are handled by the MeTTa interpreter in the symbolic Atomspace, which can perform logical inference that is beyond the capability of LLMs. The LLM can be used to provide commonsense knowledge or suggest potential steps, but the final plan is constructed and verified by the logical core.
+-   **Working Memory**: The Atomspace serves as a structured, long-term, and working memory. This allows the system to maintain a consistent state and context over long interactions, overcoming the limited context windows of LLMs.
+
+This neural-symbolic approach allows the system to combine the linguistic fluency of LLMs with the logical rigor and consistency of a symbolic reasoning system, creating a whole that is more capable than the sum of its parts.
+
+## 10. Extension Points
 (Content unchanged)
 
 ## 10. System Initialization and Configuration
