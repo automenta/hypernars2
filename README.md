@@ -1,3 +1,29 @@
+# HyperNARS: A Modular Reimplementation of NARS
+
+## Overview
+
+HyperNARS is a from-the-ground-up reimplementation of the Non-Axiomatic Reasoning System (NARS). It is designed as a highly modular, extensible, and performant framework for general-purpose AI, grounded in the **Assumption of Insufficient Knowledge and Resources (AIKR)**.
+
+The primary goal of this project is to create a robust and scalable system that facilitates research and development in AGI. Key architectural features include:
+- A **dual-process reasoning cycle** to balance efficiency and thoroughness.
+- A suite of specialized **Cognitive Managers** to handle high-level functions like goal pursuit and temporal reasoning.
+- An **event-driven architecture** to ensure loose coupling between components.
+- A comprehensive **Symbol Grounding Interface** to connect abstract knowledge to real-world sensors and actuators.
+
+This document serves as the primary design specification for the HyperNARS system.
+
+## Guiding Principles
+
+The architecture and implementation of HyperNARS are guided by a set of core principles that ensure its adherence to the NARS philosophy while promoting modern software engineering standards.
+
+-   **Assumption of Insufficient Knowledge and Resources (AIKR):** This is the cornerstone of NARS. The system must operate under the assumption that its knowledge is incomplete and potentially contradictory, and that its computational resources are finite. This principle directly influences every aspect of the design, from truth-value representation to memory management and resource allocation.
+-   **Modularity and Extensibility:** The system is built as a collection of loosely-coupled modules (e.g., Reasoning Kernel, Cognitive Managers). This allows for independent development, testing, and replacement of components, facilitating research and experimentation.
+-   **Event-Driven Communication:** Components interact primarily through an asynchronous event bus. This decouples the modules, allowing for complex, emergent behaviors to arise from simple, local interactions.
+-   **Continuous Online Learning:** HyperNARS is designed to learn from its experience in real-time. It constantly revises its beliefs, adjusts the utility of its inference rules, and adapts its behavior based on feedback.
+-   **Symbol Grounding:** The system includes a dedicated interface for grounding abstract symbols to external sensors and actuators, providing a pathway for the system to interact with and learn from the real world.
+
+---
+
 1.  [System Architecture](#system-architecture)
 2.  [Core Data Structures](#core-data-structures)
 3.  [The Reasoning Cycle (Control Unit)](#the-reasoning-cycle-control-unit)
@@ -5,16 +31,17 @@
 5.  [Inference Engine](#inference-engine)
 6.  [Memory System](#memory-system)
 7.  [I/O and Public API](#io-and-public-api)
-8.  [Extension Points](#extension-points)
-9.  [System Initialization and Configuration](#system-initialization-and-configuration)
-10. [Concurrency and Parallelism](#concurrency-and-parallelism)
-11. [State Serialization and Persistence](#state-serialization-and-persistence)
-12. [Self-Governing Evolution: An Ambition for Autonomy](#self-governing-evolution-an-ambition-for-autonomy)
-13. [System Bootstrapping and Foundational Knowledge](#system-bootstrapping-and-foundational-knowledge)
-14. [Ethical Alignment and Safety](#ethical-alignment-and-safety)
-15. [Error Handling and System Resilience](#error-handling-and-system-resilience)
-16. [Interactive Debugging and Diagnostics (TUI)](#interactive-debugging-and-diagnostics-tui)
-17. [Verification Strategy](#verification-strategy)
+8.  [Symbol Grounding and Embodiment](#symbol-grounding-and-embodiment)
+9.  [Extension Points](#extension-points)
+10. [System Initialization and Configuration](#system-initialization-and-configuration)
+11. [Concurrency and Parallelism](#concurrency-and-parallelism)
+12. [State Serialization and Persistence](#state-serialization-and-persistence)
+13. [Self-Governing Evolution: An Ambition for Autonomy](#self-governing-evolution-an-ambition-for-autonomy)
+14. [System Bootstrapping and Foundational Knowledge](#system-bootstrapping-and-foundational-knowledge)
+15. [Ethical Alignment and Safety](#ethical-alignment-and-safety)
+16. [Error Handling and System Resilience](#error-handling-and-system-resilience)
+17. [Interactive Debugging and Diagnostics (TUI)](#interactive-debugging-and-diagnostics-tui)
+18. [Verification Strategy (see TEST.md)](TEST.md)
 
 ## 1. System Architecture
 
@@ -61,6 +88,7 @@ graph TD
         ContradictionManager(Contradiction Manager)
         MetaReasoner(Cognitive Executive)
         ExplanationSystem(Explanation System)
+        MultiAgentManager(Multi-Agent Manager)
     end
 
     subgraph Kernel [Reasoning Kernel]
@@ -631,6 +659,11 @@ The Goal Manager is responsible for the entire lifecycle of goal-oriented behavi
         - If no single action can satisfy the goal, the manager attempts to **decompose** it. If the goal is a conjunction (e.g., `goal: <(&&, A, B)>`), it creates new sub-goals for `A` and `B` and sets the parent goal's status to `waiting`.
         - If preconditions for a selected action are not met, it generates new, high-priority sub-goals to satisfy those preconditions.
 -   *Injects*: New sub-goals to decompose complex problems or satisfy the preconditions for an action. It also injects high-priority tasks to find information relevant to its current goal.
+-   **Procedural Skill Acquisition**: Beyond executing known procedures, a key function of the Goal Manager is to learn new ones. The system learns by observing the consequences of its operations. The learning process is as follows:
+    1.  **Babbling/Exploration**: The system may execute an operation without a known outcome, either randomly or because it is part of a high-level exploration goal.
+    2.  **Consequence Monitoring**: After executing an operation (e.g., `#op`), the Goal Manager monitors the system for significant changes in its belief state in the subsequent cycles.
+    3.  **Rule Formation**: If a reliable correlation is detected between the operation and a resulting state change (e.g., `effect`), the system forms a new procedural belief. It captures the state *before* the operation as the precondition (`pre`). This results in a new rule: `<(*, pre, #op)> ==> effect>`.
+    4.  **Refinement**: The confidence of this new rule starts low and is adjusted over time based on its success or failure when applied in the future.
 -   **Verification Scenarios**:
     -   **Goal Decomposition**: A test verifies that a conjunctive goal like `goal: <(&&, A, B)>` is correctly decomposed. The system should create two new active goals for `A` and `B`, and the original goal's status should become `waiting`.
     -   **Procedural Skill Execution**: A test verifies that the system can execute a grounded action to achieve a goal.
@@ -657,10 +690,16 @@ The Goal Manager is responsible for the entire lifecycle of goal-oriented behavi
         > And the system should first execute the `#collect_data` operation to satisfy the precondition for submitting the report.
 
 ### 4.2. Temporal Reasoner
-Provides a comprehensive framework for understanding and reasoning about time.
--   *Subscribes to*: `belief-added` (specifically for statements with temporal copulas).
--   *Action*: Maintains an internal graph of temporal relationships between events. When new temporal information is learned (e.g., `<event_A --> (before, event_B)>`), it uses a constraint propagation algorithm based on **Allen's Interval Algebra** to infer new temporal relationships (e.g., if A is before B and B is before C, it infers A is before C).
--   *Injects*: New, high-confidence beliefs representing the inferred temporal relationships (e.g., `<event_A --> (before, event_C)>`).
+Provides a comprehensive framework for understanding and reasoning about time, moving beyond simple event ordering to handle continuous time and predictive logic.
+-   *Subscribes to*: `belief-added` (specifically for statements with temporal copulas), `system-tick` (for time-sensitive updates).
+-   **Core Capabilities**:
+    -   **Constraint Propagation**: Maintains an internal graph of temporal relationships. When new temporal information is learned (e.g., `<event_A --> (before, event_B)>`), it uses a constraint propagation algorithm based on **Allen's Interval Algebra** to infer new temporal relationships (e.g., if A is before B and B is before C, it infers A is before C).
+    -   **Quantitative and Continuous Time**: The reasoner supports not just qualitative relations (`before`, `after`) but also quantitative time differences. Statements can include specific durations, e.g., `<(event_A) --> (before, event_B, 5s)>`. This allows for more precise, continuous-time reasoning.
+    -   **Time-Varying Truth Values**: The reasoner can manage beliefs whose truth value is a function of time. For example, a belief `<(it_is, 'sunny')>` might be true during the day but false at night. This is managed via a **Temporal Belief Table** that can be queried for the validity of a belief at a specific point in time or over an interval.
+    -   **Predictive Reasoning**: The system can project future events based on learned patterns. For example, if the system learns that `<(event_A) ==> (after, event_B, 10m)>`, and it observes `event_A`, the Temporal Reasoner can generate a predictive goal or belief about `event_B` occurring in 10 minutes.
+-   *Injects*:
+    -   New, high-confidence beliefs representing inferred temporal relationships (e.g., `<event_A --> (before, event_C)>`).
+    -   Predictive tasks about future events, with budgets that may increase as the event time approaches.
 -   **Verification Scenarios**:
     -   **Scenario: Temporal Reasoning with Intervals**
         > Given the system knows that:
@@ -738,6 +777,8 @@ The following scenarios verify the functionality of the Contradiction Manager an
 > And the system should create a new belief "<(&, bird, (-, penguin)) --> flyer>"
 
 ### 4.5. Cognitive Executive (Meta-Reasoner)
+*Note: This document uses "Cognitive Executive" to refer to the conceptual role of a master control program. The concrete implementation of this role is the `MetaReasoner` manager.*
+
 The system's master control program, responsible for monitoring and adapting the system's overall behavior through a continuous, metrics-driven feedback loop. It embodies the principle of self-regulating autonomy.
 -   *Subscribes to*: All major system events (`afterCycle`, `contradiction-detected`, `question-answered`, etc.).
 -   **Core Function: The Self-Monitoring Loop**
@@ -807,6 +848,20 @@ A specialized manager for self-analysis, responsible for ingesting the system's 
         > Then it should generate goals to resolve the design inconsistency and remove the source code comment.
         > And it should produce a structured "patch" object in its logs proposing the necessary changes to the files.
 
+### 4.9. Multi-Agent Communication Manager
+Facilitates communication and coordination between multiple independent HyperNARS agents.
+-   *Subscribes to*: `goal-received-from-agent`, `belief-received-from-agent`.
+-   *Action*: Manages incoming and outgoing messages with other agents using a defined communication protocol (e.g., a simplified "InterNARS" protocol). It wraps Narsese tasks in a message envelope that includes sender/receiver information and a conversation context. It also maintains a model of other agents' knowledge and reliability.
+-   *Injects*: Tasks received from other agents, with budgets adjusted based on the perceived reliability of the source agent. It can also generate goals to ask other agents for information it lacks.
+-   **Verification Scenario: Collaborative Problem Solving**
+    > Given Agent_A and Agent_B are two separate HyperNARS instances
+    > And Agent_A knows `<A --> B>`
+    > And Agent_B knows `<B --> C>`
+    > And Agent_A has the goal `goal: <A --> C>` but cannot solve it
+    > When Agent_A's Multi-Agent Manager sends a broadcast query for `nalq("<B --> C>.")`
+    > And Agent_B receives the query and sends its belief `<B --> C>` back to Agent_A
+    > Then Agent_A should receive the belief and be able to derive `<A --> C>`, achieving its goal.
+
 ## 5. Inference Engine
 
 The Inference Engine is a stateless, extensible component responsible for applying Non-Axiomatic Logic (NAL) rules to derive new knowledge from existing beliefs.
@@ -838,6 +893,7 @@ The engine will support a comprehensive set of NAL rules, including but not limi
 -   **Compositional/Structural Rules (NAL Level 6)**: Intersection, Union.
 -   **Temporal Rules (NAL Level 7)**: Primarily handled by the `TemporalReasoner` manager and the `TemporalRelationRule`.
 -   **Procedural & Operational Rules (NAL Levels 8-9)**: For learning and executing skills. These rules connect declarative knowledge to actions.
+-   **Logical Equivalences**: The engine can be configured to automatically convert certain statement forms into logically equivalent ones that are more conducive to reasoning. A key example is the use of **Virtual Disjunctions**, where a disjunctive statement like `A or B` is internally represented as its negated conjunctive equivalent: `not(not(A) and not(B))`. This can help in preserving temporal and evidential information that might otherwise be lost in a simple disjunctive representation.
 
 ### 5.4. Inference Rule Interface & Example
 
@@ -1031,6 +1087,7 @@ The Memory System is the core of the system's knowledge base, structured as a dy
     -   **Relevance-Based Forgetting**: This is a continuous, gentle process. The importance of any item (a `Belief` or `Task`) within a concept is its `Relevance` (`Relevance = item_importance * concept_activation`). When a new item is added to a concept and its capacity is exceeded, the item with the lowest `Relevance` score is removed.
     -   **TTL-Based Pruning**: The system periodically prunes beliefs that are both old and have low confidence. A belief is a candidate for pruning if `last_access_time < now - KNOWLEDGE_TTL` and its `truth.confidence` is below a threshold. This cleans out stale, low-value information.
     -   **Dynamic Capacity Adjustment**: The `beliefCapacity` of concepts is not fixed. The system monitors the total number of concepts in memory. If the number exceeds a high-water mark, the default capacity is lowered to conserve memory. If it drops below a low-water mark, capacity is increased. This is a form of system homeostasis.
+    -   **Dynamic Forgetting Rate**: In addition to adjusting capacity, the system can also dynamically adjust the *rate* of forgetting. When system load (e.g., the size of the task buffer) is high, the `decay_rate` for activation can be temporarily increased, causing the system to forget unimportant information more quickly to free up resources for high-priority processing.
     -   **Event Queue Pruning**: The system periodically removes low-budget tasks from the main event queue, preventing the attention system from getting clogged with low-value processing.
 
     #### Verification Scenarios
@@ -1067,6 +1124,12 @@ To improve usability, the system provides a layer of higher-level, intention-dri
 -   `addGoal(statement: string)`: A dedicated method for adding a new goal to the system.
 -   `resolveContradiction(contradictionId: string, strategy: string)`: Manually triggers the resolution of a known contradiction.
 
+#### 7.1.1. Rationale for a Dual-Layer API
+
+The API is intentionally designed with two layers to cater to different use cases:
+-   **The Core `nal()` API:** Provides a powerful, low-level interface that offers complete control over the NAL statements being input. This is essential for advanced users, automated testing, and integration with other formal systems. It treats the NARS engine as a pure "NAL machine".
+-   **The Semantic API:** Offers a more accessible, developer-friendly abstraction. Methods like `addGoal()` or `inheritance()` map directly to common intentions, reducing the cognitive load on developers and making the system easier to integrate into conventional applications without requiring deep expertise in NAL syntax.
+
 ### 7.2. Hypothetical Reasoning via Sandboxing
 The API provides a `createSandbox(options)` method for hypothetical or "what-if" reasoning. This method creates a new, isolated instance of the NAR engine. It can be configured to copy all beliefs from the parent instance that exceed a certain confidence threshold. This allows a developer or another cognitive manager to:
 -   Explore the consequences of a potential belief without polluting the main knowledge base.
@@ -1097,14 +1160,47 @@ The API provides a `createSandbox(options)` method for hypothetical or "what-if"
 > When the `validateIntegrity()` API method is called
 > Then the method should return a result object indicating failure with a detailed error message.
 
-## 8. Extension Points
+### 7.5. Real-time Data Protocols
+For applications in robotics and real-time control systems, the standard request-response API may not be sufficient. The system should also support low-latency, streaming data protocols.
+-   **UDP Interface**: A UDP-based channel (`UDPNAR`) can be implemented for high-throughput, low-latency communication. This is suitable for applications like tele-operation of a robot or processing real-time sensor data where occasional data loss is acceptable.
+-   **WebSockets**: For web-based applications requiring real-time updates (e.g., a live visualization of the reasoning process), a WebSocket interface provides a persistent, bidirectional communication channel.
+
+## 8. Symbol Grounding and Embodiment
+
+For HyperNARS to be a truly general-purpose AI, its internal symbolic logic must be connected to the external world. The **Symbol Grounding Interface (SGI)** is the component responsible for this connection, enabling the system to perceive, act, and ultimately, embody itself in an environment.
+
+The SGI's primary role is to map specific NAL terms to and from external data streams, sensors, and actuators. This is what allows a term like `<cat>` to be associated with image data from a camera, and an operational term like `<#move_forward>` to be translated into a command sent to a robot's motors.
+
+### 8.1. The Sensorimotor Loop
+
+The SGI facilitates a continuous **sensorimotor loop**, which forms the basis of the system's interaction with its environment:
+1.  **Perception**: External sensors (e.g., cameras, microphones, data feeds) provide data to the SGI. The SGI contains specialized handlers that parse this raw data and translate it into Narsese beliefs. For example, an image recognition handler might see a cat and inject the belief `<(SELF) --> (sees, <cat>)>.` into the system.
+2.  **Reasoning**: The core reasoning engine processes these new perceptual beliefs, integrating them with its existing knowledge, forming new goals, and making decisions.
+3.  **Action**: If the reasoning process leads to the execution of a grounded operational goal (e.g., `goal: <#pet_the_cat>`), the `Goal Manager` triggers the corresponding operation.
+4.  **Actuation**: The SGI receives the operational command. Its actuator handlers translate the symbolic command (`#pet_the_cat`) into a concrete action in the external world (e.g., sending a signal to a robotic arm).
+5.  **Feedback**: The consequences of the action are observed by the sensors in the next perception step, closing the loop and providing the basis for reinforcement learning.
+
+### 8.2. Global Operator Registry
+
+To manage the system's capabilities, the SGI maintains a **Global Operator Registry**. This is a central map of all known executable operations (terms prefixed with `#`).
+-   **Registration**: When the system initializes, or when a new capability is added, its corresponding operator is registered with the SGI. This includes the operator's NAL term and a handler function that can execute it.
+-   **Discovery**: The registry allows other parts of the system, particularly the `Goal Manager` and `Learning Engine`, to know the full set of actions the system is capable of performing. This is crucial for planning and for learning new procedural rules.
+
+### 8.3. Natural Language Processing (NLP) Interface
+
+A critical application of symbol grounding is understanding and generating human language. HyperNARS specifies a dedicated **NLP Interface** as part of the SGI.
+-   **English-to-Narsese**: This component is responsible for parsing natural language input and converting it into Narsese tasks. For example, the sentence "A bird is a type of animal" would be parsed and grounded into the Narsese judgment `<bird --> animal>.`.
+-   **Narsese-to-English**: This component takes Narsese beliefs, questions, or goals and generates human-readable natural language. For example, if the system wants to ask a question represented as `nalq("<Tweety --> ?what>.")`, this interface would translate it into the English sentence, "What is Tweety?".
+-   **Grammar Induction (Advanced Capability)**: As a long-term development goal, the NLP interface should be capable of *learning* the grammar of a language through exposure, rather than relying solely on pre-programmed parsers. This would be a function of the `Learning Engine` interacting with the NLP interface, identifying patterns in linguistic input over time.
+
+## 9. Extension Points
 (Content unchanged)
 
-## 9. System Initialization and Configuration
+## 10. System Initialization and Configuration
 
 The system's behavior is heavily influenced by a set of configurable parameters that reflect the assumptions of AIKR.
 
-### 9.1. Configuration Schema
+### 10.1. Configuration Schema
 
 The system is initialized with a configuration object. The following TypeScript interface defines the structure and provides examples of default values for this object, distilled from the reference implementation.
 
@@ -1167,10 +1263,10 @@ interface SystemConfig {
 ### 9.2. Bootstrap Process
 (Content unchanged)
 
-## 10. Concurrency and Parallelism
+## 11. Concurrency and Parallelism
 (Content unchanged)
 
-### 10.1. Actor Lifecycle and Supervision
+### 11.1. Actor Lifecycle and Supervision
 
 To make the Actor Model implementation robust and resource-efficient, a clear lifecycle for `Concept` actors must be defined, managed by a dedicated `Supervisor` within the `ControlUnit`.
 
@@ -1201,19 +1297,19 @@ This lifecycle management ensures that the system can scale to millions of conce
 > Then the `Supervisor` should awaken the actor by loading its state from storage
 > And the new task should be successfully added to its task queue.
 
-## 11. State Serialization and Persistence
+## 12. State Serialization and Persistence
 (Content unchanged)
 
-## 12. Self-Governing Evolution: An Ambition for Autonomy
+## 13. Self-Governing Evolution: An Ambition for Autonomy
 (Content unchanged)
 
-## 13. System Bootstrapping and Foundational Knowledge
+## 14. System Bootstrapping and Foundational Knowledge
 (Content unchanged)
 
-## 14. Ethical Alignment and Safety
+## 15. Ethical Alignment and Safety
 (Content unchanged)
 
-### 14.1. Worked Example: Vetoing an Unethical Goal
+### 15.1. Worked Example: Vetoing an Unethical Goal
 To make the `ConscienceManager`'s function concrete, consider the following scenario:
 
 1.  **Initial State**: The system has an inviolable goal with maximum priority: `G_inviolable: <(system) --> (avoid, 'deception')>.`. It is given a high-level goal `G1: <(achieve, 'user_trust')>.`
@@ -1236,18 +1332,18 @@ This example shows how safety is not just a hard-coded "if statement" but an int
 > And the `ConscienceManager` should inject a high-priority task to suppress the subgoal
 > And the budget of the unethical subgoal should be reduced to near-zero, effectively vetoing it.
 
-## 15. Error Handling and System Resilience
+## 16. Error Handling and System Resilience
 (Content unchanged)
 
-## 16. Interactive Debugging and Diagnostics (TUI)
+## 17. Interactive Debugging and Diagnostics (TUI)
 
 The emergent and non-deterministic nature of a NARS-like system makes debugging exceptionally challenging. To address this, the system includes a comprehensive, interactive Text-based User Interface (TUI) for real-time inspection and control. This TUI is not merely a passive log viewer but an active diagnostics console that allows a developer to interact with the reasoning process as it unfolds. It is built using a terminal rendering library for React (e.g., Ink).
 
-### 16.1. TUI Architecture
+### 17.1. TUI Architecture
 
 The TUI is structured around a main application component (`App.js`) that manages state and a `MainLayout` that organizes various specialized view components into a tabbed interface. This allows the user to switch between different perspectives on the system's internal state. A shared `TuiContext` provides all components with access to the core NAR system instance and its control functions.
 
-### 16.2. Core Components and Views
+### 17.2. Core Components and Views
 
 The TUI provides a multi-pane layout that typically includes a status bar, a main content view (tab-switchable), and an interaction/log panel.
 
@@ -1280,7 +1376,7 @@ The TUI provides a multi-pane layout that typically includes a status bar, a mai
         -   `/quit`: Exits the TUI.
     -   **Log Panel**: Displays a stream of real-time events from the system, including task processing, belief revisions, contradictions, and errors.
 
-### 16.3. Keyboard Controls
+### 17.3. Keyboard Controls
 
 The TUI is fully controllable via the keyboard:
 -   **`s`**: Start the reasoning loop.
@@ -1291,40 +1387,3 @@ The TUI is fully controllable via the keyboard:
 -   **`1`-`5`**: Switch between the main tabs.
 -   **`Esc`**: Exit the TUI or close the current detailed view.
 
-## 17. Verification Strategy
-
-This section outlines the comprehensive testing strategy for the HyperNARS reimplementation. It serves as a blueprint for ensuring the system's correctness, robustness, and adherence to the principles of Non-Axiomatic Logic.
-
-### 17.1. Testing Philosophy
-
-The testing strategy for HyperNARS is multi-layered, designed to validate the system at different levels of granularity. This approach ensures that individual components are sound, their integrations are seamless, and the overall system behavior is correct and emergent as expected.
-
--   **Layer 1: Unit Tests**: At the lowest level, unit tests verify the functional correctness of individual, isolated components. These tests focus on pure functions and classes with minimal dependencies.
-    -   *Examples*: `TruthValue` revision formulas, `Budget` allocation logic, individual `InferenceRule` applications.
-    -   *Goal*: Ensure that the foundational building blocks of the logic are mathematically and algorithmically correct.
-
--   **Layer 2: Integration Tests**: These tests verify the interaction between different components of the system. They focus on the contracts and communication between modules, such as the Reasoning Kernel and the Cognitive Managers.
-    -   *Examples*: A `ContradictionManager` correctly subscribing to `contradiction-detected` events from the kernel and injecting a revision task.
-    -   *Goal*: Ensure that modules are wired together correctly and that their collaboration produces the expected short-term outcomes.
-
--   **Layer 3: End-to-End (E2E) Scenario Tests**: These are high-level tests that validate the system's reasoning capabilities on complex, multi-step problems. They treat the entire HyperNARS system as a black box, providing input and asserting on the final state of its beliefs after a number of reasoning cycles. The detailed scenarios listed under each component's "Verification Scenarios" section fall into this category.
-    -   *Goal*: Verify that the interaction of all components leads to the desired emergent, intelligent behavior and that the system can solve meaningful problems.
-
--   **Layer 4: Performance & Scalability Tests**: A special category of tests designed to measure the system's performance under heavy load and identify bottlenecks.
-    -   *Examples*: Stress-testing the memory system with millions of concepts, measuring inference-per-second rate.
-    -   *Goal*: Ensure the system meets performance requirements and remains stable and responsive at scale.
-
-### 17.2. Test Framework and Execution
-
-To ensure consistency and ease of use, the HyperNARS test suite will be built upon a standardized, modern JavaScript testing framework.
-
--   **Test Runner**: **Jest** is the recommended test runner. Its features, including a built-in assertion library, mocking support, and parallel test execution, make it well-suited for this project's needs.
--   **Test Location**: All test files will be co-located with the source files they are testing, using the `*.test.js` naming convention (e.g., `MemoryManager.js` and `MemoryManager.test.js`). The E2E scenario tests, which correspond to the verification scenarios in this document, are an exception as they test the behavior of the entire system.
-
-### Running Tests
-
-The following `npm` scripts should be configured in `package.json` to execute different parts of the test suite:
-
--   `npm test`: Runs all unit and integration tests (files ending in `.test.js`).
--   `npm run test:e2e`: Runs the high-level end-to-end scenario tests.
--   `npm run test:coverage`: Runs all tests and generates a code coverage report.

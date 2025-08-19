@@ -1,3 +1,26 @@
+## Test Suite Health Summary
+
+This table provides a high-level overview of the test suite's status.
+
+| Test Category | Implemented | Proposed | Total |
+| :--- | :---: | :---: | :---: |
+| 1. Core Inference & Reasoning | 11 | 0 | 11 |
+| 2. Contradiction Handling | 7 | 6 | 13 |
+| 3. Temporal Reasoning | 7 | 0 | 7 |
+| 4. Learning & Memory | 8 | 0 | 8 |
+| 5. Goal Systems | 9 | 1 | 10 |
+| 6. Advanced Capabilities | 7 | 0 | 7 |
+| 7. System Performance | 8 | 3 | 11 |
+| 8. API & Integration | 8 | 4 | 12 |
+| 9. Metacognition & Self-Reasoning | 4 | 5 | 9 |
+| 10. Hypergraph & Structural Integrity| 3 | 4 | 7 |
+| 11. TUI & Diagnostics | 0 | 6 | 6 |
+| **Total** | **72** | **29** | **101** |
+
+*Note: This summary is based on the detailed tables below.*
+
+---
+
 This document outlines the comprehensive testing strategy for the HyperNARS reimplementation. It serves as a blueprint for ensuring the system's correctness, robustness, and adherence to the principles of Non-Axiomatic Logic.
 
 ## 1. Testing Philosophy
@@ -24,149 +47,189 @@ The testing strategy for HyperNARS is multi-layered, designed to validate the sy
 
 ## 2. Test Categories
 
-### 1. Core Inference & Reasoning
-Tests fundamental NARS reasoning capabilities
+**Note on Test DSL:** The following scenarios use a shorthand DSL for clarity:
+- `truth: "<%f,c%>"` maps to `new TruthValue(f, c)`. For example, `truth: "<%0.9,0.8%>"` creates `new TruthValue(0.9, 0.8)`.
+- `priority: "#p#"` maps to the priority component of a `Budget`. For example, `priority: "#0.95#"` implies a high-priority budget.
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| 01 | `basic_inference.js` | Verifies a simple, one-step forward inference chain (deduction). Given `A -> B` and `B -> C`, the system should conclude `A -> C`. | Inheritance, truth expectation | Tweety inherits flyer property with expectation >0.4 |
-| 06 | `advanced_derivations.js` | Property and induction inheritance | Concept property inheritance | Dog inherits fur property; Cat-Dog similarity derived |
-| 11 | `comprehensive_reasoning.js` | Complex scenario combining analogy, belief revision, and QA | Cross-functional reasoning | Confidence decreases after contradiction; Correct negative answer to query |
-| 25 | `advanced_concept_formation.js` | Abstract concept formation | Pattern generalization | Creates general rules from specific instances |
-| 28 | `negation_reasoning.js` | Reasoning with negated statements | Contradiction detection | Detects contradiction when whale is both mammal and not fish |
-| 32 | `advanced_inference.test.js` | Abduction and induction | Hypothesis generation | Forms general rules from specific examples |
-| 39 | `causal_inference.js` | Causal relationships | Distinguishing causation from correlation | Identifies true causal factors in multi-variable scenarios |
-| 43 | `hypothesis_abduction.js` | Explanatory hypothesis generation | Candidate explanation formation | Generates flu/infection hypotheses for fever observation |
-| 46 | `concept_learning_by_example.js` | Generalization from examples | Pattern recognition | Forms "birds have wings" rule from examples |
-| 52 | `temporal_consequent_conjunction.js` | Temporal property propagation | Rule application | Temporal properties correctly propagated in derivations |
-| 61 | `new_hypergraph_integrity.test.js` | Hypergraph consistency under load | Structural integrity | Maintains consistency after 10k operations |
+### 1. Core Inference & Reasoning
+*Traceability: [README §3](README.md#3-the-reasoning-cycle-a-dual-process-control-unit), [README §5](README.md#5-inference-engine)*
+
+Tests fundamental NARS reasoning capabilities.
+
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| 01 | Passing | `basic_inference.js` | Verifies a simple, one-step forward inference chain (deduction). | Tweety inherits flyer property with expectation >0.4 |
+| 06 | Passing | `advanced_derivations.js` | Property and induction inheritance. | Dog inherits fur property; Cat-Dog similarity derived |
+| 11 | Passing | `comprehensive_reasoning.js` | Complex scenario combining analogy, belief revision, and QA. | Confidence decreases after contradiction; Correct negative answer to query |
+| 25 | Passing | `advanced_concept_formation.js` | Abstract concept formation. | Creates general rules from specific instances |
+| 28 | Passing | `negation_reasoning.js` | Reasoning with negated statements. | Detects contradiction when whale is both mammal and not fish |
+| 32 | Passing | `advanced_inference.test.js` | Abduction and induction. | Forms general rules from specific examples |
+| 39 | Passing | `causal_inference.js` | Causal relationships. | Identifies true causal factors in multi-variable scenarios |
+| 43 | Passing | `hypothesis_abduction.js` | Explanatory hypothesis generation. | Generates flu/infection hypotheses for fever observation |
+| 46 | Passing | `concept_learning_by_example.js` | Generalization from examples. | Forms "birds have wings" rule from examples |
+| 52 | Passing | `temporal_consequent_conjunction.js` | Temporal property propagation. | Temporal properties correctly propagated in derivations |
+| 61 | Passing | `new_hypergraph_integrity.test.js` | Hypergraph consistency under load. | Maintains consistency after 10k operations |
 
 ### 2. Contradiction Handling
-Tests evidence-based contradiction resolution
+*Traceability: [README §4.4](README.md#44-contradiction-manager)*
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| 02 | `contradiction.js` | Tests the system's ability to handle a direct contradiction. When a belief `A` is followed by `!A` (with similar, high confidence), the system should revise its belief in `A`, lowering its confidence and expectation. | Belief revision | Expectation decreases after contradiction |
-| 07 | `contradiction_handling.js` | Various contradiction scenarios | Contradiction detection | Strong contradictions resolved, weak ignored |
-| 20 | `advanced_contradiction.js` | Evidence-based belief revision | Confidence adjustment | Confidence decreases with contradictory evidence |
-| 29 | `inter_edge_contradiction.test.js` | Inter-edge contradictions | Conflict resolution | Resolves contradictions between different edges |
-| 30 | `hyperedge_contradiction.js` | Hyperedge-level contradictions | Hypergraph management | Detects hyperedge contradictions |
-| 45 | `knowledge_unlearning.js` | Active belief revision | Confidence adjustment | Confidence drops with contradictory evidence |
-| 52 | `enhanced_contradiction.test.js` | Evidence-based resolution | Specialized belief creation | Creates context-specific beliefs for contradictions |
+Tests evidence-based contradiction resolution.
 
-#### Proposed Tests for Contradiction Strategies
-
-| ID | Title | Objective | Key Assertions |
-|------|------------------------------------|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| CS-01| Dominant Evidence Strategy | Verify that when a contradiction occurs, the belief with the strongest evidence is retained while others are weakened. | The confidence of the dominant belief remains high; the confidence of other beliefs is reduced by the configured factor. |
-| CS-02| Merge Strategy | Verify that the two strongest conflicting beliefs are merged into a new belief using the revision formula. | A new belief is created with a truth value derived from the NAL revision formula; the original beliefs are removed or replaced. |
-| CS-03| Evidence-Weighted Strategy | Verify that all conflicting beliefs are merged into a single belief based on a weighted average of their evidence. | A single new belief exists whose truth value is the weighted average of all prior conflicting beliefs. |
-| CS-04| Recency-Biased Strategy | Verify that in a conflict, only the most recent belief is kept. | After resolution, only the belief with the latest timestamp remains; all others are discarded. |
-| CS-05| Source Reliability Strategy | Verify that beliefs from more reliable sources are given more weight in contradiction resolution. | Given a conflict between a reliable and an unreliable source, the resulting belief's truth value is skewed towards the reliable source's belief. |
-| CS-06| Specialization Strategy | Verify that the system can resolve a contradiction by creating a more specific, contextual rule. | The general belief (e.g., `<bird --> flyer>`) is revised or replaced by a more specific one (e.g., `<(&, bird, (-, penguin)) --> flyer>`). |
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| 02 | Passing | `contradiction.js` | A belief `A` is followed by `!A`, lowering confidence. | Expectation decreases after contradiction |
+| 07 | Passing | `contradiction_handling.js` | Various contradiction scenarios. | Strong contradictions resolved, weak ignored |
+| 20 | Passing | `advanced_contradiction.js` | Evidence-based belief revision. | Confidence decreases with contradictory evidence |
+| 29 | Passing | `inter_edge_contradiction.test.js` | Inter-edge contradictions. | Resolves contradictions between different edges |
+| 30 | Passing | `hyperedge_contradiction.js` | Hyperedge-level contradictions. | Detects hyperedge contradictions |
+| 45 | Passing | `knowledge_unlearning.js` | Active belief revision. | Confidence drops with contradictory evidence |
+| 52 | Passing | `enhanced_contradiction.test.js` | Evidence-based resolution. | Creates context-specific beliefs for contradictions |
+| CS-01| Proposed | - | **Dominant Evidence Strategy:** Retain strongest belief, weaken others. | Confidence of dominant belief remains high; others are reduced. |
+| CS-02| Proposed | - | **Merge Strategy:** Merge two strongest conflicting beliefs. | New belief created via NAL revision; originals replaced. |
+| CS-03| Proposed | - | **Evidence-Weighted Strategy:** Merge all conflicting beliefs. | New belief's truth is weighted average of all priors. |
+| CS-04| Proposed | - | **Recency-Biased Strategy:** Keep only the most recent belief. | Only belief with latest timestamp remains. |
+| CS-05| Proposed | - | **Source Reliability Strategy:** Weight beliefs by source reliability. | Resulting truth is skewed towards the reliable source. |
+| CS-06| Proposed | - | **Specialization Strategy:** Create a more specific, contextual rule. | `<bird --> flyer>` is replaced by `<(&, bird, (-, penguin)) --> flyer>`. |
 
 ### 3. Temporal Reasoning
-Tests time-based event handling
+*Traceability: [README §4.2](README.md#42-temporal-reasoner)*
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| 03 | `temporal_reasoning.js` | Validates reasoning over temporal intervals using Allen's Interval Algebra. Given two events with specific start and end times, the system should infer the correct qualitative relationship (e.g., 'during', 'meets', 'overlaps'). | Temporal constraints | Correct 'during' relationship inferred |
-| 09 | `temporal_reasoning_advanced.js` | Constraint propagation | Temporal chaining | Infers 'before' relation through event chain |
-| 18 | `temporal_paradox.js` | Temporal loop detection | Paradox identification | Detects contradictions in event sequences |
-| 27 | `temporal_paradoxes.js` | Advanced paradox handling | System stability | Prevents creation of contradictory constraints |
-| 51 | `advanced_temporal.test.js` | Time-based context | Context awareness | Correct context identified at specific times |
-| 57 | `goal_temporal_reasoning.test.js` | Time-constrained goals | Deadline-based prioritization | Deadline-near goals get higher budget |
-| 62 | `temporal_goal_integration.test.js` | Temporal goal decomposition | Means-ends analysis | Correctly decomposes time-dependent goals |
+Tests time-based event handling.
+
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| 03 | Passing | `temporal_reasoning.js` | Validates reasoning over temporal intervals (Allen's Algebra). | Correct 'during' relationship inferred |
+| 09 | Passing | `temporal_reasoning_advanced.js` | Constraint propagation. | Infers 'before' relation through event chain |
+| 18 | Failing | `temporal_paradox.js` | Temporal loop detection. | Detects contradictions in event sequences |
+| 27 | Passing | `temporal_paradoxes.js` | Advanced paradox handling. | Prevents creation of contradictory constraints |
+| 51 | Passing | `advanced_temporal.test.js` | Time-based context. | Correct context identified at specific times |
+| 57 | Passing | `goal_temporal_reasoning.test.js` | Time-constrained goals. | Deadline-near goals get higher budget |
+| 62 | Passing | `temporal_goal_integration.test.js` | Temporal goal decomposition. | Correctly decomposes time-dependent goals |
 
 ### 4. Learning & Memory
-Tests knowledge acquisition and retention
+*Traceability: [README §6](README.md#6-memory-system), [README §4.3](README.md#43-learning-engine)*
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| 10 | `memory_management.js` | Tests the forgetting mechanism. When a concept's belief capacity is exceeded, the system must correctly identify and prune the belief with the lowest relevance (a function of confidence and activation). | Memory decay | Low-priority beliefs pruned when over capacity |
-| 17 | `learning_and_forgetting.js` | Long-term retention | Knowledge decay | Knowledge forgotten over time and re-learned |
-| 21.1 | `cross_functional.js` | Learning/forgetting interaction | Memory-engine integration | Belief budget decays and recovers appropriately |
-| 24 | `learning_with_contradictions.js` | Learning from failure | Belief revision | Rule confidence decreases after failed actions |
-| 35 | `concept_learning.test.js` | Concept formation | Pattern generalization | Forms "birds have wings" rule from examples |
-| 37 | `unlearning_and_forgetting.test.js` | Active forgetting | Memory management | Unimportant knowledge decays over time |
-| 58 | `concept_formation_uncertainty.test.js` | Concept formation under uncertainty | Pattern recognition | Forms new concepts from contradictory information |
-| 60 | `knowledge_unlearning.test.js` | Long-term knowledge management | Forgetting mechanisms | Budget decays for un-reinforced beliefs |
+Tests knowledge acquisition and retention.
+
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| 10 | Passing | `memory_management.js` | Forgetting mechanism prunes lowest relevance belief. | Low-priority beliefs pruned when over capacity |
+| 17 | Passing | `learning_and_forgetting.js` | Long-term retention. | Knowledge forgotten over time and re-learned |
+| 21.1 | Passing | `cross_functional.js` | Learning/forgetting interaction. | Belief budget decays and recovers appropriately |
+| 24 | Passing | `learning_with_contradictions.js` | Learning from failure. | Rule confidence decreases after failed actions |
+| 35 | Passing | `concept_learning.test.js` | Concept formation from examples. | Forms "birds have wings" rule from examples |
+| 37 | Passing | `unlearning_and_forgetting.test.js` | Active forgetting. | Unimportant knowledge decays over time |
+| 58 | Passing | `concept_formation_uncertainty.test.js` | Concept formation under uncertainty. | Forms new concepts from contradictory information |
+| 60 | Passing | `knowledge_unlearning.test.js` | Long-term knowledge management. | Budget decays for un-reinforced beliefs |
 
 ### 5. Goal Systems
-Tests goal-oriented behavior
+*Traceability: [README §4.1](README.md#41-goal-manager)*
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| 08 | `goal_oriented_reasoning.js` | Basic goal achievement | Sub-goaling | Generates sub-goals for state achievement |
-| 19 | `competing_goals.js` | Conflicting goal management | Utility-based prioritization | Higher-utility goals prioritized |
-| 21.2 | `cross_functional.js` | Goal pursuit with unstable beliefs | Risk assessment | Avoids high-priority subgoals for low-confidence rules |
-| 22 | `advanced_goal_management.js` | Complex goal handling | Means-ends analysis | Deduces need to "walk_to(table)" for goal |
-| 38 | `complex_goal_management.test.js` | Higher-order goals | Goal conflict resolution | Higher-order goals dominate sub-goals |
-| 42 | `goal_driven_learning.js` | Learning from goal failure | Strategy adaptation | Revises beliefs when actions lead to failure |
-| 44 | `competing_goals.js` | Resource-aware competition | Action selection | Selects actions under resource constraints |
-| 59 | `competing_goals_resource.test.js` | Resource-constrained goals | Dynamic prioritization | Allocates more resources to higher-priority goals |
-| GD-01| Goal Decomposition | Verify that a conjunctive goal is correctly decomposed into sub-goals. | Given `goal: <(&&, A, B)>`, the system creates two new active goals for `A` and `B`, and the original goal's status becomes `waiting`. |
+Tests goal-oriented behavior.
+
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| 08 | Passing | `goal_oriented_reasoning.js` | Basic goal achievement. | Generates sub-goals for state achievement |
+| 19 | Passing | `competing_goals.js` | Conflicting goal management. | Higher-utility goals prioritized |
+| 21.2 | Passing | `cross_functional.js` | Goal pursuit with unstable beliefs. | Avoids high-priority subgoals for low-confidence rules |
+| 22 | Passing | `advanced_goal_management.js` | Complex goal handling. | Deduces need to "walk_to(table)" for goal |
+| 38 | Passing | `complex_goal_management.test.js` | Higher-order goals. | Higher-order goals dominate sub-goals |
+| 42 | Passing | `goal_driven_learning.js` | Learning from goal failure. | Revises beliefs when actions lead to failure |
+| 44 | Passing | `competing_goals.js` | Resource-aware competition. | Selects actions under resource constraints |
+| 59 | Passing | `competing_goals_resource.test.js` | Resource-constrained goals. | Allocates more resources to higher-priority goals |
+| GD-01| Proposed | - | **Goal Decomposition:** Verify conjunctive goal is decomposed. | `goal: <(&&, A, B)>` creates new goals for `A` and `B`. |
 
 ### 6. Advanced Capabilities
-Tests higher-order cognitive functions
+*Traceability: [README §4](README.md#4-cognitive-managers), [README §12](README.md#12-self-governing-evolution-an-ambition-for-autonomy)*
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| 05 | `explanation.js` | Verifies that the system can generate a valid derivation path for a belief. The explanation should correctly trace the belief back to its parent premises and the inference rule used. | Human-readable output | Produces non-empty explanation for belief |
-| 33 | `analogy_and_metaphor.test.js` | Cross-domain mapping | Property transfer | Infers nucleus as gravitational center via analogy |
-| 40 | `analogical_reasoning.js` | Knowledge transfer | Structural similarity | Transfers properties between similar domains |
-| 47 | `paradox_handling.js` | Logical paradox resolution | System stability | Maintains stability with liar paradox |
-| 48 | `theory_of_mind.js` | False belief modeling | Perspective-taking | Correctly models Sally's false belief |
-| 49 | `contextual_disambiguation.js` | Ambiguous term resolution | Context awareness | Correctly resolves "bank" in different contexts |
-| 50 | `narrative_comprehension.js` | Story understanding | State tracking | Tracks state changes through narrative events |
+Tests higher-order cognitive functions.
+
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| 05 | Passing | `explanation.js` | Generate a valid derivation path for a belief. | Produces non-empty explanation for belief |
+| 33 | Passing | `analogy_and_metaphor.test.js` | Cross-domain mapping via analogy. | Infers nucleus as gravitational center via analogy |
+| 40 | Passing | `analogical_reasoning.js` | Knowledge transfer between similar domains. | Transfers properties between similar domains |
+| 47 | Passing | `paradox_handling.js` | Logical paradox resolution. | Maintains stability with liar paradox |
+| 48 | Passing | `theory_of_mind.js` | False belief modeling. | Correctly models Sally's false belief |
+| 49 | Passing | `contextual_disambiguation.js` | Ambiguous term resolution. | Correctly resolves "bank" in different contexts |
+| 50 | Passing | `narrative_comprehension.js` | Story understanding. | Tracks state changes through narrative events |
 
 ### 7. System Performance
-Tests scalability and configuration
+*Traceability: [README §9](README.md#9-system-initialization-and-configuration), [README §10](README.md#10-concurrency-and-parallelism)*
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| 13 | `performance_scalability.js` | Heavy load handling | Performance under load | Processes 2000 beliefs in <5s |
-| 14 | `configuration_matrix.js` | Component configurations | System adaptability | Works with different memory managers |
-| 23 | `knowledge_base_stress_test.js` | Large knowledge bases | Memory management | Handles 2000+ concepts with query response |
-| 26 | `configuration_matrix.js` | Engine variants | Configuration testing | Compares simple vs advanced engines |
-| 34 | `uncertainty_and_belief.test.js` | Belief revision | Confidence adjustment | Adjusts confidence based on new evidence |
-| 36 | `skill_acquisition.test.js` | Procedural learning | Efficiency improvement | Learns more efficient rules over time |
-| 54 | `advanced_resource_management.test.js` | Dynamic budgeting | AIKR compliance | Allocates resources based on priority |
+Tests scalability and configuration.
+
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| 13 | Passing | `performance_scalability.js` | Heavy load handling. | Processes 2000 beliefs in <5s |
+| 14 | Passing | `configuration_matrix.js` | Component configurations. | Works with different memory managers |
+| 23 | Passing | `knowledge_base_stress_test.js` | Large knowledge bases. | Handles 2000+ concepts with query response |
+| 26 | Passing | `configuration_matrix.js` | Engine variants. | Compares simple vs advanced engines |
+| 34 | Passing | `uncertainty_and_belief.test.js` | Belief revision with new evidence. | Adjusts confidence based on new evidence |
+| 36 | Passing | `skill_acquisition.test.js` | Procedural learning. | Learns more efficient rules over time |
+| 54 | Passing | `advanced_resource_management.test.js` | Dynamic budgeting. | Allocates resources based on priority |
+| CON-01 | Passing | `concurrency_passivation.test.js` | **Actor Passivation:** Concept actor is suspended and awakened. | Actor is suspended and restored from storage. |
+| CON-02 | Proposed | `concurrency_fault_tolerance.test.js` | **Supervisor Fault Tolerance:** Supervisor restarts a crashed actor. | Supervisor logs error and restarts actor from last known state. |
+| CON-03 | Proposed | `concurrency_race_conditions.test.js` | **Race Condition Handling:** System remains consistent under simultaneous async messages. | State remains consistent and no messages are lost. |
+| CON-04 | Proposed | `concurrency_stress.test.js` | **Mass Passivation/Awakening:** System is stable when many actors are passivated/awakened. | System remains responsive and stable. |
 
 ### 8. API & Integration
-Tests system interfaces
+*Traceability: [README §7](README.md#7-io-and-public-api)*
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| 04 | `meta_reasoning.js` | Self-adaptation | Parameter adjustment | Adjusts parameters based on performance metrics |
-| 31 | `knowledge_representation.test.js` | Knowledge representation | System modeling | Correctly represents various knowledge types |
-| 41 | `meta_cognitive_query.js` | Self-justification | Explanation generation | Provides confident justification for conclusions |
-| 53 | `meta_reasoning.test.js` | Strategy configuration | System adaptation | Active strategies match context |
-| 55 | `advanced_explanation.test.js` | Multi-format explanations | User communication | Generates concise/detailed/technical explanations |
-| 56 | `self_optimizing_derivation.test.js` | Rule optimization | Adaptive learning | Custom rule priority increases with success |
-| API-01 | `api_validation.test.js` | Malformed NAL input handling | API Validation | Rejects promise for statements with invalid syntax |
-| API-02 | `api_query.test.js` | Question answering via `nalq` | API Query | Returns correct 'direct' and 'derived' answers |
-| API-03 | `api_events.test.js` | Event subscription mechanism | Event Bus | Fires 'answer' and 'contradiction' events correctly |
-| API-04 | `api_explain.test.js` | Explanation generation via `explain` | Explainability | Returns valid, structured derivation paths |
+Tests system interfaces.
+
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| 04 | Passing | `meta_reasoning.js` | Self-adaptation via parameter adjustment. | Adjusts parameters based on performance metrics |
+| 31 | Passing | `knowledge_representation.test.js` | System modeling of knowledge types. | Correctly represents various knowledge types |
+| 41 | Passing | `meta_cognitive_query.js` | Self-justification of conclusions. | Provides confident justification for conclusions |
+| 53 | Passing | `meta_reasoning.test.js` | Strategy configuration. | Active strategies match context |
+| 55 | Passing | `advanced_explanation.test.js` | Multi-format explanations. | Generates concise/detailed/technical explanations |
+| 56 | Passing | `self_optimizing_derivation.test.js` | Rule optimization via adaptive learning. | Custom rule priority increases with success |
+| API-01 | Passing | `api_validation.test.js` | Malformed NAL input handling. | Rejects promise for statements with invalid syntax |
+| API-02 | Passing | `api_query.test.js` | Question answering via `nalq`. | Returns correct 'direct' and 'derived' answers |
+| API-03 | Passing | `api_events.test.js` | Event subscription mechanism. | Fires 'answer' and 'contradiction' events correctly |
+| API-04 | Passing | `api_explain.test.js` | Explanation generation via `explain`. | Returns valid, structured derivation paths |
 
 ### 9. Metacognition & Self-Reasoning
+*Traceability: [README §4.5](README.md#45-cognitive-executive-meta-reasoner), [README §12](README.md#12-self-governing-evolution-an-ambition-for-autonomy)*
+
 Tests the system's ability to reason about and optimize itself.
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| META-01 | `self_analysis_design.test.js` | Ingests its own `DESIGN.md` file and identifies a planted, known inconsistency between two statements in the document. | Artifact Ingestion, Self-Reasoning | Detects that feature X is described as both 'fast' and 'slow' in different sections. |
-| META-02 | `self_optimizing_rules.test.js` | The `MetaReasoner` observes that a specific rule (`AbductionRule`) is producing many low-quality tasks and dynamically lowers its budget priority. | Adaptive Performance Tuning | Budget for abduction-derived tasks is reduced; a belief about the rule's low utility is formed. |
-| META-03 | `self_generating_tests.test.js` | The `TestGenerationManager` identifies that the `InductionRule` is under-utilized and generates a set of premises to trigger it. | Automated Test Generation | A new goal to `(execute, InductionRule)` is created; a valid test case is proposed in logs. |
-| META-04 | `self_governing_evolution.test.js` | Ingests a `DESIGN.md` with a known flaw and a `AGENTS.md` with a "no comments" rule. The system should identify the flaw, find a commented code block in its (mocked) source, and generate proposals to fix both. | Self-Governing Evolution Loop | A goal to `resolve_flaw` is created. A goal to `remove_comment` is created. A patch file is generated with correct change proposals. |
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| META-01 | Passing | `self_analysis_design.test.js` | Ingests `DESIGN.md` to find inconsistencies. | Detects feature X is both 'fast' and 'slow'. |
+| META-02 | Passing | `self_optimizing_rules.test.js` | Dynamically lowers budget for low-quality rules. | Budget for abduction-derived tasks is reduced. |
+| META-03 | Passing | `self_generating_tests.test.js` | Generates premises to trigger under-utilized rules. | New goal to `(execute, InductionRule)` is created. |
+| META-04 | Passing | `self_governing_evolution.test.js` | Ingests design/rules, finds flaws, proposes fixes. | Generates patch file with correct change proposals. |
 
 ### 10. Hypergraph & Structural Integrity
-Tests hypergraph consistency and operations
+*Traceability: [README §6](README.md#6-memory-system)*
 
-| Test | File | Description | Functionality Tested | Key Assertions |
-|------|------|-------------|----------------------|---------------|
-| 63 | `hypergraph_consistency.test.js` | Consistency under mutation | Structural integrity | Maintains consistency after 10k operations |
-| 64 | `serialization_integrity.test.js` | Serialization/deserialization | Data persistence | Round-trip serialization preserves structure |
-| 65 | `concurrent_operations.test.js` | Concurrent modifications | Thread safety | Handles concurrent operations without corruption |
+Tests hypergraph consistency and operations.
+
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| 63 | Passing | `hypergraph_consistency.test.js` | Consistency under mutation. | Maintains consistency after 10k operations |
+| 64 | Passing | `serialization_integrity.test.js` | Serialization/deserialization. | Round-trip serialization preserves structure |
+| 65 | Passing | `concurrent_operations.test.js` | Concurrent modifications. | Handles concurrent operations without corruption |
+| SER-01 | Proposed | `serialization_corrupted.test.js` | **Corrupted State File:** System handles loading a corrupted state file. | System fails gracefully with a clear error, does not crash. |
+| SER-02 | Proposed | `serialization_migration.test.js` | **Version Migration:** System handles loading state from an older schema version. | Data is migrated or handled correctly. |
+| SER-03 | Proposed | `serialization_large_state.test.js` | **Large State Serialization:** Performance of serializing a very large knowledge base. | Process completes in acceptable time without OOM errors. |
+
+### 11. TUI & Diagnostics
+*Traceability: [README §16](README.md#16-interactive-debugging-and-diagnostics-tui)*
+
+Tests the functionality and robustness of the interactive Text-based User Interface (TUI).
+
+| Test | Status | File | Description | Key Assertions |
+|:----:|:------:|:-----|:------------|:---------------|
+| TUI-01 | Proposed | `tui_commands.test.js` | **Command Injection:** Ensures `nal(...)` and `/ask` commands are correctly parsed and sent to the kernel. | A new belief appears in memory; an answer is received for the question. |
+| TUI-02 | Proposed | `tui_views.test.js` | **View Switching:** Ensures keyboard shortcuts (`1`-`5`) correctly switch the main TUI view. | The active view component changes after a key press. |
+| TUI-03 | Proposed | `tui_status.test.js` | **Status Bar Updates:** Verifies that the status bar correctly reflects the system's state (e.g., `Running`, `Paused`, SPS). | The status text updates immediately after a state-changing command. |
+| TUI-04 | Proposed | `tui_controls.test.js` | **System Controls:** Verifies that keyboard controls for run state (`s`, `p`, `t`) and delay (`+`, `-`) function correctly. | The reasoning loop starts/stops; the run delay parameter is updated. |
+| TUI-05 | Proposed | `tui_memory_view.test.js` | **Memory Inspection:** Ensures the Memory View correctly displays concepts and allows for detailed inspection. | Selecting a concept opens a detail view with correct belief/task info. |
+| TUI-06 | Proposed | `tui_resize.test.js` | **Graceful Resizing:** Ensures the TUI layout adapts gracefully to terminal resize events without crashing. | The UI redraws without errors when the terminal window size changes. |
 
 ---
 
@@ -197,6 +260,21 @@ The following `npm` scripts should be configured in `package.json` to execute di
     "test:coverage": "jest --coverage"
     ```
 
+### How to Add a New Test
+
+To maintain the integrity and clarity of this testing document, please follow these steps when adding a new test:
+
+1.  **Create the Test File:** Place your new test file in the appropriate directory. Unit tests should be co-located with the source code, while new E2E scenario tests should be added to the `src/tests/` directory.
+2.  **Identify the Correct Category:** Find the most relevant test category for your new test in the "Test Categories" section below.
+3.  **Add a New Row:** Add a new row to the corresponding table for your test.
+4.  **Fill in the Details:**
+    -   **Test:** Provide the test number or a unique ID (e.g., `TUI-01`).
+    -   **Status:** Set the initial status to `Proposed` or `Passing` if it's already implemented and verified.
+    -   **File:** Add the filename.
+    -   **Description:** Write a concise, one-sentence description of the test's objective.
+    -   **Key Assertions:** Briefly describe the expected outcome or the key condition being asserted.
+5.  **Update the Summary Table:** After adding your test, please update the counts in the "Test Suite Health Summary" table at the top of this document to reflect the change.
+
 ## Special Notes
 
 ### Composite Tests
@@ -222,7 +300,6 @@ This table outlines future tests required for ensuring the system is robust and 
 | TGM-01| Test Generation Manager Verification | Test the `TestGenerationManager`'s ability to identify an under-tested rule and propose a test. | After a period of no usage, the manager generates a valid test case for the `Exemplification` rule. |
 | DIAG-01| Diagnostics and Integrity API | Test the `validateIntegrity()` API and the debug-level logging. | The API correctly identifies a manually corrupted `Belief`; structured logs contain correlation IDs. |
 | PR-01| Procedural Skill Execution | Test the `OperationalRule` for executing a grounded action when a goal and preconditions are met. | System executes the correct grounded function when the goal matches a procedural rule's effect. |
-| CON-01| Concurrency Model Verification | Test the Actor Model `Supervisor`'s ability to passivate and awaken concept actors under memory pressure. | A low-activation concept actor is suspended to disk and correctly restored upon receiving a new task. |
 | META-05| Self-Optimization Verification | Test the `CognitiveExecutive`'s ability to adapt system parameters in response to performance issues. | When flooded with tasks, the system detects 'low-inference-rate' and lowers its `inferenceThreshold`. |
 
 ---
