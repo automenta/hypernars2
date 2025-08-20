@@ -1,6 +1,6 @@
 # System Architecture
 
-The HyperNARS architecture is a modular, dynamic system designed around a refined principle: **"The Content is an Atom, the Work is a Sentence."** All knowledge and logic are ultimately represented as MeTTa atoms, and the system organizes these atoms into a clear hierarchy (`Atom` -> `Sentence`) for conceptual clarity and implementability. This creates an exceptionally flexible, transparent, and self-modifiable system.
+The HyperNARS architecture is a modular, dynamic system designed around a core principle: the unification of the **content** of a thought (an Atom) and the **work** it generates into a single, processable unit: the **Sentence**. All knowledge and logic are ultimately represented as MeTTa atoms, organized into this clear `Atom` -> `Sentence` hierarchy for conceptual clarity and implementability. This creates an exceptionally flexible, transparent, and self-modifiable system.
 
 The architecture is centered on two core components: a **Memory** space, which holds all data, and a **MeTTa Interpreter**, which continuously evaluates atoms to drive the reasoning process.
 
@@ -10,7 +10,7 @@ The architecture is centered on two core components: a **Memory** space, which h
 
 The system's design is guided by a set of core principles that enable its flexibility and power.
 
--   **Metaprogramming as a First Principle**: Traditional architectures have hard-coded components (e.g., event buses, configuration parsers, inference engines). In HyperNARS, these are all implemented as MeTTa programs and data. They can be modified at runtime simply by changing the atoms in Memory, without recompiling or restarting the system.
+-   **Metaprogramming as a First Principle**: Traditional architectures have hard-coded components (e.g., event buses, configuration parsers, inference engines). In HyperNARS, these are all implemented as MeTTa programs and data. They can be modified at runtime simply by changing the atoms in Memory, without recompiling or restarting the system. For a detailed guide on the practical startup sequence and its relationship to this architectural philosophy, see the [**System Initialization Guide**](./API_AND_INTEGRATION.md#22-bootstrap-process).
 
 -   **Deep Introspection**: Because the system's own logic and configuration are represented as data, it can "reason about itself." A Cognitive Function can be written to analyze the performance of inference rules, inspect the event stream, or check its own configuration for inconsistencies.
 
@@ -18,13 +18,7 @@ The system's design is guided by a set of core principles that enable its flexib
 
 -   **Cognitive Functions as Atom Collections**: Higher-level capabilities are not implemented as separate software modules, but as collections of MeTTa atoms. A function like "Goal Planning" is simply a set of inference rules loaded into memory that know how to manipulate `Goal` sentences.
 
-### 1.1. System Initialization and the Metaprogramming Model
-
-The metaprogramming approach resolves a potential ambiguity in the system's startup or "bootstrap" process. While documents like `API_AND_INTEGRATION.md` may describe a procedural startup sequence for practical purposes (e.g., "initialize memory", "load configuration"), this should be understood as a convenience.
-
-From a purely architectural standpoint, the system's behavior is defined entirely by the atoms present in its `Memory` at the start of the reasoning process. "Registering a cognitive function" is not a hard-coded step but is synonymous with "loading the atoms that define the function." This ensures that the system's capabilities are determined by its knowledge, not by its compiled code.
-
-### 1.2. Concurrency Model
+### 1.1. Concurrency Model
 
 The primary reasoning process, described in `REASONING_AND_COGNITION.md`, is the conceptually sequential `reflexive_reasoning_cycle`. However, the architecture is compatible with advanced concurrency models like the **Actor Model** (as discussed in `ADVANCED_TOPICS.md`) as an implementation strategy.
 

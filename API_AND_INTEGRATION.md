@@ -32,7 +32,9 @@ For applications in robotics and real-time control systems, the architecture sho
 The system's behavior is heavily influenced by a set of configurable parameters that reflect the assumptions of AIKR. The system is initialized with a configuration object that allows overriding these parameters.
 
 ### 2.1. Configuration Categories
-Configuration is organized into logical groups. Examples include:
+Configuration is organized into logical groups. As described in `ARCHITECTURE.md`, each setting is defined using a `(Config key value)` atom. For a practical example of a configuration file, see the [**sample .metta file**](./ARCHITECTURE.md#example-minimalist-reasonermetta).
+
+Examples of configurable categories include:
 
 -   **Core Engine Parameters**: Control the fundamental reasoning process (e.g., maximum derivation depth, inference selectivity thresholds).
 -   **Memory Management**: Control the size and behavior of memory (e.g., concept capacity, forgetting rates, pruning thresholds).
@@ -50,6 +52,12 @@ The system follows a well-defined sequence to ensure a stable startup:
 5.  **Register Cognitive Functions**: Instantiate all configured Cognitive Functions and subscribe them to events.
 6.  **Load Foundational Knowledge**: Load a base set of declarative and procedural knowledge into Memory.
 7.  **Start Reasoning Loop**: Begin the main control unit's reasoning cycle.
+
+### 2.3. Architectural Perspective on Initialization
+
+It is important to understand the metaprogramming philosophy that underpins this bootstrap process. While the sequence above describes a practical, procedural startup for implementation convenience, it should be understood as a high-level guide.
+
+From a purely architectural standpoint, the system's behavior is defined entirely by the atoms present in its `Memory` at the start of the reasoning process. For example, "Registering a cognitive function" (step 5) is not a hard-coded step but is synonymous with "loading the atoms that define the function." This ensures that the system's capabilities are determined by its knowledge, not by its compiled code.
 
 ## 3. Extension Points
 

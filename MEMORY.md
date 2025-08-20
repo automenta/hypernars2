@@ -82,18 +82,19 @@ The `perform_housekeeping` function for ECAN would implement a decay formula for
 
 ## Forgetting Algorithms
 
-Forgetting is a natural and essential outcome of resource management under AIKR. The `should_forget_item` function of a `BudgetingStrategy` implements the logic for removing items. This ensures that the system's finite resources are focused on the most relevant and important knowledge.
+Forgetting is a natural and essential outcome of resource management under AIKR. These algorithms are typically implemented via the **`Bag`** data structure (defined in `DATA_STRUCTURES.md`), which is used within each `Concept` to hold `Sentences`. The `should_forget_item` function of a `BudgetingStrategy` then implements the logic for determining which items to remove. This ensures that the system's finite resources are focused on the most relevant and important knowledge.
 
 Below are more detailed, language-agnostic descriptions of common forgetting strategies.
 
--   **Capacity-Based Forgetting**: Each `Concept` has a limited capacity for `Sentences`. When a new item is added and the capacity is exceeded, the item with the lowest importance (e.g., lowest STI in the ECAN model) is removed.
+-   **Capacity-Based Forgetting**: This is the primary mechanism of the `Bag` data structure. A `Bag` has a limited capacity, and when a new item is added to a full `Bag`, the existing item with the lowest priority is automatically evicted.
     ```pseudo
-    function add_item_to_concept(item, concept) {
-        if concept.size() >= concept.capacity() {
-            lowest_importance_item = concept.find_item_with_lowest_importance();
-            concept.remove(lowest_importance_item);
+    function add_item_to_bag(item, bag) {
+        if bag.size() >= bag.capacity() {
+            // The Bag data structure itself handles finding and removing
+            // the item with the lowest priority.
+            evicted_item = bag.evict_lowest_priority_item();
         }
-        concept.add(item);
+        bag.add(item);
     }
     ```
 -   **TTL-Based Pruning (Time-to-Live)**: A background process periodically scans `Sentences`. If a sentence is both old (based on its creation timestamp) and has an importance value below a certain threshold, it is pruned.
