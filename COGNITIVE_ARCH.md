@@ -1,82 +1,115 @@
-# Cognitive Architecture: Functions as MeTTa Programs
+# A Layered Cognitive Architecture for HyperNARS
 
-Higher-level cognitive functions, often handled by specialized "Cognitive Managers" in other architectures, are implemented in HyperNARS as collections of MeTTa scripts that operate on Memory. Instead of being separate, event-driven modules, they are pattern-matching programs that run as part of the overall reasoning process.
+The cognitive architecture of HyperNARS is designed for modularity, extensibility, and cognitive dexterity. It organizes the system's higher-level capabilities into a three-tiered hierarchy that aligns with the dual-process reasoning model described in `REASONING.md`.
 
-Each cognitive function is a set of MeTTa rules that `match` for specific patterns in Memory and then execute a corresponding action by adding, removing, or modifying Atoms. This makes cognitive oversight a natural part of the reasoning flow, rather than an external process.
+This layered approach moves beyond a flat "bag of managers" to a more structured and implementable model. Each "Cognitive Function" described below is not a separate, monolithic software module, but rather a **collection of MeTTa atoms** (rules and goals) that implement a specific capability. This adheres to the "everything is an atom" principle, ensuring the entire cognitive apparatus is inspectable, modifiable, and part of the same unified reasoning process.
 
-The Cognitive Managers are specialized, pluggable modules that handle complex, cross-cutting concerns. They operate by subscribing to events from the Reasoning Kernel and can inject new tasks back into the system to influence its behavior.
+## The Three Layers of Cognition
 
-## 1. Goal Manager
+The architecture is divided into three layers, which roughly correspond to different levels of abstraction and control:
+
+1.  **Layer 1: Core Cognitive Functions (System 1 Dominant):** This layer forms the "engine room" of the mind. These are the fundamental, continuously-operating functions that drive the reflexive, System 1 reasoning loop. They handle the moment-to-moment processing of goals, temporal information, and learning.
+
+2.  **Layer 2: Executive Control & Awareness (System 2 Initiation):** This layer acts as the "foreman," monitoring the core functions and initiating deeper, more deliberate thought. It is responsible for self-monitoring, managing contradictions, and explaining the system's reasoning to the outside world. It serves as the bridge between reflexive and deliberative reasoning.
+
+3.  **Layer 3: Specialized Metacognition (System 2 Dominant):** This layer is the "strategist," handling the most abstract, goal-driven, and resource-intensive cognitive tasks. These functions are typically invoked by the Executive Control layer during System 2 deliberation to handle complex challenges like ethical reasoning, self-improvement, and deep system validation.
+
+---
+
+## Layer 1: Core Cognitive Functions
+
+These functions are the workhorses of the reflexive reasoning loop (System 1).
+
+### 1.1 Goal & Planning Function
 Responsible for goal-oriented behavior, including planning, execution monitoring, and skill acquisition.
--   *Subscribes to*: `goal-event`, `belief-added`.
--   **Core Capabilities**: Implements a backward-chaining planner. When a `(Goal G)` is received, it queries memory for beliefs of the form `(Op ==> G)`, where `Op` is an operation. If `Op` has preconditions `P`, it injects a new subgoal `(Goal P)`. This process repeats until a sequence of executable operations is found.
-    ```pseudo
-    function process_goal(goal) {
-        // Find operations that achieve the goal
-        relevant_ops = memory.query( (?, op) ==> goal );
-
-        for (op in relevant_ops) {
-            if (op.has_preconditions()) {
-                // If preconditions exist, create a subgoal to achieve them
-                new_goal = create_goal(op.preconditions);
-                inject_task(new_goal);
-            } else {
-                // If no preconditions, the operation is executable
-                execute_operation(op);
-            }
-        }
-    }
-    ```
--   **Procedural Skill Acquisition**: Learns new procedural rules by observing the consequences of its operations, forming new beliefs of the form `(Op ==> Effect)`.
+-   **Core Capability**: Implements a backward-chaining planner. When a `(Goal G)` is received, it queries memory for beliefs of the form `(Op ==> G)`. If `Op` has preconditions `P`, it injects a new subgoal `(Goal P)`.
+-   **Skill Acquisition**: Learns new procedural rules by observing the consequences of its operations, forming new beliefs of the form `(Op ==> Effect)`.
 -   *Injects*: New sub-goals, operation execution tasks.
--   **Verification Scenarios**:
-    -   **Input**: `(Goal (state door unlocked))` and `Belief ((operation unlock) ==> (state door unlocked))`.
-    -   **Expected Output**: The system injects a task to execute the `unlock` operation.
-    -   **Input**: `(Goal (state house secure))` and `Belief ((And (state door locked) (state window closed)) ==> (state house secure))`.
-    -   **Expected Output**: The system injects two new subgoals: `(Goal (state door locked))` and `(Goal (state window closed))`.
 
-## 2. Temporal Reasoner
+### 1.2 Temporal Reasoning Function
 Provides a framework for understanding and reasoning about time.
--   *Subscribes to*: `belief-added` (for temporal statements), `system-tick`.
--   **Core Capabilities**:
-    -   **Constraint Propagation**: Maintains a graph of temporal relationships (e.g., Allen's Interval Algebra) and infers new ones.
-    -   **Predictive Reasoning**: Generates predictions about future events based on learned temporal patterns of the form `(A </> B)` (A is followed by B).
+-   **Core Capability**: Maintains a graph of temporal relationships (e.g., Allen's Interval Algebra) and generates predictions based on learned temporal patterns of the form `(A </> B)` (A is followed by B).
 -   *Injects*: Inferred temporal relationships and predictive tasks.
--   **Verification Scenarios**:
-    -   **Input**: `Belief (event_A [/] event_B)` (A before B) and `Belief (event_B [/] event_C)`.
-    -   **Expected Output**: The system derives a new `Belief (event_A [/] event_C)`.
 
-## 3. Learning Engine
-Responsible for abstracting knowledge and forming new concepts and rules.
--   *Subscribes to*: `concept-created`, `belief-added`, `afterInference`.
--   *Action*: Detects patterns and correlations to form higher-level abstractions or new inference rules.
--   *Injects*: Tasks representing new concepts or learned rules.
--   **Verification Scenario**:
-    -   **Input**: Repeated observations of `(cat --> mammal)`, `(dog --> mammal)`, `(human --> mammal)`.
-    -   **Expected Output**: The system might form a new, more abstract concept like `(define warm_blooded_animal (Or cat dog human ...))` or learn a higher-order pattern about biological classification.
+### 1.3 Inductive & Conceptual Learning Function
+Responsible for abstracting knowledge, forming new concepts, and learning new rules through induction.
+-   **Core Capability**: Detects patterns and correlations in memory to form higher-level abstractions or new inference rules.
+-   *Injects*: Tasks representing new concepts or learned inductive rules.
 
-## 4. Contradiction Manager
-Implements strategies for resolving contradictions detected by the kernel.
--   *Subscribes to*: `contradiction-detected(belief1, belief2)`.
--   *Injects*: Tasks that revise or remove beliefs to resolve contradictions.
--   **Resolution Algorithm**:
-    1.  Receive the two conflicting beliefs, `b1` and `b2`.
-    2.  Delegate to the `CognitiveExecutive` to choose a strategy (e.g., `Specialization`).
-    3.  Execute the strategy. For `Specialization`, this involves finding the difference in the premises of `b1` and `b2` and creating a more specific, non-contradictory rule.
--   **Verification Scenarios**:
-    -   **Input**: `Belief b1: <bird --> flyer>`, `Belief b2: <penguin --> (Not flyer)>`, and `Belief <penguin --> bird>`. A contradiction is detected between `b1` and `b2` when considering a penguin.
-    -   **Expected Output**: Assuming `Specialization` strategy, the system generates a revised belief: `<(And bird (Not penguin)) --> flyer>`, resolving the conflict. The confidence of the original `<bird --> flyer>` belief is reduced.
+---
 
-## 5. Cognitive Executive
-The system's master control program, responsible for self-monitoring, strategic control, and adaptation.
--   *Subscribes to*: All major system events (`contradiction-detected`, `system-idle`, `goal-achieved`, etc.).
--   **Core Function**: It runs a continuous "sense-analyze-act" loop:
-    1.  **Sense**: Gathers KPI beliefs from Memory.
-    2.  **Analyze**: Compares KPIs against configurable thresholds to identify issues (e.g., `contradictionRate > 0.1`) or opportunities (e.g., `system-idle-time > 10s`).
-    3.  **Act**: Injects high-level goals to address the findings, e.g., `(Achieve (reduce-contradictions))` or `(Analyze (rule 'AbductionRule'))`.
--   *Injects*: High-level control tasks for other managers to handle.
+## Layer 2: Executive Control & Awareness
 
--   **Comprehensive Key Performance Indicators (KPIs)**:
+These functions monitor the system's performance and initiate deliberative (System 2) reasoning when necessary.
+
+### 2.1 Cognitive Executive
+The system's master control program, responsible for self-monitoring, strategic control, and adaptation. It is the core of System 2 initiation.
+-   **Core Function**: Runs a continuous "sense-analyze-act" loop on the system's own performance.
+    1.  **Sense**: Gathers KPI beliefs from Memory (see table below).
+    2.  **Analyze**: Compares KPIs against thresholds to identify issues (e.g., `contradictionRate > 0.1`) or opportunities (e.g., `system-idle-time > 10s`).
+    3.  **Act**: Injects high-level goals to trigger deliberative reasoning by Layer 3 functions, e.g., `(Achieve (reduce-contradictions))` or `(Goal (optimize-rule 'AbductionRule'))`.
+-   *Injects*: High-level control tasks for other functions to handle.
+
+### 2.2 Contradiction Management Function
+Implements strategies for resolving contradictions detected by the kernel. This is a classic example of a deliberative process triggered by the Executive.
+-   **Trigger**: A `(Goal (reduce-contradictions))` from the `Cognitive Executive`.
+-   **Core Capability**: Analyzes the conflicting beliefs and their derivations to select a resolution strategy (e.g., reducing confidence, specializing a rule).
+-   *Injects*: Tasks that revise or remove beliefs to resolve the detected contradiction.
+
+### 2.3 Explanation Function
+Generates human-readable explanations for the system's conclusions, providing transparency into both System 1 and System 2 reasoning chains.
+-   **Trigger**: An external or internal `(Goal (explain <belief>))`.
+-   **Core Capability**: Traverses the derivation history of the given `belief` via its `parent_premises` metadata. It constructs a graph of the reasoning chain and formats it for output.
+
+---
+
+## Layer 3: Specialized Metacognition
+
+These advanced functions perform highly abstract, resource-intensive reasoning as part of a System 2 deliberative process. They are typically activated by a `Goal` from the `Cognitive Executive`.
+
+### 3.1 Conscience Function
+Responsible for enforcing ethical constraints and safety protocols. It acts as a high-priority filter on the system's intentions.
+-   **Trigger**: `goal-generated`, `task-selected`.
+-   **Core Capability**: Evaluates potential actions and goals against a set of inviolable ethical rules represented as MeTTa atoms, e.g., `(Constraint (Forbid (Goal (cause-harm-to-human))))`.
+-   *Injects*: High-priority tasks to veto or modify unethical goals.
+
+### 3.2 Self-Modification & Improvement Functions
+This is a suite of related functions dedicated to analyzing and improving the system's own knowledge and codebase. They are the primary actors in long-term adaptation.
+
+-   **Self-Optimization Function**: Improves the system's operational efficiency by analyzing and refactoring its own reasoning rules.
+    -   **Trigger**: `(Goal (optimize-rule $X))`.
+    -   **Action**: Analyzes `rule_cost` and `rule_utility` KPIs, then attempts to rewrite the rule to be more efficient.
+
+-   **Test Generation Function**: Proactively generates tests to verify the system's reasoning and the correctness of proposed self-modifications.
+    -   **Trigger**: `(Goal (analyze-rule $X))`, `(Goal (test-concept $Y))`.
+    -   **Action**: Generates novel combinations of premises to trigger a specific rule or explore a concept, then monitors the outcome.
+
+-   **Codebase Integrity Function**: Reasons about the system's own design documents and source code to find inconsistencies.
+    -   **Trigger**: `(Goal (validate self.design))`.
+    -   **Action**: Uses grounded functions to parse design documents and source code, creating atoms that represent the specified and implemented architecture, then looks for inconsistencies.
+
+-   **Implementation Assistance Function**: Assists human developers by automating parts of the implementation process.
+    -   **Trigger**: `(Goal (Implement (feature $F)))`.
+    -   **Action**: Reads a specification and generates boilerplate MeTTa code and corresponding test stubs.
+
+---
+
+## Inter-Function Communication
+
+Cognitive functions collaborate indirectly through Memory, adhering to the "everything is an atom" principle. This creates a loosely coupled, highly flexible architecture where control flows between layers.
+
+1.  **System 1 Loop (Intra-Layer 1):** In the default reflexive state, the Layer 1 functions continuously interact by injecting tasks and beliefs for each other to process.
+
+2.  **Escalation to System 2 (Layer 1 to 2):** The `Cognitive Executive` (Layer 2) constantly monitors the output and KPIs of the Layer 1 functions. When it detects an anomaly (like a contradiction) or a major opportunity, it initiates System 2 deliberation.
+
+3.  **Delegation (Layer 2 to 3):** The Executive initiates deliberation by injecting a high-level `Goal` into Memory. This goal is specifically crafted to trigger one of the specialized Layer 3 functions. For example, `(Goal (reduce-contradictions))` activates the `Contradiction Management Function`, while `(Goal (optimize-rule ...))` activates the `Self-Optimization Function`.
+
+4.  **Resolution (Layer 3 to 1):** After completing its resource-intensive analysis, the Layer 3 function injects its conclusions (e.g., a revised belief, a new rule) back into Memory, where they are picked up by the Layer 1 functions, thus completing the full cognitive loop.
+
+This structured, layered model of communication provides a clear and elegant framework for complex cognitive control.
+
+## Key Performance Indicators (KPIs) for Self-Monitoring
+The `Cognitive Executive` relies on a comprehensive set of KPIs to monitor the system's health.
 | KPI Name | Description | Source Document |
 | :--- | :--- | :--- |
 | `avg_belief_confidence` | The average confidence of all beliefs in Memory. | `DATA_STRUCTURES.md` |
@@ -89,68 +122,3 @@ The system's master control program, responsible for self-monitoring, strategic 
 | `rule_cost` | The average execution time for a specific inference rule. | `REASONING.md` |
 | `goal_success_rate` | The percentage of goals that are successfully achieved. | `COGNITIVE_ARCH.md` |
 | `contradiction_rate` | The percentage of new beliefs that cause contradictions. | `COGNITIVE_ARCH.md` |
-
--   **Verification Scenarios**:
-    -   **Input**: The belief `(has-value (kpi contradictionRate) 0.15)` is added to memory, exceeding the executive's threshold of 0.1.
-    -   **Expected Output**: The executive injects the task `(Goal (reduce-contradictions))`. This goal might then be picked up by the `ContradictionManager` or `Self-OptimizationManager`.
-    -   **Input**: The belief `(has-utility (rule Abduce) 0.1)` is added, which is below the utility threshold.
-    -   **Expected Output**: The executive injects the task `(Goal (analyze-rule Abduce))`, which could trigger the `Test Generation Manager` to investigate why the rule is performing poorly.
-
-## 6. Explanation System
-Generates human-readable explanations for the system's conclusions.
--   *Subscribes to*: `explain-request(belief)`.
--   *Action*: Traverses the derivation history of the given `belief` via its `parent_premises` metadata. It constructs a graph of the reasoning chain and formats it for output.
-
-## 7. Test Generation Manager
-Aids development by proactively generating tests to verify the system's reasoning.
--   *Subscribes to*: `(Goal (analyze-rule $X))`, `(Goal (test-concept $Y))`.
--   *Action*: When tasked to analyze a rule, it generates novel combinations of premises that are designed to trigger that specific rule. It then injects these premises as tasks and monitors the outcome.
--   *Injects*: Test-case tasks.
-
-## 8. Codebase Integrity Manager
-A specialized manager for reasoning about the system's own design documents and source code.
--   *Subscribes to*: `(Goal (validate self.design))`.
--   *Action*: Uses grounded functions to parse design documents and source code, creating atoms that represent the specified and implemented architecture. It then looks for inconsistencies.
--   *Injects*: `(Belief (inconsistency ...))` atoms.
-
-## 9. Conscience Manager
-Responsible for enforcing ethical constraints and safety protocols.
--   *Subscribes to*: `task-selected`, `goal-generated`.
--   *Action*: Evaluates potential actions and goals against a set of inviolable ethical rules represented as MeTTa atoms, e.g., `(Constraint (Forbid (Goal (cause-harm-to-human))))`.
--   *Injects*: High-priority tasks to veto or modify unethical goals.
-
-## 10. Self-Optimization Manager
-Improves the system's own operational efficiency by analyzing and refactoring its own codebase.
--   *Subscribes to*: `(Goal (optimize-rule $X))`, `(Belief (has-cost (rule $X) $Y))`.
--   **Core Capabilities**:
-    -   **Rule Performance Analysis**: Analyzes the `rule_cost` and `rule_utility` KPIs.
-    -   **Rule Refactoring**: Autonomously rewrites rules to be more efficient.
--   *Injects*: Goals to test refactored rules in a sandbox environment before proposing them as replacements.
--   **Verification Scenario**:
-    -   **Input**: The `CognitiveExecutive` has injected `(Goal (optimize-rule 'complex-rule'))` because its cost is too high.
-    -   **Expected Output**: The manager creates a new, more efficient version `complex-rule-v2`, tasks the `Test Generation Manager` to verify its correctness, and if it passes, proposes replacing the original rule.
-
-## 11. Implementation Manager
-A manager designed to assist human developers by automating parts of the implementation process.
--   *Subscribes to*: `(Goal (Implement (feature $F)))`.
--   **Core Capabilities**:
-    -   **Specification Ingestion**: Reads a developer-provided specification for a new feature.
-    -   **Stub Generation**: Generates boilerplate MeTTa code for the new feature.
-    -   **Test Case Generation**: Tasks the `Test Generation Manager` to create a unit test for the new stub.
--   *Injects*: The generated stub code and test goal into a development space.
-
-## Inter-Manager Communication and Collaboration
-
-Cognitive Managers in HyperNARS do not call each other directly. Instead, they collaborate indirectly through Memory, adhering to the "everything is an atom" principle. This creates a loosely coupled, highly flexible architecture.
-
-The primary mechanisms for collaboration are:
-
-1.  **Goal Injection**: This is the most common method. One manager injects a `(Goal ...)` task into Memory. Another manager, which subscribes to that type of goal, will then pick it up and act on it.
-    -   **Example**: The `CognitiveExecutive` detects a high contradiction rate and injects `(Goal (reduce-contradictions))`. The `ContradictionManager` is designed to match on this goal and will activate its resolution strategies.
-
-2.  **Belief Observation**: Managers can react to `Beliefs` created by other managers or by the core reasoning engine.
-    -   **Example**: The `Self-Optimization Manager` observes a `(Belief (has-cost (rule Abduce) high))` that was generated by the reasoning cycle's performance monitor. This belief might trigger it to initiate an optimization process for the `Abduce` rule.
-
-3.  **Event-Driven Activation**: While most communication is via goals and beliefs, the system still uses a simple event system (as described in `ARCHITECTURE.md`) for broadcasting significant occurrences like `contradiction-detected` or `system-tick`. Managers subscribe to these events as entry points for their processing.
-
-This indirect communication model allows for new managers to be added to the system without requiring changes to existing ones. As long as a new manager knows what kinds of goals and beliefs to subscribe to, it can seamlessly extend the system's cognitive capabilities.
