@@ -5,7 +5,7 @@
 HyperNARS-MeTTa is a new design that evolves the HyperNARS architecture by integrating it with key concepts from OpenCog Hyperon, particularly its native language MeTTa (Meta Type Talk). The system is designed as a highly modular and extensible framework for AGI, fusing the Non-Axiomatic Reasoning System's core principle of **Assumption of Insufficient Knowledge and Resources (AIKR)** with the expressive, formal, and functional knowledge representation of MeTTa.
 
 The primary goal is to create a robust and scalable architecture that enables deep integration of symbolic reasoning with modern Machine Learning and Large Language Model (LLM) technologies. Key architectural features include:
-- A **unified Atomspace** for knowledge representation, where data and code are represented as expressions.
+- A **unified Memory** for knowledge representation, where data and code are represented as expressions.
 - A **MeTTa Interpreter** as the core reasoning engine, allowing for runtime extensibility of inference.
 - A **dual-process reasoning cycle** to balance efficiency and thoroughness, guided by AIKR.
 - A suite of specialized **Cognitive Managers** to handle high-level functions.
@@ -18,8 +18,8 @@ This document serves as the primary architectural specification for the HyperNAR
 The architecture is guided by a set of core principles that fuse the NARS philosophy with the functional paradigm of MeTTa.
 
 -   **Assumption of Insufficient Knowledge and Resources (AIKR):** This remains the cornerstone. The system must operate under the assumption that its knowledge is incomplete and potentially contradictory, and that its computational resources are finite. This principle directly influences resource allocation, belief revision, and control.
--   **Everything is an Atom:** A core principle from OpenCog Hyperon. All knowledge, including declarative facts, procedural rules, inference logic, and goals, is represented as symbolic expressions (Atoms) in a single, unified knowledge store (the Atomspace). This uniformity allows the system to reason about and modify its own logic.
--   **Modularity and Extensibility:** The system is built as a collection of loosely-coupled modules. The MeTTa-based design makes the system's reasoning capabilities themselves extensible at runtime by simply adding new atoms to the Atomspace.
+-   **Everything is an Atom:** A core principle from OpenCog Hyperon. All knowledge, including declarative facts, procedural rules, inference logic, and goals, is represented as symbolic expressions (Atoms) in a single, unified knowledge store (the Memory). This uniformity allows the system to reason about and modify its own logic.
+-   **Modularity and Extensibility:** The system is built as a collection of loosely-coupled modules. The MeTTa-based design makes the system's reasoning capabilities themselves extensible at runtime by simply adding new atoms to the Memory.
 -   **Event-Driven Communication:** Components interact primarily through an asynchronous event bus, allowing for complex, emergent behaviors to arise from simple, local interactions.
 -   **Continuous Online Learning:** The system is designed to learn from its experience in real-time, constantly revising its beliefs and adapting its behavior based on feedback.
 -   **Grounded Knowledge:** The system includes a dedicated interface for grounding atoms to external sensors, actuators, and computational procedures (including ML/LLM models), providing a pathway for the system to interact with and learn from the real world.
@@ -49,9 +49,9 @@ The HyperNARS-MeTTa architecture is a modular, layered system designed for testa
 
 The system is composed of a central **Reasoning Kernel** that executes the core reasoning cycle, and a suite of specialized **Cognitive Managers** that handle higher-level cognitive functions. Communication is handled via an **asynchronous event bus**.
 
-At the heart of the kernel is the **Atomspace**, a unified knowledge store containing all of the system's knowledge as MeTTa expressions (atoms). The reasoning process itself is driven by a **MeTTa Interpreter**, which evaluates these expressions. This approach replaces the traditional, fixed set of inference rules with a dynamic, programmable reasoning engine where the rules of inference are themselves atoms in the Atomspace.
+At the heart of the kernel is the **Memory**, a unified knowledge store containing all of the system's knowledge as MeTTa expressions (atoms). The reasoning process itself is driven by a **MeTTa Interpreter**, which evaluates these expressions. This approach replaces the traditional, fixed set of inference rules with a dynamic, programmable reasoning engine where the rules of inference are themselves atoms in the Memory.
 
-Managers subscribe to events from the kernel and influence the system by injecting new tasks—which are also atoms—into the Atomspace for the interpreter to process.
+Managers subscribe to events from the kernel and influence the system by injecting new tasks—which are also atoms—into the Memory for the interpreter to process.
 
 ### Event-Based Communication
 The Reasoning Kernel emits events at key points in the reasoning cycle. Cognitive Managers subscribe to these events to perform their functions. Below are core events and their conceptual payloads:
@@ -88,9 +88,9 @@ graph TD
         TemporalReasoner(Temporal Reasoner)
         LearningEngine(Learning Engine)
         ContradictionManager(Contradiction Manager)
-        MetaReasoner(Cognitive Executive)
+        CognitiveExecutive(Cognitive Executive)
         ExplanationSystem(Explanation System)
-        MultiAgentManager(Multi-Agent Manager)
+        ConscienceManager(Conscience Manager)
     end
 
     subgraph Kernel [Reasoning Kernel]
@@ -100,7 +100,7 @@ graph TD
             ControlUnit(Control Unit / Cycle)
             MeTTaInterpreter(MeTTa Interpreter)
         end
-        Atomspace(Atomspace / Concept Graph)
+        Memory
     end
 
     subgraph Grounding [Grounded Atom Interface]
@@ -111,8 +111,8 @@ graph TD
     API -- "Input/Queries" --> CogManagers
     CogManagers -- "Injects Tasks (Atoms)" --> Kernel
     Kernel -- "Emits Events" --> CogManagers
-    Kernel -- "Accesses/Modifies" --> Atomspace
-    MeTTaInterpreter -- "Evaluates Atoms in" --> Atomspace
+    Kernel -- "Accesses/Modifies" --> Memory
+    MeTTaInterpreter -- "Evaluates Atoms in" --> Memory
     ControlUnit -- "Orchestrates" --> MeTTaInterpreter
     Kernel -- "Grounding Requests" --> Grounding
     Grounding -- "Grounded Knowledge" --> Kernel
@@ -137,15 +137,16 @@ The core data structures are designed to be immutable where possible, combining 
     -   **Procedural Knowledge**: `(= (action-sequence (take-book) (read-book)) (knowledge-acquired))`
     -   **Logical Propositions**: `(Implication (And (human $x) (sentient $x)) (mortal $x))`
 
--   **TruthValue**: Represents the epistemic value of a declarative atom. It is defined by components like frequency, confidence, and doubt. It is **metadata** attached to an atom in the Atomspace, not part of the atom itself. The architecture must define functions for:
-    -   **Revision**: A function to combine two truth values into one, representing the synthesis of evidence.
-    -   **Projection**: A function to calculate the truth value of a component derived from a larger compound atom.
-    -   **Conjunction (and)**: A function to calculate the truth value of a conjunction of two atoms.
-    -   **Disjunction (or)**: A function to calculate the truth value of a disjunction of two atoms.
+-   **TruthValue**: A NARS-style truth-value representing the epistemic value of a declarative atom, defined by `frequency` (evidence strength) and `confidence` (confidence in frequency). It is **metadata** attached to an atom in the Memory, not part of the atom itself. The architecture must define the full set of NARS inference functions for:
+    -   **Revision**: Combining two truth values for the same atom.
+    -   **Projection**: Deriving the truth value of a component from a compound atom.
+    -   **Intersection (and)**: Calculating the truth value for a conjunction of two atoms.
+    -   **Union (or)**: Calculating the truth value for a disjunction of two atoms.
+    -   And all other logical connectives (negation, implication, etc.).
 
--   **Budget**: Represents the allocation of computational resources to an atom that is being processed (a `Task`). It is defined by components like `priority` (immediate importance), `durability` (long-term importance), and `quality` (well-foundedness). It is **metadata** attached to a task atom. The architecture must define functions for:
-    -   **Allocation**: A function to allocate a budget to a new task.
-    -   **Merging**: A function to merge the budgets of parent tasks to determine the budget of a derived task.
+-   **Budget**: A NARS-style budget representing the allocation of computational resources to a `Task`. It is defined by `priority` (immediate importance), `durability` (long-term importance), and `quality` (epistemic quality of the derivation). It is **metadata** attached to a task atom. The architecture must define functions for:
+    -   **Allocation**: Allocating a budget to a new task.
+    -   **Merging**: Merging parent task budgets to derive a new task's budget.
 
 -   **Belief**: An immutable pairing of an `Atom` and its `TruthValue`, with a timestamp to mark its creation time. Represents what the system "knows".
 
@@ -164,8 +165,8 @@ To balance efficiency and thoroughness, the reasoning cycle is architected as a 
 This is the default, high-throughput operational mode. The conceptual flow is as follows:
 1.  **Select Task**: A concept and a high-priority task (an atom with a budget) are selected from memory based on a global attention mechanism.
 2.  **Select Belief**: A relevant belief (an atom with a truth value) is selected from the chosen concept to interact with the task.
-3.  **Interpret & Reason**: The MeTTa interpreter is invoked with the task and belief atoms. It attempts to match and evaluate them against other atoms in the Atomspace (which represent inference rules), generating new derived tasks (atoms).
-4.  **Process Results**: The derived tasks are budgeted and added to the appropriate concepts in the Atomspace.
+3.  **Interpret & Reason**: The MeTTa interpreter is invoked with the task and belief atoms. It attempts to match and evaluate them against other atoms in the Memory (which represent inference rules), generating new derived tasks (atoms).
+4.  **Process Results**: The derived tasks are budgeted and added to the appropriate concepts in the Memory.
 5.  **Hooks**: The cycle provides hooks for other modules to run logic `before` and `after` the main steps.
 
 ### 3.2. System 2: The Deliberative Reasoning Process
@@ -233,17 +234,20 @@ Implements strategies for resolving contradictions detected by the kernel.
 -   **Verification Scenarios**:
     -   **Specialization**: Given a strong belief `(Implication bird flyer)` and contradictory evidence `(Inheritance penguin bird)` and `(Implication penguin (Not flyer))`, the system should lower the confidence of `(Implication bird flyer)` and create the new, more specific belief `(Implication (And bird (Not penguin)) flyer)`.
 
-### 4.5. Cognitive Executive (Meta-Reasoner)
-The system's master control program, responsible for self-monitoring and adaptation.
--   *Subscribes to*: All major system events.
--   **Core Function**: It runs a continuous self-monitoring loop:
-    1.  **Calculate Metrics**: It computes Key Performance Indicators (KPIs) like `inferenceRate`, `contradictionRate`, and `resourceUtilization`.
-    2.  **Detect Issues**: It compares these metrics against configurable thresholds to identify operational issues.
-    3.  **Adapt**: It performs real-time adjustments to system parameters (e.g., inference selectivity) or resource allocation priorities based on the detected issues.
--   *Injects*: High-level control tasks or directly calls configuration methods on the kernel.
+### 4.5. Cognitive Executive
+The system's master control program, responsible for self-monitoring, strategic control, and adaptation. It orchestrates the dual-process reasoning modes.
+-   *Subscribes to*: All major system events (`contradiction-detected`, `system-idle`, `goal-achieved`, etc.).
+-   **Core Function**: It runs a continuous self-monitoring loop to maintain operational health and strategic focus:
+    1.  **Calculate Metrics**: It computes Key Performance Indicators (KPIs) like `inferenceRate`, `contradictionRate`, `goalSuccessRate`, and `resourceUtilization`.
+    2.  **Detect Issues & Opportunities**: It compares these metrics against configurable thresholds to identify problems (e.g., high contradiction rate) or opportunities (e.g., system is idle).
+    3.  **Adapt & Control**: It initiates strategic responses, which include:
+        -   Switching between **System 1 (Reflexive)** and **System 2 (Deliberative)** reasoning.
+        -   Adjusting system parameters (e.g., inference selectivity, budget allocation weights).
+        -   Triggering other managers (e.g., tasking the `Test Generation Manager` to investigate a low-utility rule).
+-   *Injects*: High-level control tasks, such as `(Achieve (reduce-contradictions))` or `(Analyze (rule 'AbductionRule'))`.
 -   **Verification Scenarios**:
-    -   **Parameter Adaptation**: If the system experiences a high rate of contradictions, the `CognitiveExecutive` should adapt by making the system more skeptical (e.g., by adjusting a "doubt" parameter).
-    -   **Rule Optimization**: If an inference rule is observed to consistently produce low-quality results, the system should form a belief like `((rule, 'AbductionRule') --> (has_utility, 'low'))` and lower the budget allocated to tasks derived from that rule.
+    -   **Mode Switching**: If a high-priority goal is set, the `CognitiveExecutive` should switch the system to Deliberative (System 2) mode to focus resources on it.
+    -   **Rule Pruning**: If an inference rule is observed to consistently produce low-quality results, the system should form a belief like `((rule, 'AbductionRule') --> (has_utility, 'low'))` and lower the budget allocated to tasks derived from it.
 
 ### 4.6. Explanation System
 Generates human-readable explanations for the system's conclusions.
@@ -251,35 +255,35 @@ Generates human-readable explanations for the system's conclusions.
 -   *Action*: Maintains a trace of derivations. When the public API's `explain()` method is called, this manager is queried to construct the explanation graph.
 
 ### 4.7. Test Generation Manager
-Proactively ensures the system's reasoning capabilities are robust by identifying and filling gaps in its verification coverage.
+Aids development and ensures robustness by proactively generating tests to verify the system's reasoning. This manager embodies the principle of using the system's own reasoning as a development scaffold.
 -   *Subscribes to*: `afterCycle`, `rule-utility-updated`.
--   *Action*: Periodically analyzes metrics to find under-utilized inference rules or concepts with low activity. It then formulates premises that would specifically trigger these rules.
--   *Injects*: Goals to execute under-tested components, logging the proposed test case for developer review.
+-   *Action*: Periodically analyzes operational metrics to find under-utilized inference rules or concepts with low activity. It then formulates new premises that would specifically trigger these rules or components. It can also perform causal analysis on test failures, attempting to form hypotheses about which component or belief caused the unexpected result.
+-   *Injects*: Goals to execute under-tested components. It logs the proposed test case and its results for developer review, effectively creating a self-auditing test suite.
 
 ### 4.8. Codebase Integrity Manager
-A specialized manager for self-analysis, responsible for ingesting the system's own design documents to reason about their consistency.
--   *Subscribes to*: Triggered by a high-level goal, e.g., `(Achieve (analyze self.design))`.
--   *Action*: Uses grounded functions to parse design documents and test specifications, creating atoms representing the system's architecture. It then compares this knowledge against a set of baked-in consistency rules.
--   *Injects*: Goals to resolve detected inconsistencies between design and implementation.
+A specialized manager for self-analysis, responsible for ingesting the system's own design documents and source code to reason about their consistency. This enhances development ergonomics by automating design validation.
+-   *Subscribes to*: Triggered by a high-level goal, e.g., `(Achieve (validate self.design))`.
+-   *Action*: Uses grounded functions to parse design documents (like this README), source code, and test specifications. It creates atoms representing the system's specified and implemented architecture. It then compares this knowledge against a set of baked-in consistency rules (e.g., "every Cognitive Manager in the diagram must have a corresponding section").
+-   *Injects*: Goals to report or resolve detected inconsistencies between the design and the implementation.
 
-### 4.9. Multi-Agent Communication Manager
-Facilitates communication and coordination between multiple independent HyperNARS agents.
--   *Subscribes to*: Events representing messages from other agents.
--   *Action*: Manages incoming and outgoing messages with other agents using a defined communication protocol. It maintains a model of other agents' knowledge and reliability.
--   *Injects*: Tasks received from other agents, with budgets adjusted based on the perceived reliability of the source agent.
+### 4.9. Conscience Manager
+Responsible for enforcing ethical constraints and safety protocols, as detailed in Section 15.
+-   *Subscribes to*: `task-selected`, `goal-generated`.
+-   *Action*: It evaluates potential actions and goals against a set of inviolable ethical rules.
+-   *Injects*: High-priority tasks to veto or modify unethical goals, and can trigger alerts for human supervision.
 
 ## 5. The MeTTa Interpreter and Reasoning
 The core of the reasoning process is the **MeTTa Interpreter**. This component replaces the traditional, static inference engine with a dynamic, programmable reasoning system that embodies the "Everything is an Atom" principle.
 
 ### 5.1. Inference as Interpretation
-In this paradigm, inference is not the application of hard-coded rules, but the **interpretation of atoms by other atoms**. The interpreter works by matching and rewriting expressions in the Atomspace.
+In this paradigm, inference is not the application of hard-coded rules, but the **interpretation of atoms by other atoms**. The interpreter works by matching and rewriting expressions in the Memory.
 
 Inference rules themselves are represented as atoms, typically using an equality `(=)` or "rewrite" pattern. For example, a classical deduction rule (Modus Ponens) can be expressed as:
 `(= (deduce (Implication $a $b) $a) $b)`
 
 When the control unit selects a task like `(deduce (Implication (human socrates) (mortal socrates)) (human socrates))`, the interpreter can match this against the rule above and evaluate it to produce a new atom: `(mortal socrates)`.
 
-This approach provides immense flexibility. The system can learn, modify, or be given new inference rules at runtime simply by adding new atoms to the Atomspace. Different types of logic (probabilistic, temporal, deontic) can be implemented as sets of interpretation rules.
+This approach provides immense flexibility. The system can learn, modify, or be given new inference rules at runtime simply by adding new atoms to the Memory. Different types of logic (probabilistic, temporal, deontic) can be implemented as sets of interpretation rules.
 
 ### 5.2. AIKR-Constrained Interpretation
 While the interpreter provides the mechanism for reasoning, the **NARS-style control loop** provides the guidance. The control loop uses the `Budget` and `activation` levels to decide which atoms to feed to the interpreter. This ensures that the system's finite computational resources are always focused on the most promising and relevant lines of reasoning, in accordance with AIKR.
@@ -288,17 +292,17 @@ The dual-process model is also implemented here:
 -   **System 1 (Reflexive)**: The interpreter performs a shallow, fast evaluation of the selected atoms.
 -   **System 2 (Deliberative)**: The interpreter is instructed to perform a deeper, more exhaustive evaluation, potentially chaining multiple rewrite steps together in pursuit of a high-priority goal.
 
-## 6. The Atomspace (Memory System)
-The Memory System is the core of the system's knowledge base, structured as a dynamic **Atomspace**.
+## 6. Memory System
+The Memory System is the core of the system's knowledge base, structured as a dynamic hypergraph.
 
--   **The Atomspace Hypergraph**: The memory is structured as a **hypergraph**, where `Concept`s (representing key atoms) are vertices and all other `Atoms` are hyperedges that can connect any number of vertices. This allows for representing complex, compositional knowledge.
+-   **The Memory Hypergraph**: The memory is structured as a **hypergraph**, where `Concept`s (representing key atoms) are vertices and all other `Atoms` are hyperedges that can connect any number of vertices. This allows for representing complex, compositional knowledge.
 
     **Hypergraph Visualization:**
     The following diagram illustrates how a complex belief is represented as a single atom/hyperedge connecting multiple concepts. The central diamond represents the hyperedge for the atom `(Implication (And cat mammal) (has_fur true))`.
 
     ```mermaid
     graph TD
-        subgraph "Atomspace Hypergraph Example"
+        subgraph "Memory Hypergraph Example"
             A("Concept: cat")
             B("Concept: mammal")
             C("Concept: has_fur")
@@ -351,7 +355,7 @@ The public API should be designed to be clean, language-agnostic, and powerful. 
     -   Request a structured explanation for a belief.
 
 ### 7.1. The Semantic API Layer
-To improve usability, the system can provide a higher-level, intention-driven API that wraps the raw NAL input. This "semantic API" would allow developers to interact with the system more naturally (e.g., via methods like `createInheritanceBelief()` or `addGoal()`).
+To improve usability, the system can provide a higher-level, intention-driven API that wraps the raw MeTTa input. This "semantic API" would allow developers to interact with the system more naturally (e.g., via methods like `createInheritanceBelief()` or `addGoal()`).
 
 ### 7.2. Hypothetical Reasoning via Sandboxing
 The API should provide a method for creating isolated "sandbox" instances of the reasoner. This allows for hypothetical or "what-if" reasoning without polluting the main knowledge base.
@@ -374,11 +378,11 @@ The GAI facilitates a continuous **sensorimotor loop**:
 
 ### 8.2. Machine Learning and LLM Integration
 
-A key advantage of the Grounded Atom model is the deep and flexible integration of external computational models, including neural networks and LLMs. A grounded atom can be defined to execute any external function, with the results being fed back into the Atomspace.
+A key advantage of the Grounded Atom model is the deep and flexible integration of external computational models, including neural networks and LLMs. A grounded atom can be defined to execute any external function, with the results being fed back into the Memory.
 
 This allows the system to seamlessly blend symbolic reasoning with sub-symbolic processing:
--   **LLM as a Knowledge Source**: An atom like `(llm-query "What is the capital of France?")` can be grounded to an LLM API. The interpreter can evaluate this atom, and the LLM's response ("Paris") is inserted into the Atomspace as a new atom, e.g., `(capital-of France Paris)`.
--   **Embeddings for Similarity**: An atom `(get-embedding "some text")` can be grounded to a text embedding model. The resulting vector can be stored in the Atomspace and used for powerful similarity and analogy calculations, e.g., `(= (similarity (get-embedding $a) (get-embedding $b)) (cosine-similarity ...))`
+-   **LLM as a Knowledge Source**: An atom like `(llm-query "What is the capital of France?")` can be grounded to an LLM API. The interpreter can evaluate this atom, and the LLM's response ("Paris") is inserted into the Memory as a new atom, e.g., `(capital-of France Paris)`.
+-   **Embeddings for Similarity**: An atom `(get-embedding "some text")` can be grounded to a text embedding model. The resulting vector can be stored in the Memory and used for powerful similarity and analogy calculations, e.g., `(= (similarity (get-embedding $a) (get-embedding $b)) (cosine-similarity ...))`
 -   **Perception via Vision Models**: An atom like `(recognize-objects <image_data>)` can be grounded to a computer vision model, producing atoms that describe the contents of an image.
 
 This mechanism allows the symbolic reasoner to offload complex, pattern-based tasks to specialized ML models while still managing the high-level reasoning process.
@@ -389,12 +393,17 @@ The GAI maintains a central registry of all known grounded atoms (traditionally,
 
 ### 8.4. Natural Language Processing (NLP) Interface
 
-The NLP interface is a specialized part of the GAI.
--   **Language to Atoms**: Parsing natural language and converting it into MeTTa atoms (e.g., "A bird is an animal" becomes `(Inheritance bird animal)`).
--   **Atoms to Language**: Generating human-readable language from atoms in the Atomspace.
+The NLP interface is a specialized part of the GAI, responsible for bridging the gap between symbolic atoms and human language.
+-   **Natural Language Understanding (NLU)**: Parsing human language into MeTTa atoms (e.g., "A bird is an animal" becomes `(Inheritance bird animal)`).
+-   **Natural Language Generation (NLG)**: Generating human-readable language from atoms in the Memory.
 
 ## 9. Extension Points
-(Content unchanged)
+The architecture is designed to be extensible at multiple levels, allowing developers to add new capabilities without modifying the core kernel. Key extension points include:
+
+-   **Adding New Cognitive Managers**: A developer can create a new manager that subscribes to kernel events and injects tasks to implement novel high-level cognitive functions. This is the primary way to add new behaviors.
+-   **Adding New Inference Rules**: Since inference rules are just MeTTa atoms, new forms of reasoning can be introduced at runtime by simply adding new rule atoms to the Memory.
+-   **Adding Grounded Atoms**: New capabilities for interacting with the external world can be added by implementing new grounded atoms and registering them with the Grounded Atom Interface. This is how the system learns new "skills".
+-   **Swapping Core Components**: The pluggable module architecture (Section 1.1) allows for different implementations of components like the Memory system or budget functions to be swapped out at initialization.
 
 ## 10. System Initialization and Configuration
 
@@ -412,10 +421,21 @@ Configuration should be organized into logical groups. Examples include:
 -   **Cognitive Executive**: Parameters for the self-monitoring loop (e.g., metric thresholds that trigger adaptation, adaptation learning rate).
 
 ### 10.2. Bootstrap Process
-(Content unchanged)
+The system follows a well-defined sequence to ensure a stable startup:
+1.  **Load Configuration**: The system loads its configuration from a file or environment variables.
+2.  **Initialize Event Bus**: The central asynchronous event bus is created.
+3.  **Initialize Memory**: The Memory system is initialized, including its indexing structures.
+4.  **Initialize MeTTa Interpreter**: The interpreter is started and loaded with the foundational inference rules (see Section 14).
+5.  **Register Cognitive Managers**: All configured Cognitive Managers are instantiated and subscribe to their required events.
+6.  **Load Foundational Knowledge**: A base set of declarative and procedural knowledge is loaded into the Memory.
+7.  **Start Reasoning Loop**: The main control unit begins the reasoning cycle, and the system is now operational.
 
 ## 11. Concurrency and Parallelism
-(Content unchanged)
+The system is designed to leverage concurrency to improve performance and scalability, especially on multi-core processors. The primary concurrency model is the **Actor Model**, which maps well to the distributed, message-passing nature of the system's components.
+
+-   **Concurrent Concept Processing**: Each `Concept` can be implemented as a lightweight actor. This allows the system to process tasks related to different concepts in parallel. For example, reasoning about "cats" and "dogs" can happen concurrently without interference.
+-   **Parallel Inference**: While the primary reasoning loop is sequential, there are opportunities for parallelizing parts of the inference process. For example, the MeTTa interpreter could attempt to match a task against multiple beliefs or rules simultaneously.
+-   **Asynchronous Grounding**: Calls to grounded atoms, especially those involving I/O (like API calls), must be executed asynchronously to prevent blocking the entire reasoning kernel.
 
 ### 11.1. Actor Lifecycle and Supervision
 
@@ -430,16 +450,37 @@ If an Actor Model is used for concurrency, a clear lifecycle for `Concept` actor
 - **Actor Passivation and Awakening**: An actor for a low-activation concept should be suspended. When a new task for that concept arrives, the actor should be awakened by loading its state, and it should process the task correctly.
 
 ## 12. State Serialization and Persistence
-(Content unchanged)
+To support long-running operation and recovery from shutdowns, the system must be able to serialize its entire state to persistent storage. A complete snapshot should include:
+
+-   **Memory Content**: All atoms, beliefs, concepts, and their associated metadata (TruthValues, activation levels). This should ideally be stored in a format that is both efficient and human-readable, such as a stream of MeTTa expressions.
+-   **Cognitive Manager State**: The internal state of all cognitive managers (e.g., the Goal Manager's current goal stack). This can be serialized using standard formats like JSON or YAML.
+-   **System Configuration**: The configuration parameters the system is currently running with.
+-   **Event Queues**: A snapshot of any pending events or tasks to ensure a seamless restart.
+
+This capability is also essential for debugging, as it allows developers to capture and replay the exact state of the system at a specific moment.
 
 ## 13. Self-Governing Evolution: An Ambition for Autonomy
-(Content unchanged)
+A long-term ambition for HyperNARS-MeTTa is to achieve a degree of self-governing evolution. This vision extends beyond simple runtime adaptation to encompass the system's ability to reason about and improve its own architecture and codebase. This capability is underpinned by the principle of representing knowledge and process uniformly as atoms.
+
+The pathway to this ambitious goal involves several stages:
+1.  **Architectural Self-Representation**: The system uses the `Codebase Integrity Manager` to parse its own design documents and source code, creating a model of its architecture within its own Memory.
+2.  **Self-Analysis**: Using this self-model, the system can reason about its own structure and behavior. It can detect inconsistencies, identify performance bottlenecks (e.g., inefficient inference rules), or find gaps in its knowledge.
+3.  **Hypothesize Improvements**: Based on its analysis, the system can formulate hypotheses for improvement. These could be new inference rules, modifications to a Cognitive Manager's logic, or even proposals for new components. These proposals are represented as atoms.
+4.  **Sandboxed Verification**: The system can spin up a sandboxed instance of itself to test the proposed changes. It can run simulations and analyze the results to predict the impact of the change on its performance and safety.
+5.  **Autonomous Deployment**: If a change is verified as beneficial and safe, the system could autonomously integrate it into its live operational code, thus completing a cycle of self-improvement.
+
+This capability represents the ultimate expression of elegant self-definition and is a guiding star for the long-term development of the project.
 
 ## 14. System Bootstrapping and Foundational Knowledge
-(Content unchanged)
+The system cannot start from a completely blank state. It requires a minimal set of foundational knowledge to be "bootstrapped" at initialization. This knowledge provides the basic scaffolding for all subsequent learning and reasoning. This foundational knowledge set includes:
+
+-   **Core Inference Schemas**: The essential MeTTa atoms that define the built-in inference rules, such as deduction, abduction, induction, revision, and choice. These form the basis of the system's ability to reason.
+-   **Core Ontology**: A minimal set of concepts and relations that structure its world model, such as atoms representing `Type`, `Inheritance`, `Property`, `Time`, and `Event`.
+-   **Grounded Primitives**: A declarative understanding of the available grounded atoms (operators), including their purpose, inputs, and expected outputs. This allows the system to reason about how to use its own skills.
+-   **Self-Model**: A basic representation of the system itself, such as `(isa SELF System)`, which allows it to reason about its own properties and actions.
 
 ## 15. Ethical Alignment and Safety
-(Content unchanged)
+Safety and ethical alignment are critical concerns. The system's architecture includes a dedicated `Conscience Manager` (Section 4.9) responsible for enforcing a set of core, inviolable principles. This manager acts as a safety layer, monitoring the system's goals and actions to prevent unethical or harmful behavior. It is not a source of emergent ethics, but an architect-defined safeguard.
 
 ### 15.1. Worked Example: Vetoing an Unethical Goal
 To make the `ConscienceManager`'s function concrete, consider the following scenario:
@@ -459,4 +500,9 @@ To make the `ConscienceManager`'s function concrete, consider the following scen
 > Then the `ConscienceManager` should detect the conflict, inject a task to suppress the subgoal, and the subgoal's budget should be reduced to near-zero.
 
 ## 16. Error Handling and System Resilience
-(Content unchanged)
+In accordance with AIKR, the system is designed to be resilient to errors, treating them not as fatal exceptions but as sources of information. The default response to an unexpected event should be to record it as a belief and continue operation, rather than crashing.
+
+-   **Invalid Input**: The API layer should validate all incoming atoms. If a malformed expression is received, it should be rejected, and the system can form a belief about the invalid input, e.g., `(property-of <source> (produces malformed-data))`.
+-   **Grounding Failures**: When a grounded atom fails (e.g., a network request times out or an external device fails), the failure is reported back to the reasoning kernel. The system can then form a belief about the failure (e.g., `(state #my-api offline)`) and use its reasoning capabilities to decide on an alternative course of action.
+-   **Internal Errors**: The Actor Model's supervision strategy (Section 11.1) provides a mechanism for resilience against internal component failures. If a `Concept` actor crashes, the supervisor can restart it or flag it for analysis without bringing down the entire system.
+-   **Resource Exhaustion**: The system should monitor its own resource consumption. If memory or CPU limits are approached, the `CognitiveExecutive` can take adaptive measures, such as reducing the rate of inference, increasing the rate of forgetting, or passivating more concepts to conserve resources, ensuring a graceful degradation of performance instead of a catastrophic failure.
