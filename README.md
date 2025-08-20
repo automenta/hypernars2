@@ -95,9 +95,9 @@ graph TD
         subgraph ControlInference [ ]
             direction LR
             ControlUnit(Control Unit / Cycle)
-            InferenceEngine(Inference Engine / NAL)
+            InferenceEngine(Inference Engine / MeTTa Interpreter)
         end
-        MemorySystem(Memory System / Concept Graph)
+        MemorySystem(Memory System / Concept Hypergraph)
     end
 
     subgraph Grounding [Symbol Grounding Interface]
@@ -109,7 +109,7 @@ graph TD
     CogManagers -- "Injects Tasks" --> Kernel
     Kernel -- "Emits Events" --> CogManagers
     Kernel -- "Accesses/Modifies" --> MemorySystem
-    InferenceEngine -- "Applies Rules" --> MemorySystem
+    InferenceEngine -- "Interprets/Transforms" --> MemorySystem
     ControlUnit -- "Orchestrates" --> InferenceEngine
     Kernel -- "Grounding Requests" --> Grounding
     Grounding -- "Grounded Knowledge" --> Kernel
@@ -118,22 +118,30 @@ graph TD
     classDef layer fill:#f8f8f8,stroke:#666,stroke-width:2px,stroke-dasharray: 3 3;
     class AppLayer,CogManagers,Kernel,Grounding layer;
 ```
-### 1.1. Pluggable Module Architecture
+### 1.1. MeTTa: The Language of Thought
+HyperNARS adopts **MeTTa (Meta Type Talk)** as its core symbolic language, replacing traditional Narsese. MeTTa is a highly flexible, functional language designed for AGI, where every component of the system—from simple concepts to complex inference rules and even the inference engine itself—is represented as a MeTTa expression. This "everything is an expression" philosophy provides several key advantages:
+
+-   **Unification of Knowledge and Procedure**: MeTTa seamlessly blends declarative knowledge (what the system knows) with procedural knowledge (what the system can do). A statement like `(implies (bird $x) (flyer $x))` is data, but it is also an executable program for deriving new knowledge.
+-   **Intrinsic Support for Higher-Order Reasoning**: Because MeTTa expressions can manipulate other MeTTa expressions, the system can naturally reason about its own knowledge and reasoning processes. This is fundamental for self-reflection, learning, and adaptation.
+-   **Extensibility**: New logical connectives, inference rules, or even entire sub-languages can be defined within MeTTa itself, without altering the core interpreter.
+-   **Symbol Grounding as Function Calls**: Grounding symbols to external sensors or actuators becomes a natural extension of the language, where a symbol is simply bound to a function in the host environment.
+
+### 1.2. Pluggable Module Architecture
 A core design principle is modularity, allowing different implementations of key components to be swapped out. The system should support a mechanism to select between different versions of its modules at initialization time (e.g., a `SimpleMemoryManager` vs. an `AdvancedMemoryManager`). This allows the system's footprint and complexity to be tailored to the specific application.
 
-### 1.2. Cognitive Manager Roles
+### 1.3. Cognitive Manager Roles
 
 The Cognitive Managers are specialized, pluggable modules that handle complex, cross-cutting concerns. They operate by subscribing to events from the Reasoning Kernel and can inject new tasks back into the system to influence its behavior. Their detailed functionality is described in Section 4.
 
 ## 2. Core Data Structures
 
-The core data structures should be designed as **immutable** where possible to promote functional purity and predictable state management.
+All core data structures in HyperNARS are represented as **MeTTa expressions**. The system's state is embodied in a collection of these expressions stored in Memory. The primary types are:
 
--   **Term**: The basic unit of meaning. It can be an atomic identifier or a `CompoundTerm`.
+-   **Symbol**: An atomic, indivisible identifier. It is the simplest form of a MeTTa expression. For example: `bird`, `flyer`, `implies`.
 
--   **Compound Term**: A structure composed of other terms, connected by an operator. This allows for representing complex subjects and predicates. For example, the term `(&, bird, (-, penguin))` in the statement `((&, bird, (-, penguin)) --> flyer)`.
+-   **Expression**: A sequence of other MeTTa expressions (Symbols or other Expressions), representing a structured piece of information or a program. For example: `(implies (bird $x) (flyer $x))`. This replaces the legacy `CompoundTerm` and `Statement` distinction, unifying them into a single, powerful construct.
 
--   **Statement**: A relationship between terms, forming the primary type of hyperedge in the Concept Hypergraph. It consists of the terms it connects and the `copula` (e.g., `inheritance`, `similarity`, `implication`) that defines the relationship. It must have a canonical representation for hashing and identification. For example: `(bird --> animal)`.
+-   **Statement**: A declarative MeTTa expression that asserts a belief. These are typically expressions that can be assigned a `TruthValue`. For example, `(Inheritance bird animal)` is a statement expressed in MeTTa syntax.
 
 -   **TruthValue**: Represents the epistemic value of a statement. It is defined by components like frequency, confidence, and doubt. The architecture must define functions for:
     -   **Revision**: A function to combine two truth values into one, representing the synthesis of evidence. The function should weigh evidence based on confidence.
