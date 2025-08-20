@@ -1,16 +1,17 @@
 # HyperNARS: A Modular Reimplementation of NARS
 
-## Overview
+## Overview: A Hybrid Neural-Symbolic Architecture
 
-HyperNARS is a from-the-ground-up reimplementation of the Non-Axiomatic Reasoning System (NARS). It is designed as a highly modular, extensible, and performant framework for general-purpose AI, grounded in the **Assumption of Insufficient Knowledge and Resources (AIKR)**.
+This document specifies HyperNARS, a from-the-ground-up reimplementation of the Non-Axiomatic Reasoning System (NARS), redesigned as a hybrid neural-symbolic cognitive architecture. This evolution integrates the core principles of NARS with the symbolic processing power of pattern-matching languages like OpenCog's MeTTa and the sub-symbolic strengths of modern Machine Learning (ML) and Large Language Models (LLMs).
 
-The primary goal of this project is to create a robust and scalable system that facilitates research and development in AGI. Key architectural features include:
-- A **dual-process reasoning cycle** to balance efficiency and thoroughness.
-- A suite of specialized **Cognitive Managers** to handle high-level functions like goal pursuit and temporal reasoning.
-- An **event-driven architecture** to ensure loose coupling between components.
-- A comprehensive **Symbol Grounding Interface** to connect abstract knowledge to real-world sensors and actuators.
+The system is designed as a modular, extensible, and performant framework for general-purpose AI, grounded in the **Assumption of Insufficient Knowledge and Resources (AIKR)**.
 
-This document serves as the primary design specification for the HyperNARS system.
+The primary goal is to create a robust and scalable AGI architecture by leveraging the strengths of three complementary paradigms:
+-   **NARS Cognitive Architecture**: The high-level cognitive framework, including its specialized **Cognitive Managers** and **dual-process reasoning cycle**, provides the blueprint for autonomous, goal-oriented reasoning under uncertainty.
+-   **Symbolic Reasoning Language (MeTTa-inspired)**: A powerful, hypergraph-native language serves as the new core of the inference engine. This allows for flexible, expressive, and self-modifiable reasoning, where inference rules themselves are data that can be learned and evolved by the system.
+-   **Grounded Neural Models**: A comprehensive **Symbol Grounding Interface** connects the symbolic reasoning engine to external neural models (e.g., LLMs, computer vision systems), allowing the system to ground its abstract knowledge in real-world perceptual data and leverage the pattern-recognition capabilities of deep learning.
+
+This document serves as the primary design specification for this integrated HyperNARS system.
 
 ## Guiding Principles
 
@@ -28,7 +29,7 @@ The architecture and implementation of HyperNARS are guided by a set of core pri
 2.  [Core Data Structures](#core-data-structures)
 3.  [The Reasoning Cycle (Control Unit)](#the-reasoning-cycle-control-unit)
 4.  [Cognitive Managers](#cognitive-managers)
-5.  [Inference Engine](#inference-engine)
+5.  [The MeTTa-Inspired Symbolic Reasoning Engine](#the-metta-inspired-symbolic-reasoning-engine)
 6.  [Memory System](#memory-system)
 7.  [I/O and Public API](#io-and-public-api)
 8.  [Symbol Grounding and Embodiment](#symbol-grounding-and-embodiment)
@@ -47,9 +48,9 @@ The architecture and implementation of HyperNARS are guided by a set of core pri
 
 The new HyperNARS architecture will be designed as a modular, layered system. This approach enhances testability, extensibility, and maintainability. The design is inspired by the C4 model, focusing on components and their interactions.
 
-The system is composed of a central **Reasoning Kernel** that executes the core reasoning cycle, and a suite of specialized **Cognitive Managers** that handle higher-level cognitive functions. This separation of concerns ensures the kernel remains lean and focused on pure NARS logic, while complex behaviors can be developed and tested independently in the managers.
+The system is composed of a central **Reasoning Kernel** that executes the core reasoning cycle, and a suite of specialized **Cognitive Managers** that handle higher-level cognitive functions. This separation of concerns ensures the kernel remains lean and focused on executing symbolic expressions, while complex behaviors can be developed and tested independently in the managers.
 
-Communication is primarily handled via an **asynchronous event bus**. The Reasoning Kernel emits events at key points in its cycle, and managers subscribe to these events to perform their functions. This ensures loose coupling and allows for flexible, emergent behavior. Managers can influence the kernel by injecting new tasks into its processing queue.
+Communication is primarily handled via an **asynchronous event bus**. The Reasoning Kernel emits events at key points in its cycle, and managers subscribe to these events to perform their functions. This ensures loose coupling and allows for flexible, emergent behavior. Managers can influence the kernel by injecting new tasks and symbolic expressions into its processing queue.
 
 ### Event-Based Communication
 The Reasoning Kernel will emit events at key points in the reasoning cycle. Cognitive Managers subscribe to these events to perform their functions. Below are the core events and their data payloads:
@@ -96,7 +97,7 @@ graph TD
         subgraph ControlInference [ ]
             direction LR
             ControlUnit(Control Unit / Cycle)
-            InferenceEngine(Inference Engine / NAL)
+            SymbolicEngine(Symbolic Engine / MeTTa)
         end
         MemorySystem(Memory System / Concept Graph)
     end
@@ -107,11 +108,11 @@ graph TD
     end
 
     UI_API -- "Input/Queries" --> CogManagers
-    CogManagers -- "Injects Tasks" --> Kernel
+    CogManagers -- "Injects Tasks & Expressions" --> Kernel
     Kernel -- "Emits Events" --> CogManagers
     Kernel -- "Accesses/Modifies" --> MemorySystem
-    InferenceEngine -- "Applies Rules" --> MemorySystem
-    ControlUnit -- "Orchestrates" --> InferenceEngine
+    SymbolicEngine -- "Matches & Rewrites" --> MemorySystem
+    ControlUnit -- "Orchestrates" --> SymbolicEngine
     Kernel -- "Grounding Requests" --> Grounding
     Grounding -- "Grounded Knowledge" --> Kernel
 
@@ -503,16 +504,16 @@ class Concept {
 
 ## 3. The Reasoning Cycle: A Dual-Process Control Unit
 
-To achieve a balance between efficiency and thoroughness, the reasoning cycle is architected as a **dual-process system**, inspired by dual process theories in cognitive science. This allows the system to handle routine inferences rapidly while dedicating more resources to complex, novel, or problematic situations. The two modes are:
+To achieve a balance between efficiency and thoroughness, the reasoning cycle is architected as a **dual-process system**, inspired by dual process theories in cognitive science. This allows the system to handle routine inferences rapidly while dedicating more resources to complex, novel, or problematic situations. The reasoning cycle is orchestrated by the Control Unit, which continuously selects tasks and beliefs and directs the **Symbolic Engine** to perform reasoning. The dual-process model is realized through different modes of symbolic execution:
 
-1.  **System 1 (Reflexive Mode):** A fast, associative, and resource-efficient mode for routine reasoning. It operates continuously, handling the vast majority of inferences.
-2.  **System 2 (Deliberative Mode):** A slow, serial, and resource-intensive mode for deep, focused reasoning. It is triggered under specific conditions to handle complex problems, paradoxes, or high-stakes goals.
+1.  **System 1 (Reflexive Mode):** A fast, associative, and resource-efficient mode for routine reasoning. It operates continuously, handling the vast majority of inferences by executing simple, common-case symbolic patterns.
+2.  **System 2 (Deliberative Mode):** A slow, serial, and resource-intensive mode for deep, focused reasoning. It is triggered under specific conditions to handle complex problems by generating and executing sophisticated, higher-order symbolic expressions.
 
 The **Cognitive Executive** (the `MetaReasoner` manager) is responsible for monitoring the system's state and orchestrating the transition between these two modes.
 
 ### 3.1. System 1: The Reflexive Reasoning Loop
 
-This is the default operational mode, representing the main loop of the system. It is designed for high throughput and continuous, parallelizable processing. Its operation is largely unchanged from a standard NARS control cycle.
+This is the default operational mode, representing the main loop of the system. It is designed for high throughput and continuous, parallelizable processing.
 
 ```pseudocode
 function reflexiveReasoningCycle(kernel) {
@@ -539,8 +540,8 @@ function reflexiveReasoningCycle(kernel) {
     if (!belief) continue; // No relevant belief found.
     cycleContext.belief = belief;
 
-    // 3. Perform Local Inference.
-    let derivedTasks = kernel.inferenceEngine.applyAllRules(cycleContext.task, cycleContext.belief);
+    // 3. Perform Local Inference via fast pattern matching.
+    let derivedTasks = kernel.symbolicEngine.matchAndRewrite(cycleContext.task, cycleContext.belief, 'reflexive');
     cycleContext.derivedTasks = derivedTasks;
 
     // 4. Process and Store Derived Tasks.
@@ -571,8 +572,8 @@ The Cognitive Executive transitions the system to Deliberative Mode upon detecti
 
 Once triggered, the Deliberative Mode executes a multi-step analysis:
 1.  **Context Freezing & Scoping:** The relevant area of the concept graph is "frozen" by allocating a large budget to the involved concepts and tasks, preventing them from being forgotten during the analysis.
-2.  **Hypothesis Generation:** Instead of just applying rules forward, the system generates multiple competing hypotheses. For a paradox, it might generate hypotheses like "premise A is wrong," "premise B is wrong," or "the derivation rule is misapplied."
-3.  **Evidence Gathering & Simulation:** The system actively seeks evidence for or against each hypothesis. This may involve generating questions (`nalq`) to find missing information or running "mental simulations" by exploring long derivation chains without immediately adding the results to the belief space.
+2.  **Hypothesis Generation:** Instead of just applying rules forward, the system generates and executes complex, higher-order symbolic expressions designed for analysis, hypothesis generation, and simulation. For a paradox, it might execute an expression that evaluates the provenance of the conflicting beliefs.
+3.  **Evidence Gathering & Simulation:** The system actively seeks evidence for or against each hypothesis. This may involve generating questions (`nalq`) to find missing information or running "mental simulations" by executing symbolic expressions without immediately committing their results to the belief space.
 4.  **Conclusion & Action:** After a set number of steps or when a conclusion reaches a high confidence threshold, the system commits to a resolution. This might involve:
     -   Revising a core belief that caused the paradox.
     -   Creating a new, more nuanced belief that resolves a contradiction (e.g., via the Specialize strategy).
@@ -643,8 +644,9 @@ function selectBeliefForTask(concept, task) {
 }
 ```
 
-## 4. Cognitive Managers
-The Cognitive Managers are specialized, pluggable modules that handle complex, cross-cutting concerns. They operate by subscribing to events from the Reasoning Kernel and can inject new tasks back into the system to influence its behavior.
+## 4. Cognitive Managers: Governing with a Symbolic Language
+
+The Cognitive Managers are specialized, pluggable modules that handle complex, cross-cutting concerns. In the new architecture, they are not just event listeners; they are the primary authors of complex symbolic code. They operate by generating and injecting sophisticated expressions into the knowledge base, which are then executed by the Symbolic Engine to achieve high-level cognitive functions. This approach allows for a powerful separation of concerns: the managers define *what* to do (the strategy), and the symbolic engine defines *how* to do it (the execution).
 
 ### 4.1. Goal Manager
 The Goal Manager is responsible for the entire lifecycle of goal-oriented behavior, from receiving a high-level goal to decomposing it into actionable steps and monitoring its progress. It operates as a sophisticated planner and execution monitor.
@@ -658,7 +660,7 @@ The Goal Manager is responsible for the entire lifecycle of goal-oriented behavi
         - If a suitable action is found and its preconditions are met, the manager triggers the `OperationalRule` to execute it.
         - If no single action can satisfy the goal, the manager attempts to **decompose** it. If the goal is a conjunction (e.g., `goal: <(&&, A, B)>`), it creates new sub-goals for `A` and `B` and sets the parent goal's status to `waiting`.
         - If preconditions for a selected action are not met, it generates new, high-priority sub-goals to satisfy those preconditions.
--   *Injects*: New sub-goals to decompose complex problems or satisfy the preconditions for an action. It also injects high-priority tasks to find information relevant to its current goal.
+-   *Injects*: The Goal Manager achieves its aims by injecting high-level symbolic expressions into the knowledge base. For example, to decompose a complex goal, it might inject `(achieve <complex_goal>)`, relying on the symbolic engine to find a matching expression that breaks it down into sub-goals.
 -   **Procedural Skill Acquisition**: Beyond executing known procedures, a key function of the Goal Manager is to learn new ones. The system learns by observing the consequences of its operations. The learning process is as follows:
     1.  **Babbling/Exploration**: The system may execute an operation without a known outcome, either randomly or because it is part of a high-level exploration goal.
     2.  **Consequence Monitoring**: After executing an operation (e.g., `#op`), the Goal Manager monitors the system for significant changes in its belief state in the subsequent cycles.
@@ -721,7 +723,7 @@ Provides a comprehensive framework for understanding and reasoning about time, m
 Responsible for abstracting knowledge and forming new concepts.
 -   *Subscribes to*: `concept-created`, `belief-added`, `afterInference`.
 -   *Action*: Detects patterns and correlations across concepts to form higher-level abstractions or new inference rules. It provides performance statistics on existing inference rules to the `CognitiveExecutive` to aid in self-optimization.
--   *Injects*: Tasks representing new concepts or learned rules.
+-   *Injects*: New `match` expressions that represent learned inference rules or patterns. By writing new executable code into the knowledge base, the Learning Engine allows the system to actively improve its own reasoning capabilities.
 -   **Verification Scenario: Meta-Learning Verification of a New Inference Rule (ML-01)**
     > Given the system's LearningEngine is active and monitoring derivation patterns
     > And the system repeatedly observes the following pattern:
@@ -741,7 +743,7 @@ Responsible for abstracting knowledge and forming new concepts.
 ### 4.4. Contradiction Manager
 The Contradiction Manager implements sophisticated strategies for resolving contradictions. When a `contradiction-detected` event is fired, the manager analyzes the evidence, source reliability, and recency of the conflicting beliefs to decide on a resolution strategy.
 -   *Subscribes to*: `contradiction-detected`.
--   *Injects*: Tasks that revise or remove beliefs to resolve the contradiction.
+-   *Injects*: Symbolic expressions representing different resolution strategies. For example, it might inject `(resolve-contradiction <id> 'specialize')`, which would trigger a pre-defined expression for resolving a conflict via specialization.
 
 #### Contradiction Resolution Strategies
 The choice of strategy can be determined by the `CognitiveExecutive` based on the context of the contradiction. The available strategies include:
@@ -862,168 +864,69 @@ Facilitates communication and coordination between multiple independent HyperNAR
     > And Agent_B receives the query and sends its belief `<B --> C>` back to Agent_A
     > Then Agent_A should receive the belief and be able to derive `<A --> C>`, achieving its goal.
 
-## 5. Inference Engine
+## 5. The MeTTa-Inspired Symbolic Reasoning Engine
 
-The Inference Engine is a stateless, extensible component responsible for applying Non-Axiomatic Logic (NAL) rules to derive new knowledge from existing beliefs.
+The core of HyperNARS's reasoning capability is a **Symbolic Reasoning Engine** inspired by and compatible with languages like MeTTa (Meta-Type Talk). This engine replaces the traditional, hard-coded inference rule system with a single, powerful, and flexible interpreter that operates directly on the statements in the Concept Hypergraph.
+
+In this paradigm, there is no distinction between data and code. Inference rules, queries, goals, and even complex cognitive processes are all represented as symbolic expressions that can be stored, matched, and transformed by the interpreter. This "everything is an expression" approach is fundamental to the system's flexibility and its capacity for self-modification and meta-reasoning.
 
 ### 5.1. Core Principles
--   **Extensible Rule System**: The engine uses a central registry, `Map<string, InferenceRule>`, where new rules can be added at runtime via `kernel.inferenceEngine.registerRule(rule)`. This allows for the system's reasoning capabilities to be expanded or modified.
--   **Self-Optimizing Rule Application**: The engine employs a sophisticated, metrics-driven mechanism to manage resource allocation under AIKR. Instead of a static utility, each rule's effectiveness is dynamically tracked and used to guide the reasoning process.
-    -   **Rule Priority**: Each rule has a dynamic `priority` score. This score is a function of the rule's historical `successRate` (how often it produces useful results) and its `applicability` in the current context.
-    -   **Performance-Based Adaptation**: The `CognitiveExecutive` periodically analyzes performance statistics (e.g., `successes / attempts`, `computationalCost`) provided by the `LearningEngine` for each rule. It then updates each rule's `successRate` and overall `priority`. This creates a feedback loop where effective rules are prioritized over time.
-    -   **Weighted Probabilistic Selection**: When applying rules, the engine does not deterministically pick the highest-priority rule. Instead, it performs a weighted random selection (a "roulette-wheel" selection) based on the priorities of all applicable rules. This balances exploiting known-good rules with exploring potentially useful but less-proven ones.
-    -   **Top-Down Modulation**: The `CognitiveExecutive` can provide a `dynamicFactor` to temporarily boost or suppress the priority of certain rules based on the system's current high-level goals or reasoning focus (e.g., prioritizing abductive rules when in a "hypothesis generation" mode).
 
-### 5.2. Baseline Inference Rule Set
-The system is bootstrapped with a comprehensive set of NAL rules:
--   **InheritanceRule**: Handles deduction, abduction, and induction for `-->` statements.
--   **SimilarityRule**: Handles analogy for `<->` statements.
--   **ImplicationRule**: Handles deduction and abduction for `==>` statements (higher-order).
--   **EquivalenceRule**: Handles logic for `<=>` statements (higher-order).
--   **ConjunctionRule**: Handles introduction and elimination of conjunctions (`&&`).
--   **ConsequentConjunctionRule**: A specialized rule for implications with conjunctive consequents.
--   **ForwardImplicationRule**: A specialized rule for forward-chaining implication.
--   **TemporalRelationRule**: Handles transitivity for temporal statements.
--   **MetaLearningRule**: A rule for learning about the system's own operations.
+-   **Symbolic Expression as the Universal Format**: All knowledge, including facts, procedures, and inference rules, is represented as symbolic expressions. For example, a NARS-like inheritance statement `<bird --> animal>` is represented as an expression `(Inheritance bird animal)`.
 
-### 5.3. Inference Rule Categories
-The engine will support a comprehensive set of NAL rules, including but not limited to:
+-   **Inference via Expression Matching and Rewriting**: The primary mode of reasoning is performing pattern matching on expressions in the knowledge base and rewriting them into new expressions. The engine continuously seeks to match `match` expressions against the knowledge base to derive new conclusions.
 
--   **Syllogistic & Conditional Rules (NAL Levels 1-5)**: Deduction, Abduction, Induction, Exemplification, Comparison, Analogy.
--   **Compositional/Structural Rules (NAL Level 6)**: Intersection, Union.
--   **Temporal Rules (NAL Level 7)**: Primarily handled by the `TemporalReasoner` manager and the `TemporalRelationRule`.
--   **Procedural & Operational Rules (NAL Levels 8-9)**: For learning and executing skills. These rules connect declarative knowledge to actions.
--   **Logical Equivalences**: The engine can be configured to automatically convert certain statement forms into logically equivalent ones that are more conducive to reasoning. A key example is the use of **Virtual Disjunctions**, where a disjunctive statement like `A or B` is internally represented as its negated conjunctive equivalent: `not(not(A) and not(B))`. This can help in preserving temporal and evidential information that might otherwise be lost in a simple disjunctive representation.
+-   **Non-Axiomatic Execution**: Crucially, the engine is designed to operate under AIKR. Every expression in the knowledge base is a `Belief` with an associated NARS `TruthValue` and `Budget`. When an expression is executed or a rule is applied, these values are propagated and transformed according to NAL's formulas. The result of a reasoning step is not just a new expression, but a new `Belief` with a derived truth and budget.
 
-### 5.4. Inference Rule Interface & Example
+-   **Self-Modification as a Core Capability**: Because inference rules are just expressions in the knowledge base, they can be created, modified, or deleted by the system itself. The `Learning Engine` and `Cognitive Executive` can observe successful reasoning patterns and write new, more efficient "rules" (i.e., `match` expressions) into the knowledge base, allowing the system to learn and optimize its own reasoning processes over time.
 
-All rules must implement the `InferenceRule` interface.
+### 5.2. Expressing NAL in a Symbolic Language
 
-```typescript
-interface InferenceRule {
-  // A unique name for the rule (e.g., "NAL_DEDUCTION_FORWARD")
-  readonly name: string;
-  // The dynamic priority of the rule, updated by the Cognitive Executive.
-  priority: number;
-  // The historical success rate of the rule.
-  successRate: number;
-  // A function that checks if the rule is applicable in the current context.
-  condition(event: object): boolean;
+The standard NARS inference rules are no longer implemented as code. Instead, they are expressed as patterns to be matched.
 
-  // Checks if the rule can be applied to the given premises.
-  canApply(task: Task, belief: Belief): boolean;
-
-  // Applies the rule and returns a new derived Task, or null if not applicable.
-  apply(task: Task, belief: Belief, kernel: any /* Kernel */): Task | null;
-}
+#### Example: Deduction
+A deduction rule, which in NAL combines `<A --> B>` and `<B --> C>` to get `<A --> C>`, can be expressed as a rewrite rule:
 ```
-
-#### Example: The Deduction Rule
-(Content unchanged)
-
-#### Example: The Abduction Rule
-(Content unchanged)
-
-#### Example: The Induction Rule
-(Content unchanged)
-
-#### Example: The Operational Rule
-Procedural knowledge is represented by implication statements where the antecedent describes preconditions and an operation, and the consequent describes the expected effect. Operations are special terms, often marked with a `#` prefix, that must be grounded to executable functions in the external environment via the Symbol Grounding Interface.
-
--   **Logical Form**: `(<(*, <#preconditions>, <#operation>)> ==> <effect>)`
-    -   `#preconditions`: A `CompoundTerm` representing the conditions that must be true for the operation to be applicable. This can be a complex conjunction of statements, including negations and temporal relations.
-    -   `#operation`: A grounded term representing the action to take.
-    -   `effect`: A statement describing the expected outcome of the operation.
--   **Example**: `(<(*, (&, <SELF --> (is_at, door)>, <door --> (is, unlocked)>), <#open_door>)> ==> <door --> (is, open)>)`
-    - This rule states: "If I am at the door AND the door is unlocked, then executing the `open_door` operation will result in the door being open."
-
-The `OperationalRule` is responsible for triggering these actions when the system has a goal that matches the rule's effect.
-
-```typescript
-class OperationalRule implements InferenceRule {
-    readonly name = "NAL_OPERATIONAL";
-    priority = 0.9; // High priority as it leads to action
-
-    canApply(task: Task, belief: Belief): boolean {
-        // This rule applies if the task is a GOAL.
-        // The belief must be a procedural implication.
-        const goal = task.statement;
-        const proceduralRule = belief.statement;
-
-        if (task.type !== 'goal' || proceduralRule.copula !== 'implication') {
-            return false;
-        }
-
-        // The goal must match the effect of the rule.
-        const effect = proceduralRule.terms[1];
-        return goal.key === effect.key;
-    }
-
-    apply(task: Task, belief: Belief, kernel: any /* Kernel */): Task | null {
-        if (!this.canApply(task, belief)) return null;
-
-        const proceduralRule = belief.statement; // (<(*, Pre, Op)> ==> Eff)
-        const compoundAntecedent = proceduralRule.terms[0]; // (*, Pre, Op)
-        const preconditions = compoundAntecedent.terms[0];   // Pre
-        const operation = compoundAntecedent.terms[1];      // Op
-
-        // 1. Check if all preconditions are met in the system's belief base.
-        // This involves querying the memory for high-confidence beliefs matching
-        // each component of the `preconditions` term.
-        const preconditionsMet = kernel.memory.query(preconditions); // Simplified
-
-        if (!preconditionsMet) {
-            // If preconditions are not met, the system can generate a new subgoal
-            // to achieve the preconditions.
-            const newGoalTask = kernel.createTask({
-                type: 'goal',
-                statement: preconditions,
-                // Budget derived from the original goal
-            });
-            return newGoalTask;
-        }
-
-        // 2. If preconditions are met, trigger the grounded operation.
-        // The operation term (e.g., "#open_door") must be registered in the
-        // Symbol Grounding Interface.
-        const handler = kernel.symbolGrounding.getHandler(operation.key);
-        if (handler) {
-            // The handler is executed. It might return immediately or asynchronously.
-            // This connects reasoning to action in the external world.
-            handler();
-            // The system might also create a belief that the action was taken.
-            const actionBelief = kernel.createBelief({
-                statement: `<${operation} --> executed>.`
-            });
-            kernel.memory.addBelief(actionBelief);
-        }
-
-        // The rule itself doesn't return a new task in this case, as its
-        // purpose is to trigger an external effect.
-        return null;
-    }
-}
+(= (deduction $a $b $c)
+   (match &self
+          ( (Inheritance $a $b) <f1, c1> )
+          ( (Inheritance $b $c) <f2, c2> )
+          (add-belief! (Inheritance $a $c) (nal-deduction <f1, c1> <f2, c2>))
+   )
+)
 ```
+*This conceptual example shows that a `deduction` expression, when executed, will `match` the knowledge base (`&self`) for two `Inheritance` premises. If found, it will add a new belief (`add-belief!`) whose content is the conclusion and whose truth value is calculated by the NAL deduction formula.*
 
-### 5.5. Verification Scenarios
+#### Example: Procedural Knowledge (Operational Rules)
+Procedural knowledge is also expressed symbolically. A rule like "if at the door and it's unlocked, opening it makes it open" becomes an expression:
+```
+(= (achieve (is door open))
+   (match &self
+          ( (is SELF (at door))     <%1.0, 0.9> )
+          ( (is door unlocked)      <%1.0, 0.9> )
+          (execute! #open_door)
+   )
+)
+```
+*Here, the `achieve` expression, likely generated by the `Goal Manager`, triggers a `match`. If the preconditions are met with sufficient confidence, it calls a grounded `execute!` operation, which connects to the external world via the Symbol Grounding Interface.*
 
-**Scenario: Basic Inference about Flyers**
-> Given the system knows the following:
->   | statement                                 | truth          | priority |
->   | "((bird && animal) --> flyer)"            | "<%0.9,0.8%>"  |          |
->   | "(penguin --> (bird && !flyer))"          |                | "#0.95#" |
->   | "(tweety --> bird)"                       |                |          |
-> When the system runs for 50 steps
-> Then the system should believe that "<tweety --> flyer>" with an expectation greater than 0.4
+### 5.3. Grounded Expressions for Neural-Symbolic Integration
 
-**Scenario: Cross-Modal Reasoning via Symbol Grounding (CM-01)**
-> Given the system has a symbol "image_sensor_output" grounded to a mock image recognition API
-> And the system knows that "<cat --> mammal>" with high confidence
-> And the mock API is configured to return the string "cat" when it receives the input "image_123.jpg"
-> When the system is given the procedural task "<(process_image, 'image_123.jpg') ==> <report_content>>"
-> And the symbol "process_image" is grounded to a handler that calls the mock API and injects the result as a new belief
-> And the system runs for 100 steps
-> Then the system should derive a new belief "<'image_123.jpg' --> mammal>"
+To bridge the symbolic and sub-symbolic, the engine supports **grounded expressions**. These are special symbols or expressions that are bound to external code, such as a call to a Machine Learning model.
+
+```
+; Define a grounded function that calls an LLM
+(: llm-query (Fn String String))
+(bind! llm-query (py-function "llm_interface.query"))
+
+; Use the grounded function in reasoning
+(= (answer-question $q)
+   (let $answer (llm-query $q)
+        (add-belief! (answer-for $q $answer) <%1.0, 0.8>)
+   )
+)
+```
+*In this example, an `llm-query` symbol is grounded to a Python function. It can then be used within other expressions to dynamically query an LLM and inject the result back into the knowledge base as a new belief.* This is the primary mechanism for deep ML/LM integration.
 
 ## 6. Memory System
 
@@ -1192,6 +1095,17 @@ A critical application of symbol grounding is understanding and generating human
 -   **English-to-Narsese**: This component is responsible for parsing natural language input and converting it into Narsese tasks. For example, the sentence "A bird is a type of animal" would be parsed and grounded into the Narsese judgment `<bird --> animal>.`.
 -   **Narsese-to-English**: This component takes Narsese beliefs, questions, or goals and generates human-readable natural language. For example, if the system wants to ask a question represented as `nalq("<Tweety --> ?what>.")`, this interface would translate it into the English sentence, "What is Tweety?".
 -   **Grammar Induction (Advanced Capability)**: As a long-term development goal, the NLP interface should be capable of *learning* the grammar of a language through exposure, rather than relying solely on pre-programmed parsers. This would be a function of the `Learning Engine` interacting with the NLP interface, identifying patterns in linguistic input over time.
+
+### 8.4. Grounding to Neural and Language Models
+
+A key function of the SGI is to serve as the bridge between the Symbolic Engine and external, pre-trained Machine Learning models, including Large Language Models (LLMs) and perceptual systems (e.g., image recognition, speech-to-text). This creates a powerful neural-symbolic architecture where the system can leverage the pattern-matching strengths of neural networks within its logical reasoning framework.
+
+This is achieved by **grounding symbolic expressions**.
+-   **Mechanism**: A specific symbolic expression, like `(recognize-image $path)`, can be registered in the SGI and bound to an external function (e.g., a Python function that calls a computer vision API).
+-   **Execution**: When the Symbolic Engine executes this expression, the SGI intercepts it, calls the external function with the provided arguments (e.g., the image path), and receives the result.
+-   **Integration**: The SGI then transforms the result into a new symbolic expression and injects it back into the knowledge base. For example, the `(recognize-image "cat.jpg")` expression might result in the belief `(is-a "cat.jpg" Cat)` being added to the system, with a confidence value provided by the vision model.
+
+This allows HyperNARS to perform powerful cross-modal reasoning. It can take perceptual input from a neural model and reason about it logically, or use an LLM as a "knowledge consultant" to answer specific questions, with the results being seamlessly integrated into its native non-axiomatic logical framework.
 
 ## 9. Extension Points
 (Content unchanged)
