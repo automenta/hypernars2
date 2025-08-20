@@ -10,104 +10,99 @@ This document details the **Control Loop**, which is architected as a **dual-pro
 
 This is the default, high-throughput operational mode. It is a continuous cycle of selecting a `Task` and a relevant `Sentence` from memory and feeding them to the MeTTa interpreter to potentially derive new knowledge.
 
-Below is a language-agnostic pseudo-code representation of a single cycle. All data structures are formally defined in `DATA_STRUCTURES.md`.
+Below is a more detailed, language-agnostic pseudo-code representation of a single cycle. All data structures are formally defined in `DATA_STRUCTURES.md`.
 
 ```pseudo
 function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting_strategy: BudgetingStrategy) {
-    // 1. Select a Concept from the Memory's concept bag.
-    // This is a probabilistic selection based on priority.
+    // 1. Select a Concept from Memory's concept bag based on priority.
     concept = memory.select_concept_from_bag();
     if (!concept) { return; }
 
     // 2. Select a high-priority Task from the Concept's local task bag.
-    task1 = concept.select_task_from_bag();
-    if (!task1) { return; }
+    task = concept.select_task_from_bag();
+    if (!task) { return; }
 
-    // 3. Select a relevant Belief Sentence from the same Concept's knowledge bag.
-    sentence2 = concept.select_sentence_from_bag(task1);
-    if (!sentence2 || !is_belief(sentence2)) { return; }
+    // 3. Select a relevant Belief from the same Concept's knowledge bag.
+    // Relevance can be determined by shared atoms between the task and the belief.
+    belief = concept.select_belief_from_bag(task);
+    if (!belief) { return; }
 
-    // 4. Formulate an inference expression for the MeTTa interpreter.
-    // This combines the two sentences under a generic 'deduce' or specific NAL rule.
-    sentence1 = task1.sentence;
-    inference_expression = formulate_inference_expression(sentence1, sentence2);
+    // 4. Formulate an Inference Expression.
+    // This involves selecting an inference rule (e.g., deduce, abduce, induce)
+    // and wrapping the task's sentence and the belief in it.
+    inference_rule = select_inference_rule(); // e.g., returns 'deduce'
+    inference_expression = (inference_rule task.sentence belief);
 
-    // 5. Invoke MeTTa Interpreter to perform the core reasoning step.
-    // The interpreter finds matching inference rules (also atoms in Memory) and executes them.
+    // 5. Invoke MeTTa Interpreter.
+    // The interpreter finds a matching rule in its knowledge base (see "NAL on MeTTa")
+    // and executes it. The rule itself is responsible for calculating the new TruthValue
+    // and returning one or more complete, new Sentences.
     derived_sentences = interpreter.evaluate(inference_expression);
 
     // 6. Process Derived Sentences into New Tasks.
-    for (derived_sentence in derived_sentences) {
-        // Calculate the truth value and budget for the new sentence based on its parents.
-        new_truth = truth_function(sentence1.truth, sentence2.truth);
-        new_budget = budgeting_strategy.calculate_derived_budget(task1.budget);
+    for (new_sentence in derived_sentences) {
+        // The new sentence already contains the derived truth value.
+        // Calculate the budget for the new task based on the parents' budgets.
+        new_budget = budgeting_strategy.calculate_derived_budget(task.budget, belief.budget);
 
-        // Attach the calculated truth value to the derived atom to form the final sentence.
-        final_sentence = (Belief derived_sentence new_truth);
-
-        // Create and dispatch the new Task to the appropriate concept(s).
-        new_task = create_task(final_sentence, new_budget, {task1.stamp, ...});
+        // Create the new Task and dispatch it to the appropriate concept(s).
+        new_task = create_task(new_sentence, new_budget, {task.stamp, belief.stamp});
         memory.dispatch_task(new_task);
     }
 
     // 7. System-level housekeeping.
     budgeting_strategy.perform_housekeeping(memory);
-    memory.emit_event( (Event system-cycle-complete) );
+    memory.emit_event( (Event system-cycle-complete task.id) );
 }
 ```
 
-### Helper Function Definitions
+### Detailed Helper Function Descriptions
 
--   **`select_..._from_bag()`**: These functions query a `Bag` data structure, which holds items and their priorities. The selection is probabilistic, weighted by priority, as described in `DATA_STRUCTURES.md`.
--   **`is_belief(sentence)`**: A simple type-check to ensure the sentence has a `Belief` punctuation, as only beliefs can serve as premises in this basic loop.
--   **`formulate_inference_expression(s1, s2)`**: This function wraps the two sentences in a generic inference atom, like `(deduce s1 s2)`. This allows MeTTa to find and apply any matching `(= (deduce ...)` rule defined in the knowledge base.
--   **`truth_function(t1, t2)`**: Calculates the `TruthValue` of a conclusion based on the truth values of its premises. The exact formula depends on the inference rule used (e.g., NARS deduction formula).
--   **`create_task(sentence, budget, parent_stamps)`**: Constructs a new `Task` wrapper around the given sentence, assigning it the calculated budget and a new `Stamp` derived from its parents.
+-   **`select_..._from_bag()`**: These functions query a `Bag` data structure. The selection is probabilistic, weighted by priority. The `select_belief_from_bag` variant would also include logic to favor beliefs that are structurally relevant to the input `Task`.
+-   **`select_inference_rule()`**: Selects which type of inference to attempt. This could be a simple random choice from `(deduce, abduce, induce)`, or a more sophisticated choice based on the current system state or goals.
+-   **`interpreter.evaluate(expression)`**: The core call to the MeTTa interpreter. It takes an expression and tries to find a matching rule in the knowledge base to rewrite it. Crucially, the matched rule (e.g., the `(= (deduce ...)` atom) is expected to handle the entire transformation, including calling the appropriate truth function and constructing the full resulting `Sentence` atom.
+-   **`create_task(sentence, budget, parent_stamps)`**: Constructs a new `Task` wrapper. This involves generating a new unique `TaskID`, and creating a new `Stamp` by combining the `TaskID`s from the `parent_stamps` to extend the derivational history.
 
 ---
 
 ## System 2: The Deliberative Reasoning Process
 
-This is a resource-intensive, goal-driven process initiated by the `CognitiveExecutive` when it detects a situation requiring deeper analysis (e.g., via a `Task` with a `(Goal (resolve-contradiction ...))` sentence). It operates on a temporary, scoped workspace.
+This is a resource-intensive, goal-driven process initiated by the `CognitiveExecutive` when it detects a situation requiring deeper analysis (e.g., via a `Task` with a `(Goal (resolve-contradiction ...))` sentence). It operates on a temporary, scoped workspace to conduct focused thought.
 
 ```pseudo
 function deliberative_reasoning_process(memory: Memory, interpreter: MeTTa, trigger_task: Task) {
     // 1. Initiation & Context Scoping
-    // Create a temporary, high-priority "working memory" space.
+    // A workspace is a temporary, isolated memory space with its own bags.
+    // It is used for focused reasoning without polluting the main memory space.
     workspace = memory.create_workspace(name="deliberation_space");
 
-    // Gather highly relevant knowledge (Sentences) related to the trigger task's goal
-    // and copy it into the workspace.
+    // Gather highly relevant knowledge from main memory and copy it into the workspace.
+    // Relevance can be determined by concept linkage, structural similarity, etc.
     relevant_knowledge = memory.find_relevant_knowledge(trigger_task.sentence);
     workspace.add_sentences(relevant_knowledge);
+    workspace.add_task(trigger_task); // Add the main goal to the workspace
 
     // 2. Focused, Iterative Reasoning
     // Run a high-budget, iterative reasoning loop within the isolated workspace.
+    // This loop is essentially the same as the reflexive_reasoning_cycle, but operates
+    // on the workspace's private bags and uses a dedicated deliberation budget.
     deliberation_budget = get_high_budget();
     while (deliberation_budget > 0 && !workspace.has_solution(trigger_task.sentence)) {
-
-        // Select a sub-task and a relevant sentence *within the workspace*.
-        sub_task = workspace.select_task_for_goal(trigger_task.sentence);
-        sentence = workspace.select_sentence_for_task(sub_task);
-
-        // Formulate and evaluate inference expression.
-        inference_expression = formulate_inference_expression(sub_task.sentence, sentence);
-        derived_sentences = interpreter.evaluate(inference_expression);
-
-        // Add results back to the workspace, not main memory.
-        process_and_add_new_tasks(derived_sentences, workspace);
-
-        // Decrement the deliberation budget.
+        // A solution is typically a new, high-confidence Belief that directly
+        // satisfies the initial Goal (e.g., a plan, or a revised belief).
+        reflexive_reasoning_cycle(workspace, interpreter, get_deliberation_budgeting_strategy());
         deliberation_budget--;
     }
 
     // 3. Resolution and Integration
-    // Extract the final solution (e.g., a plan, a revised Belief sentence) from the workspace.
+    // Extract the final solution from the workspace.
     solution_sentence = workspace.get_solution(trigger_task.sentence);
 
     if (solution_sentence) {
-        // Inject the high-confidence solution back into main memory as a new Task.
-        final_task = create_task_from_solution(solution_sentence);
+        // Inject the high-confidence solution back into main memory as a new Task
+        // with a very high budget to ensure it gets processed immediately.
+        solution_budget = get_very_high_budget();
+        final_task = create_task(solution_sentence, solution_budget, {trigger_task.stamp});
         memory.dispatch_task(final_task);
     }
 
@@ -118,6 +113,13 @@ function deliberative_reasoning_process(memory: Memory, interpreter: MeTTa, trig
     return solution_sentence;
 }
 ```
+
+### Detailed Helper Function Descriptions
+
+-   **`memory.create_workspace()`**: Instantiates a new, temporary memory object, likely with its own `Concept` bags.
+-   **`memory.find_relevant_knowledge(sentence)`**: A heuristic-based search function that gathers sentences from the main memory that are likely to be useful for reasoning about the given `sentence`.
+-   **`workspace.has_solution(goal_sentence)`**: Checks if the workspace contains a `Sentence` (typically a `Belief`) that satisfies the `goal_sentence`.
+-   **`get_deliberation_budgeting_strategy()`**: A budgeting strategy tailored for deliberative thought, which may be more aggressive or focused than the default one.
 
 ---
 

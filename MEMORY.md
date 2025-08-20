@@ -111,7 +111,7 @@ Below are more detailed, language-agnostic descriptions of common forgetting str
 
 ## Memory Performance Monitoring
 
-The system must be able to reason about the efficiency of its own memory system. The `CognitiveExecutive` monitors these metrics, which are stored as `Beliefs` in Memory, to detect problems and guide optimization.
+The system must be able to reason about the efficiency of its own memory system. The `CognitiveExecutive` monitors these KPIs, which are stored as `Beliefs` in Memory, to detect problems and guide optimization.
 
 | KPI Name | Description | Example MeTTa Representation |
 | :--- | :--- | :--- |

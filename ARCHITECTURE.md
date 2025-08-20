@@ -69,7 +69,31 @@ graph TD
 
 ---
 
-## 3. Event-Driven Communication via MeTTa
+## 3. The Role of the MeTTa Interpreter
+
+While the specification refers to a "MeTTa Interpreter," the system does not necessarily depend on a full-featured MeTTa (Meta Type Talk) language implementation. Rather, it depends on a symbolic reasoning engine that provides a specific, minimal set of capabilities. This clarifies the boundary between the HyperNARS specification and the underlying interpreter, allowing for a wider range of implementation choices.
+
+An interpreter suitable for HyperNARS must provide the following core features:
+
+1.  **Atom Representation**: The ability to represent knowledge using the fundamental types of symbolic AI:
+    -   **Symbols**: Atomic, indivisible identifiers (e.g., `cat`, `blue`).
+    -   **Variables**: Placeholders that can be bound to other atoms during pattern matching (e.g., `$x`).
+    -   **Expressions**: Compositions of other atoms, forming structured data (e.g., `(Inheritance cat animal)`).
+
+2.  **Pattern Matching with Variable Binding**: The interpreter must be able to match a data atom against a pattern (or rule) atom, and bind variables in the pattern to the corresponding parts of the data atom. For example, matching `(Inheritance cat animal)` against `(Inheritance $x animal)` should succeed, binding `$x` to `cat`.
+
+3.  **Knowledge Base Search & Rewrite**: The interpreter must be able to take an input expression and search a knowledge base (the `Memory` space) for a matching rule. Upon finding a match, it must perform a rewrite, replacing the input expression with the body of the rule, substituting any bound variables. This is the fundamental mechanism of inference.
+
+4.  **Execution of Grounded Atoms**: The interpreter needs a mechanism to treat certain atoms as "grounded," meaning they are bound to external, non-symbolic code (e.g., a Python function). When the interpreter encounters a grounded atom in an expression to be evaluated, it should execute the corresponding code. This is critical for:
+    -   Performing mathematical calculations (e.g., for truth functions).
+    -   Interacting with the environment (e.g., sensors and actuators).
+    -   Calling out to specialized models (e.g., LLMs).
+
+These capabilities define a powerful, generic symbolic rule engine. A full MeTTa implementation would provide these, but a custom-built engine focused on just these features would also be sufficient to implement the HyperNARS specification.
+
+---
+
+## 4. Event-Driven Communication via MeTTa
 
 The system avoids a traditional, external event bus. Instead, eventing and messaging are handled directly within the Memory space, making the communication process itself introspectable and modifiable.
 
@@ -86,7 +110,7 @@ The system avoids a traditional, external event bus. Instead, eventing and messa
 
 ---
 
-## 4. Configurable Architecture via MeTTa
+## 5. Configurable Architecture via MeTTa
 
 The system's entire configuration is defined by a set of `Config` atoms, typically loaded from a `.metta` file at startup. This allows the system's behavior, capabilities, and even its "personality" to be defined and modified using its own native language.
 

@@ -44,6 +44,7 @@ Responsible for goal-oriented behavior, planning, and skill acquisition.
                      (Goal $p)
                      (Task (execute $op)))))
     ```
+-   **Practical Use Case**: A robot is given the goal `(Goal (room-is-clean))`. The Goal & Planning function finds a procedural belief like `(<(sequence (pickup-trash) (vacuum-floor))> ==> (room-is-clean))`. It then creates two sub-goals, `(Goal (trash-is-picked-up))` and `(Goal (floor-is-vacuumed))`, and seeks to achieve them in order.
 
 ### 1.2 Temporal Reasoning Function
 Provides a framework for understanding and reasoning about time.
@@ -54,6 +55,8 @@ Provides a framework for understanding and reasoning about time.
 | **Reads** | Beliefs about temporal sequences, e.g., `(<(B </> C)>)` |
 | **Writes** | New inferred temporal beliefs, e.g., `(Belief <(A </> C)>)` |
 
+-   **Practical Use Case**: The system is told `(Belief <(I turned-on-stove) </> (I heard-whistling-kettle)>)`. Later, it learns `(Belief <(I heard-whistling-kettle) </> (I made-tea)>)`. The Temporal Reasoning Function can deduce a new belief, `(Belief <(I turned-on-stove) </> (I made-tea)>)`, allowing it to understand the full sequence of events.
+
 ### 1.3 Inductive & Conceptual Learning Function
 Responsible for abstracting knowledge and forming new concepts.
 
@@ -62,6 +65,8 @@ Responsible for abstracting knowledge and forming new concepts.
 | **Triggers** | Co-occurring beliefs, e.g., `(Belief <A --> B>)` and `(Belief <A --> C>)` |
 | **Reads** | Patterns of beliefs in memory |
 | **Writes** | New, higher-level beliefs, e.g., `(Belief <C --> B>)` (Induction) |
+
+-   **Practical Use Case**: The system observes that `(robin --> has-wings)`, `(sparrow --> has-wings)`, and `(pigeon --> has-wings)`. The Inductive & Conceptual Learning Function might generalize this pattern to form a new, more abstract belief, like `(bird --> has-wings)`, creating the concept of "bird" in the process if it doesn't already exist.
 
 ---
 
@@ -73,7 +78,7 @@ The system's master control program, responsible for self-monitoring and initiat
 | Interface | Atom Schema / Description |
 | :--- | :--- |
 | **Triggers** | `(Event system-cycle-complete ...)` |
-| **Reads** | `(has-value (metric $name) $value)` atoms (KPIs) |
+| **Reads** | `(has-value (kpi $name) $value)` atoms |
 | **Writes** | High-level `Goal` atoms for Layer 3 functions |
 
 -   **Core Function**: Runs a continuous "sense-analyze-act" loop on the system's own performance KPIs (defined in `DATA_STRUCTURES.md`).
@@ -82,11 +87,12 @@ The system's master control program, responsible for self-monitoring and initiat
     ;; Rule to initiate contradiction management when rate is too high
     (= (handle (Event system-cycle-complete _ _ _))
        (match &self
-              (has-value (metric contradiction_rate) $rate)
+              (has-value (kpi contradiction_rate) $rate)
               (if (> $rate (Config contradiction-rate-threshold))
                   (Goal (resolve-contradictions))
                   ()) ))
     ```
+-   **Practical Use Case**: After running for several hours, the system's `(kpi concept_hit_rate)` drops to a very low value. The Cognitive Executive detects this, as the value has crossed a `(Config ...)` threshold. It concludes that its current reasoning strategy is inefficient and injects a high-priority goal `(Goal (improve-reasoning-strategy))`, which might activate a Layer 3 metacognitive function.
 
 ### 2.2 Contradiction Management Function
 Implements strategies for resolving contradictions.
@@ -97,6 +103,8 @@ Implements strategies for resolving contradictions.
 | **Reads** | The two conflicting `Belief` atoms and their derivation histories. |
 | **Writes** | `(Task (revise <belief-to-weaken>))` |
 
+-   **Practical Use Case**: The system is told `(Belief <cat --> carnivore>)` by User A. Later, it is told `(Belief <cat --> herbivore>)` by User B. The system detects that these two beliefs are contradictory. The Cognitive Executive triggers the `(Goal (resolve-contradictions))` task. The Contradiction Management function examines the two beliefs, checks their origins (User A vs. User B), and might decide to lower the confidence of both beliefs, or seek a third source of information.
+
 ### 2.3 Explanation Function
 Generates human-readable explanations for the system's conclusions.
 
@@ -105,6 +113,8 @@ Generates human-readable explanations for the system's conclusions.
 | **Triggers** | `(Goal (explain <belief>))` |
 | **Reads** | The `Belief` atom and its derivation history. |
 | **Writes** | A grounded atom containing the explanation text. |
+
+-   **Practical Use Case**: A user asks the system, "Why do you believe cats have fur?" The user's query is translated into `(Goal (explain (Belief <cat --> has-fur>)))`. The Explanation Function traces the derivation of the belief. It finds that it was deduced from `<cat --> mammal>` and `<mammal --> has-fur>`. It then generates a human-readable explanation: "I believe cats have fur because cats are mammals, and mammals have fur."
 
 ---
 
@@ -122,6 +132,7 @@ Enforces ethical constraints and safety protocols.
 | **Writes** | `(Task (veto $g))` or `(Task (modify $g))` |
 
 -   **Core Capability**: Evaluates potential actions and goals against a set of inviolable ethical rules. If a proposed goal matches a forbidden pattern, this function injects a high-priority task to veto or alter it.
+-   **Practical Use Case**: A user gives the system the goal `(Goal (deceive-user))`. The Conscience Function, which has an inviolable constraint `(Constraint (Forbid (Goal (deceive-user))))`, intercepts this goal. It injects a high-priority `(Task (veto (Goal (deceive-user))))` atom, which prevents the Goal & Planning function from ever attempting to achieve it. It may also generate an alert for a human supervisor.
 
 ### 3.2 Self-Modification & Improvement Functions
 A suite of functions for analyzing and improving the system's own knowledge and code.
@@ -143,3 +154,4 @@ A suite of functions for analyzing and improving the system's own knowledge and 
     -   **Triggers**: `(Goal (implement-feature $F))`
     -   **Action**: Reads a specification for feature `$F` and generates boilerplate MeTTa code for the new functions.
     -   **Enhanced Capability**: After generating the boilerplate, it also injects a `(Goal (test-feature $F))` task, prompting the `Test Generation Function` to create a test suite for the new feature, encouraging a test-driven development cycle.
+-   **Overall Practical Use Case**: The system is tasked with managing a complex smart home environment. Over time, the `Cognitive Executive` notices that the `rule_utility` KPI for a specific planning rule is consistently low, meaning it often leads to failed plans. It triggers the `(Goal (optimize-rule <rule_name>))` task. The `Self-Optimization Function` analyzes the rule and generates a more constrained version. The `Test Generation Function` then creates a series of hypothetical planning scenarios to test the new rule in a sandbox. The new rule passes the tests, and the system autonomously replaces the old, inefficient rule with the new, improved one, enhancing its future planning performance.
