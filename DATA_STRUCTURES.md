@@ -45,7 +45,12 @@ This layered model ensures a clean, efficient representation where any piece of 
 
 ### 3.1. Atom
 
-The **Atom** is the fundamental, universal data type for representing any piece of information in the system. It is directly equivalent to a MeTTa atom.
+The **Atom** is the fundamental, universal data type for representing any piece of information in the system, corresponding directly to the core types of a symbolic reasoning engine. It is directly equivalent to a MeTTa atom. The primary types of atoms are:
+-   **Symbols**: Atomic, indivisible identifiers (e.g., `cat`, `blue`, `bird`).
+-   **Variables**: Placeholders that can be bound to other atoms during pattern matching (e.g., `$x`).
+-   **Expressions**: Compositions of other atoms, forming structured data (e.g., `(Inheritance cat animal)`).
+
+Atoms are used to represent all forms of knowledge, including:
 -   **Declarative Knowledge**: `(Inheritance bird animal)`
 -   **Procedural Knowledge**: `(= (action-sequence (take-book) (read-book)) (knowledge-acquired))`
 -   **Logical Propositions**: `(Implication (And (human $x) (sentient $x)) (mortal $x))`
