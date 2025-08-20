@@ -1,114 +1,140 @@
 # Core Data Structures
 
-This document defines the fundamental data structures of the HyperNARS system. It is the authoritative source for the structure and representation of all knowledge, processes, and metadata. A core principle is the distinction between an **Atom**—the content of thought—and the **metadata** that annotates it, such as its truth-value or importance.
+This document defines the fundamental data structures of the HyperNARS system. It is the authoritative source for the structure and representation of all knowledge and processes. The data model is designed to be elegant, consistent, and "obviously implementable" by adhering to a strict conceptual hierarchy.
 
-All data structures are ultimately represented as MeTTa expressions, ensuring they are inspectable and manipulable by the reasoning engine itself.
+A core principle is the clear separation between the **content** of a thought (an Atom), its **meaning in context** (a Sentence), and the **work** it generates (a Task).
 
 ---
 
-## 1. The Atom: The Unit of Representation
+## 1. The Conceptual Hierarchy
 
-The **Atom** is the fundamental, universal data type for representing any piece of information in the system, including facts, rules, goals, and questions. It is directly equivalent to a MeTTa atom, which can be a `Symbol`, `Variable`, `GroundedAtom`, or an `Expression`.
+The system's data is organized into three main levels of abstraction:
 
+1.  **Atom**: The raw content of thought. A universal, context-free representation of a piece of information, directly corresponding to a MeTTa atom (`Symbol`, `Variable`, `Expression`, etc.).
+    -   Example: `<bird --> flyer>`
+
+2.  **Sentence**: An Atom placed in a specific context. It combines an Atom with **Punctuation** to define its role (e.g., as a Belief, a Goal, or a Question). This is the primary unit of knowledge.
+    -   Example: A `Belief` about `<bird --> flyer>`, represented as `(Belief <bird --> flyer> (TruthValue 0.9 0.9))`.
+
+3.  **Task**: The unit of work for the reasoning engine. It is a wrapper around a `Sentence` that provides the necessary metadata for processing, such as its attentional `Budget` and derivational `Stamp`.
+    -   Example: `(Task (Belief <bird --> flyer> (TruthValue 0.9 0.9)) (Budget 0.9 0.8 0.7) (Stamp ...))`
+
+This layered model ensures a clean separation of concerns: the Atom is the what, the Sentence is the how it's framed, and the Task is the how it's processed.
+
+---
+
+## 2. Core Data Structures
+
+### 2.1. Atom
+
+The **Atom** is the fundamental, universal data type for representing any piece of information in the system. It is directly equivalent to a MeTTa atom.
 -   **Declarative Knowledge**: `(Inheritance bird animal)`
 -   **Procedural Knowledge**: `(= (action-sequence (take-book) (read-book)) (knowledge-acquired))`
 -   **Logical Propositions**: `(Implication (And (human $x) (sentient $x)) (mortal $x))`
 
-The primary structures of the system, like `Beliefs` and `Tasks`, are wrappers around Atoms that add essential metadata for the reasoning process.
+### 2.2. Sentence & Punctuation
+
+A **Sentence** gives an Atom meaning by assigning it a **Punctuation**. Punctuation specifies the type of information being conveyed.
+
+-   **Belief**: A piece of knowledge the system holds to be true, to some degree. It is punctuated with a `TruthValue`.
+-   **Goal**: A state the system desires to achieve.
+-   **Question**: A request for information.
+-   **Quest**: A request to explore a concept or fulfill a long-term curiosity.
+
+### 2.3. Task
+
+A **Task** represents a unit of work. It is a wrapper around a `Sentence` that includes all metadata required by the reasoning engine. When a new piece of information enters the system (e.g., from an API call or as the result of an inference), it is packaged into a Task and dispatched to be processed.
+
+### 2.4. Concept
+
+A **Concept** is an emergent structure in memory, identified by an Atom, that serves as an index for all knowledge related to that Atom. It typically stores `Sentences` (e.g., beliefs about the concept) and `Tasks` in special data structures called `Bags`.
+
+### 2.5. Bag
+
+A **Bag** is a probabilistic data structure used for attention management, implementing the NARS principle of Assumption of Insufficient Knowledge and Resources (AIKR). It holds a collection of items (like `Tasks` or `Concepts`) and allows for biased sampling, where items with higher priority are more likely to be selected.
+
+Key properties include:
+-   **Capacity**: A `Bag` has a maximum number of items it can hold.
+-   **Eviction**: When a new item is added to a full `Bag`, an existing item with the lowest priority is removed.
+-   **Priority-based Sampling**: Items are selected from the `Bag` probabilistically based on their priority.
+-   **Sharpness**: A configurable parameter that controls how heavily the sampling favors high-priority items.
 
 ---
 
-## 2. Core Metadata Structures
+## 3. System Data Dictionary
 
-These structures are not part of the content (the Atom) itself, but are essential metadata used by the reasoning engine to manage the knowledge base and focus attention. They are defined conceptually here and formally in the Data Dictionary below.
+This section provides the formal MeTTa-style type definitions and concrete examples for all primary data structures. This is the single source of truth for data representation.
 
--   **TruthValue**: A NARS-style epistemic value representing the system's degree of belief in a declarative atom. It is defined by `frequency` (strength of positive evidence) and `confidence` (certainty).
-
--   **Budget**: A NARS-style attentional value representing the allocation of computational resources to a `Task`. It is defined by `priority` (immediate importance), `durability` (long-term importance), and `quality` (utility of the derivation).
-
--   **Stamp**: A mechanism attached to each `Task` to track its derivational history, used to prevent infinite reasoning loops and redundant work.
-
----
-
-## 3. Primary Conceptual Structures
-
--   **Belief**: Represents what the system "knows." It is an immutable pairing of a declarative **Atom** and its **TruthValue**.
-
--   **Task**: Represents a unit of work for the system, or what the system is "doing." It is a wrapper around an **Atom** (the "sentence") that includes a **Budget**, a **Stamp**, and references to its parent premises. There are three main types of tasks:
-    -   **Belief Task**: A task to process a new piece of information. The sentence is a `Belief` atom.
-    -   **Goal Task**: A task to achieve a desired state. The sentence is a `Goal` atom.
-    -   **Question Task**: A task to find an answer to a question. The sentence is a `Question` atom.
-
--   **Concept**: An emergent structure in memory, identified by an Atom, that serves as an index for all `Beliefs` and `Tasks` related to that Atom. It is the primary mechanism for organizing and accessing knowledge efficiently.
-
----
-
-## 4. System Data Dictionary
-
-This section provides the formal MeTTa type definitions and concrete examples for all primary data structures. This is the single source of truth for data representation in HyperNARS.
-
-### 4.1 Metadata Types
-
-These define the structure of the core metadata values.
+### 3.1. Metadata & Wrapper Types
 
 -   **TruthValue**: `(: TruthValue (-> Float Float TruthValue))`
-    -   **Example**: `(TruthValue 0.9 0.8)`  *; frequency=0.9, confidence=0.8*
+    -   *Description*: Represents epistemic value (`frequency`, `confidence`).
+    -   *Example*: `(TruthValue 0.9 0.8)`
 
 -   **Budget**: `(: Budget (-> Float Float Float Budget))`
-    -   **Example**: `(Budget 0.99 0.5 0.85)`  *; priority=0.99, durability=0.5, quality=0.85*
+    -   *Description*: Represents attentional value (`priority`, `durability`, `quality`).
+    -   *Example*: `(Budget 0.99 0.5 0.85)`
 
 -   **Stamp**: `(: Stamp (-> TaskID (Set TaskID) Stamp))`
-    -   **Example**: `(Stamp "abc-123" (Set "def-456" "ghi-789"))`
+    -   *Description*: Tracks derivational history to prevent loops. `TaskID` is a unique string identifier.
+    -   *Example*: `(Stamp "t_7f8a..." (Set "t_1c5b..." "t_9e2d..."))`
 
-### 4.2 Primary Atom Schemas
+-   **Task**: `(: Task (-> Sentence Budget Stamp Task))`
+    -   *Description*: The wrapper for a `Sentence` that makes it a processable unit of work.
+    -   *Example*: `(Task <Sentence> <Budget> <Stamp>)`
 
-These define the conventional structure of the atoms that are wrapped by `Tasks`.
+### 3.2. Sentence Types (with Punctuation)
 
--   **Belief Atom**: `(: Belief (-> Atom TruthValue Belief))`
-    -   **Purpose**: Represents a piece of knowledge to be processed or stored.
-    -   **Example**: `(Belief <bird --> flyer> (TruthValue 0.9 0.9))`
+These define the structure of the `Sentence` atoms that are wrapped by `Tasks`.
 
--   **Goal Atom**: `(: Goal (-> Atom Goal))`
-    -   **Purpose**: Represents a state to be achieved.
-    -   **Example**: `(Goal <door-is-open>)`
+-   **Belief Sentence**: `(: Belief (-> Atom TruthValue Belief))`
+    -   *Purpose*: Represents a piece of knowledge to be processed or stored.
+    -   *Example*: `(Belief <bird --> flyer> (TruthValue 0.9 0.9))`
 
--   **Question Atom**: `(: Question (-> Atom Question))`
-    -   **Purpose**: Represents a request for information.
-    -   **Example**: `(Question <what-is-a-bird>)`
+-   **Goal Sentence**: `(: Goal (-> Atom Goal))`
+    -   *Purpose*: Represents a state to be achieved.
+    -   *Example*: `(Goal <door-is-open>)`
 
-### 4.3 Architectural & Metacognitive Schemas
+-   **Question Sentence**: `(: Question (-> Atom Question))`
+    -   *Purpose*: Represents a request for information.
+    -   *Example*: `(Question <what-is-a-bird>)`
 
-These schemas define the structure of atoms used for system-level communication and self-monitoring.
+-   **Quest Sentence**: `(: Quest (-> Atom Quest))`
+    -   *Purpose*: Represents a long-term, curiosity-driven exploration goal.
+    -   *Example*: `(Quest <discover-meaning-of-life>)`
+
+### 3.3. Architectural & Metacognitive Schemas
 
 -   **Event Atom**: `(: Event (-> Symbol Atom Atom TimePoint Event))`
-    -   **Purpose**: Used for the internal event bus. The arguments are `EventType`, `Subject`, `Object`, and `Timestamp`.
-    -   **Example**: `(Event contradiction-detected <belief-1> <belief-2> (now))`
+    -   *Purpose*: Used for the internal event bus.
+    -   *Example*: `(Event contradiction-detected <belief-1> <belief-2> (now))`
 
--   **Configuration Atom**: `(: Config (-> Symbol Atom Config))`
-    -   **Purpose**: Defines a configuration setting for the system.
-    -   **Example**: `(Config MemoryManager (GroundedAtom "SimpleMemoryManager"))`
-    -   **Example**: `(Config (active-manager GoalManager) True)`
+-   **Configuration Atom**: `(: Config (-> Atom Atom Config))`
+    -   *Purpose*: Defines a configuration setting. The key is often a Symbol or an Expression.
+    -   *Example*: `(Config BudgetingStrategy (GroundedAtom "SimpleBudgetingStrategy"))`
+    -   *Example*: `(Config (active-cognitive-function GoalManager) True)`
 
 -   **Key Performance Indicator (KPI) Atom**: `(: has-value (-> Atom Number has-value))`
-    -   **Purpose**: Represents a belief about a system metric, used by the `CognitiveExecutive`.
-    -   **Example**: `(has-value (metric avg_belief_confidence) 0.78)`
+    -   *Purpose*: Represents a belief about a system metric.
+    -   *Example*: `(has-value (metric avg_belief_confidence) 0.78)`
+    -   *Example*: `(has-value (metric (rule_cost Abduce)) 0.000150)`  *; in seconds*
 
 ---
 
-## 5. Self-Monitoring Metrics
+## 4. Self-Monitoring Metrics
 
 To enable self-awareness, the system materializes metrics about its own state as `KPI` atoms in Memory. This "cognitive telemetry" is essential for the `CognitiveExecutive`.
 
 | Metric Name | Description | Data Structure | Example MeTTa Representation |
 | :--- | :--- | :--- | :--- |
-| `avg_belief_confidence` | The average confidence of all beliefs in Memory. | `Belief` | `(has-value (metric avg_belief_confidence) 0.78)` |
+| `avg_belief_confidence` | The average confidence of all Belief sentences in Memory. | `Sentence` | `(has-value (metric avg_belief_confidence) 0.78)` |
 | `avg_task_priority` | The average priority of all tasks in the system. | `Task` | `(has-value (metric avg_task_priority) 0.65)` |
 | `stamp_overlap_rate` | The percentage of potential inferences that are prevented by stamp overlaps. | `Stamp` | `(has-value (metric stamp_overlap_rate) 0.02)` |
-| `belief_count` | The total number of beliefs currently in Memory. | `Belief` | `(has-value (metric belief_count) 150000)` |
-| `memory_utilization`| The percentage of total memory capacity currently being used. | `Concept`| `(has-value (metric memory_utilization) 0.6)` |
+| `belief_count` | The total number of Belief sentences currently in Memory. | `Sentence` | `(has-value (metric belief_count) 150000)` |
+| `memory_utilization`| The percentage of total memory capacity currently being used. | `Bag` | `(has-value (metric memory_utilization) 0.6)` |
 | `concept_hit_rate` | % of times a selected `Concept` contains a useful `Belief` for the current `Task`. | `Concept`| `(has-value (metric concept_hit_rate) 0.35)` |
-| `forgetting_rate` | The number of items being forgotten per second. | `Concept`| `(has-value (metric forgetting_rate) 12.5)` |
+| `forgetting_rate` | The number of items being forgotten per second from `Bags`. | `Bag` | `(has-value (metric forgetting_rate) 12.5)` |
 | `rule_utility` | Average `quality` of conclusions produced by a specific inference rule. | `Task` | `(has-value (metric (rule_utility Deduce)) 0.82)` |
-| `rule_cost` | Average execution time for a specific inference rule. | `Task` | `(has-value (metric (rule_cost Abduce)) (150 microseconds))` |
-| `goal_success_rate` | The percentage of goals that are successfully achieved. | `Goal` | `(has-value (metric goal_success_rate) 0.95)` |
-| `contradiction_rate` | The percentage of new beliefs that cause contradictions. | `Belief` | `(has-value (metric contradiction_rate) 0.01)` |
+| `rule_cost` | Average execution time for a specific inference rule, in seconds. | `Task` | `(has-value (metric (rule_cost Abduce)) 0.000150)` |
+| `goal_success_rate` | The percentage of goals that are successfully achieved. | `Sentence` | `(has-value (metric goal_success_rate) 0.95)` |
+| `contradiction_rate` | The percentage of new Beliefs that cause contradictions. | `Sentence` | `(has-value (metric contradiction_rate) 0.01)` |
