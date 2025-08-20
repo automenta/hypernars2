@@ -111,15 +111,7 @@ Below are more detailed, language-agnostic descriptions of common forgetting str
 
 ## Memory Performance Monitoring
 
-The system must be able to reason about the efficiency of its own memory system. The `CognitiveExecutive` monitors these KPIs, which are stored as beliefs in Memory, to detect problems and guide optimization.
-
-| KPI Name | Description | Example MeTTa Representation |
-| :--- | :--- | :--- | :--- |
-| `memory_utilization`| The percentage of total memory capacity currently being used. | `(has-value (kpi memory_utilization) 0.85)` |
-| `concept_hit_rate` | The percentage of times a selected `Concept` contains a useful `Sentence` for the current reasoning step. Low rates may indicate poor concept formation or activation spreading. | `(has-value (kpi concept_hit_rate) 0.60)` |
-| `forgetting_rate` | The number of items being forgotten per second. Can be used to tune forgetting algorithm aggressiveness. | `(has-value (kpi forgetting_rate) 50)` |
-| `index_lookup_time` | The average time taken to retrieve an item from an index. Spikes might indicate a need for index maintenance. | `(has-value (kpi index_lookup_time) (2 milliseconds))` |
-| `lti_distribution` | A histogram of the LTI values of all items. Can reveal if the system is failing to identify long-term important knowledge. | `(has-value (kpi lti_distribution) (histogram ...))` |
+The system must be able to reason about the efficiency of its own memory system. The `CognitiveExecutive` monitors memory-related KPIs, which are stored as beliefs in Memory, to detect problems and guide optimization. The authoritative list of all system KPIs is defined in `DATA_STRUCTURES.md`.
 
 
 ## Indexing Strategies

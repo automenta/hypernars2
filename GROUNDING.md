@@ -1,6 +1,6 @@
 # Symbol Grounding
 
-The **Grounded Atom Interface (GAI)** is the component responsible for connecting the system's internal symbolic logic to the external world. This includes sensors, actuators, and external computational resources like Machine Learning (ML) and Large Language Model (LLM) models.
+This document describes the **Grounded Atom Interface (GAI)**, the core mechanism responsible for connecting the system's internal symbolic logic to the external world. It details *how* the system interacts with sensors, actuators, and external models. For a guide to the developer-facing APIs that use this interface, see [**API and Integration Guide**](./API_AND_INTEGRATION.md).
 
 The integrated architecture provides a powerful framework for neural-symbolic integration. The system's central Memory can interface with other specialized knowledge stores, called **Spaces**. While the main knowledge base resides in the primary Memory (a Metagraph Space), the system can connect to other specialized Spaces, such as **Neural Spaces** that host ML models or vector embeddings.
 

@@ -36,7 +36,7 @@ A **Sentence** is the primary unit of knowledge and processing. It gives an Atom
 -   **Belief (.)**: A piece of knowledge the system holds to be true, to some degree. It is punctuated with a `Truth` value.
 -   **Goal (!)**: A state the system desires to achieve.
 -   **Question (?)**: A request for information.
--   **Quest (@)**: A request to explore a long-term curiosity.
+-   **Quest (@)**: A long-term, curiosity-driven goal that prompts open-ended exploration rather than seeking a specific answer.
 
 All sentences include a `Budget` (attentional value) and a `Stamp` (derivational history) to manage their processing.
 
@@ -98,8 +98,8 @@ These define the structure of the `Sentence` atoms. Note that `Budget` and `Stam
 
 -   **Quest Sentence (@)**: `(: @ (-> Atom Budget Stamp @))`
     -   *Purpose*: Represents a long-term, curiosity-driven exploration goal.
-    -   *Plain English*: "A long-term, open-ended goal, like 'understand physics'."
-    -   *Example*: `(@ (discover-meaning-of-life) (Budget 0.8 0.9 0.9) (Stamp ...))`
+    -   *Plain English*: "An open-ended exploration task, like 'investigate the properties of birds'."
+    -   *Example*: `(@ (explore-concept bird) (Budget 0.8 0.9 0.9) (Stamp ...))`
 
 ### 3.3. Architectural & Metacognitive Schemas
 
@@ -139,6 +139,8 @@ To enable self-awareness, the system materializes its own state and performance 
 | `rule_cost` | Average execution time for a specific inference rule, in seconds. | `Sentence` | `(has-value (kpi (rule_cost Abduce)) 0.000150)` |
 | `goal_success_rate` | The percentage of goals that are successfully achieved. | `Sentence` | `(has-value (kpi goal__success_rate) 0.95)` |
 | `contradiction_rate` | The percentage of new beliefs that cause contradictions. | `Sentence` | `(has-value (kpi contradiction_rate) 0.01)` |
+| `index_lookup_time` | The average time taken to retrieve an item from a memory index. | `Concept` | `(has-value (kpi index_lookup_time) (2 milliseconds))` |
+| `lti_distribution` | A histogram of the Long-Term Importance (LTI) values of all items in memory. | `Budget` | `(has-value (kpi lti_distribution) (histogram ...))` |
 
 ---
 
@@ -150,9 +152,9 @@ To clarify the roles of the primary sentence types, this section provides a dire
 
 While all are types of `Sentence` atoms, they represent fundamentally different intentions and drive different system behaviors.
 
-| Sentence Type | System's Stance                      | Example                                           | Typical System Response                                          |
-| :--- |:-------------------------------------|:--------------------------------------------------|:-----------------------------------------------------------------|
-| **Belief (.)** | "This is a fact."                    | `(. (sky-is-blue) (Truth 1.0 0.99) (Budget ...))` | Store this information; use it as a premise in future reasoning. |
-| **Goal (!)** | "I want this to be true."            | `(! (light-is-on) (Budget ...))`                  | Find a sequence of actions (a plan) to make the content true.    |
-| **Question (?)** | "Is this true?"  | `(? (is-the-door-open) (Budget ...))`             | Search memory for relevant beliefs and derive an answer.         |
-| **Quest (@)** | "Do I want this?" | `(@ (open-door) (Budget ...))`                    | Search memory for relevant goals and derive an answer.           |
+| Sentence Type | System's Stance | Example | Typical System Response |
+| :--- |:---|:---|:---|
+| **Belief (.)** | "This is a fact." | `(. (sky-is-blue) ...)` | Store this information; use it as a premise in future reasoning. |
+| **Goal (!)** | "I want this to be true." | `(! (light-is-on) ...)` | Find a sequence of actions (a plan) to make the content true. |
+| **Question (?)** | "What is the answer to this?" | `(? (what-color-is sky) ...)` | Search memory for relevant beliefs to derive a specific answer. |
+| **Quest (@)** | "Explore this concept." | `(@ (explore-concept bird) ...)` | Initiate open-ended reasoning about the concept to discover new knowledge and connections, without a single correct answer. |

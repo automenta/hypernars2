@@ -2,19 +2,33 @@
 
 The HyperNARS architecture is a modular, dynamic system designed around a refined principle: **"The Content is an Atom, the Work is a Sentence."** All knowledge and logic are ultimately represented as MeTTa atoms, and the system organizes these atoms into a clear hierarchy (`Atom` -> `Sentence`) for conceptual clarity and implementability. This creates an exceptionally flexible, transparent, and self-modifiable system.
 
-The architecture is centered on two core components: a **Memory** space, which holds all data, and a **MeTTa Interpreter**, which continuously evaluates atoms to drive the reasoning process. Higher-level cognitive capabilities are not implemented as separate software modules, but as collections of MeTTa atoms called **Cognitive Functions**.
+The architecture is centered on two core components: a **Memory** space, which holds all data, and a **MeTTa Interpreter**, which continuously evaluates atoms to drive the reasoning process.
 
 ---
 
-## 1. Design Rationale: The Metaprogramming Approach
+## 1. Architectural Principles
 
-The choice to build the entire architecture on a programmable, symbolic foundation is deliberate and central to the project's goals.
+The system's design is guided by a set of core principles that enable its flexibility and power.
 
--   **Ultimate Flexibility**: Traditional architectures have hard-coded components (e.g., event buses, configuration parsers, inference engines). In HyperNARS, these are all implemented as MeTTa programs and data. They can be modified at runtime simply by changing the atoms in Memory, without recompiling or restarting the system.
+-   **Metaprogramming as a First Principle**: Traditional architectures have hard-coded components (e.g., event buses, configuration parsers, inference engines). In HyperNARS, these are all implemented as MeTTa programs and data. They can be modified at runtime simply by changing the atoms in Memory, without recompiling or restarting the system.
 
 -   **Deep Introspection**: Because the system's own logic and configuration are represented as data, it can "reason about itself." A Cognitive Function can be written to analyze the performance of inference rules, inspect the event stream, or check its own configuration for inconsistencies.
 
 -   **Simplicity and Elegance**: By using a single representation for content (Atoms) and a single processing mechanism (the MeTTa Interpreter), the overall complexity is dramatically reduced. The architecture is defined by the *content* of its Memory, not by a rigid, external structure.
+
+-   **Cognitive Functions as Atom Collections**: Higher-level capabilities are not implemented as separate software modules, but as collections of MeTTa atoms. A function like "Goal Planning" is simply a set of inference rules loaded into memory that know how to manipulate `Goal` sentences.
+
+### 1.1. System Initialization and the Metaprogramming Model
+
+The metaprogramming approach resolves a potential ambiguity in the system's startup or "bootstrap" process. While documents like `API_AND_INTEGRATION.md` may describe a procedural startup sequence for practical purposes (e.g., "initialize memory", "load configuration"), this should be understood as a convenience.
+
+From a purely architectural standpoint, the system's behavior is defined entirely by the atoms present in its `Memory` at the start of the reasoning process. "Registering a cognitive function" is not a hard-coded step but is synonymous with "loading the atoms that define the function." This ensures that the system's capabilities are determined by its knowledge, not by its compiled code.
+
+### 1.2. Concurrency Model
+
+The primary reasoning process, described in `REASONING_AND_COGNITION.md`, is the conceptually sequential `reflexive_reasoning_cycle`. However, the architecture is compatible with advanced concurrency models like the **Actor Model** (as discussed in `ADVANCED_TOPICS.md`) as an implementation strategy.
+
+In such a model, each `Concept` could be implemented as a lightweight, parallel actor. The `reflexive_reasoning_cycle` would then represent the logic running *inside* each actor. This allows for massive parallelism at the concept level while maintaining the logical integrity of the reasoning process for each step. This specification does not mandate an Actor Model but highlights it as a viable path for high-performance implementations.
 
 ---
 
@@ -94,13 +108,9 @@ These capabilities define a powerful, generic symbolic rule engine. A full MeTTa
 
 ## 4. Event-Driven Communication via MeTTa
 
-The system avoids a traditional, external event bus. Instead, eventing and messaging are handled directly within the Memory space, making the communication process itself introspectable and modifiable.
+The system avoids a traditional, external event bus. Instead, eventing and messaging are handled directly within the Memory space using `Event` atoms, making the communication process itself introspectable and modifiable. The formal schema for these atoms is defined in `DATA_STRUCTURES.md`.
 
--   **Events as Atoms**: An "event" is simply the act of adding a specific `Event` atom to Memory. (See `DATA_STRUCTURES.md` for the formal schema).
-    -   `sentence-added` -> `(Event sentence-added (sentence-1) (now))`
-    -   `contradiction-detected` -> `(Event contradiction-detected (sentence-1) (sentence-2) (now))`
-
--   **Handlers as MeTTa Rules**: Cognitive Functions "handle" events by defining MeTTa rules that match on these `Event` atoms. They are, in effect, a persistent query over the event stream.
+Cognitive Functions "handle" events by defining MeTTa rules that match on these `Event` atoms. They are, in effect, a persistent query over the event stream.
     ```metta
     ;; The ContradictionManager function is just a MeTTa rule.
     (= (handle (Event contradiction-detected $s1 $s2 $t))
@@ -111,7 +121,7 @@ The system avoids a traditional, external event bus. Instead, eventing and messa
 
 ## 5. Configurable Architecture via MeTTa
 
-The system's entire configuration is defined by a set of `Config` atoms, typically loaded from a `.metta` file at startup. This allows the system's behavior, capabilities, and even its "personality" to be defined and modified using its own native language.
+The system's entire configuration is defined by a set of `Config` atoms, typically loaded from a `.metta` file at startup. This allows the system's behavior, capabilities, and even its "personality" to be defined and modified using its own native language. The formal schema for `Config` atoms is defined in `DATA_STRUCTURES.md`.
 
 ### Example: `minimalist-reasoner.metta`
 

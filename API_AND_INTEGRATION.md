@@ -1,6 +1,6 @@
 # API and Integration Guide
 
-This document covers the practical aspects of using, configuring, and extending the system.
+This document covers the practical, developer-facing aspects of using, configuring, and extending the system. It describes *what* capabilities are exposed. For details on the underlying mechanisms that connect the system to the external world, see [**Symbol Grounding**](./GROUNDING.md).
 
 ## 1. I/O and Public API
 
@@ -57,7 +57,7 @@ The architecture is designed to be extensible at multiple levels, allowing devel
 
 -   **Adding New Cognitive Functions**: A developer can create a new function that subscribes to kernel events and injects new `Sentences` to implement novel high-level cognitive functions. This is the primary way to add new behaviors.
 -   **Adding New Inference Rules**: Since inference rules are just MeTTa atoms, new forms of reasoning can be introduced at runtime by simply adding new rule atoms to the Memory.
--   **Adding Grounded Atoms**: New capabilities for interacting with the external world can be added by implementing new grounded atoms and registering them with the Grounded Atom Interface. This is how the system learns new "skills".
+-   **Adding Grounded Atoms**: New capabilities for interacting with the external world (e.g., calling a new web API, controlling a new sensor) can be added by implementing new grounded atoms. This process is detailed in [**Symbol Grounding**](./GROUNDING.md). This is how the system learns new "skills".
 -   **Swapping Core Components**: The pluggable module architecture allows for different implementations of components like the Memory system or budget functions to be swapped out at initialization.
 
 ## 4. State Serialization and Persistence
