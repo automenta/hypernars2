@@ -5,8 +5,29 @@ This document defines the fundamental data structures of the HyperNARS system. I
 A core principle is the unification of the **content** of a thought (an Atom) and the **work** it generates into a single, processable unit: the **Sentence**.
 
 ---
+## 1. Glossary of Core Terms
 
-## 1. The Conceptual Hierarchy
+This glossary provides concise definitions for the core concepts used throughout the HyperNARS specification.
+
+| Term | Definition |
+| :--- | :--- |
+| **AIKR** | **Assumption of Insufficient Knowledge and Resources**. The core NARS principle that the system must operate with finite computational resources and incomplete knowledge. This guides the entire attention and resource allocation process. |
+| **Atom** | The fundamental, context-free unit of information, equivalent to a MeTTa atom (Symbol, Variable, Expression). It represents the raw content of thought before it is contextualized in a `Sentence`. |
+| **Bag** | A probabilistic data structure with limited capacity used to hold items (like `Sentences` or `Concepts`) and sample from them based on priority. It is the primary mechanism for implementing forgetting. |
+| **Budget** | An attentional value attached to a `Sentence`, typically composed of `priority`, `durability`, and `quality`. It determines how much processing resources should be allocated to the sentence. |
+| **Concept** | An emergent organizational structure in memory, identified by an `Atom`, that serves as an index for all knowledge (`Sentences`) related to that `Atom`. |
+| **Cognitive Function** | A system capability, such as Goal Planning or Contradiction Management, implemented not as a rigid software module but as a collection of MeTTa atoms (rules and goals). |
+| **Grounded Atom** | A special `Atom` that is bound to external, non-symbolic code (e.g., a Python function or a call to a web API). This is the primary mechanism for connecting the system's symbolic logic to the outside world. |
+| **Punctuation** | A symbol (`.`, `!`, `?`, `@`) that defines the role of a `Sentence` (e.g., a Belief, Goal, Question, or Quest). |
+| **Sentence** | The primary, self-contained unit of knowledge and work in the system. It consists of an `Atom`, a `Punctuation`, and all necessary processing metadata (`Truth`, `Budget`, `Stamp`). |
+| **Stamp** | A record of derivational history attached to a `Sentence`. It is used to prevent infinite inference loops by tracking which parent sentences were used to create it. |
+| **System 1** | **Reflexive Reasoning**. The default, high-throughput, and efficient mode of operation. It is a continuous cycle of selecting and processing sentences based on local context and relevance. |
+| **System 2** | **Deliberative Reasoning**. A resource-intensive, goal-driven reasoning process initiated by the `Cognitive Executive` to handle complex situations like contradictions or strategic planning. |
+| **Truth** | An epistemic value attached to a Belief `Sentence`, typically composed of `frequency` and `confidence`. It represents the system's degree of belief in the sentence's content. |
+
+---
+
+## 2. The Conceptual Hierarchy
 
 The system's data is organized into two main levels of abstraction:
 
@@ -20,16 +41,16 @@ This layered model ensures a clean, efficient representation where any piece of 
 
 ---
 
-## 2. Core Data Structures
+## 3. Core Data Structures
 
-### 2.1. Atom
+### 3.1. Atom
 
 The **Atom** is the fundamental, universal data type for representing any piece of information in the system. It is directly equivalent to a MeTTa atom.
 -   **Declarative Knowledge**: `(Inheritance bird animal)`
 -   **Procedural Knowledge**: `(= (action-sequence (take-book) (read-book)) (knowledge-acquired))`
 -   **Logical Propositions**: `(Implication (And (human $x) (sentient $x)) (mortal $x))`
 
-### 2.2. Sentence & Punctuation
+### 3.2. Sentence & Punctuation
 
 A **Sentence** is the primary unit of knowledge and processing. It gives an Atom meaning by assigning it a **Punctuation** and attaching all relevant metadata. Punctuation specifies the type of information being conveyed using the NARS convention.
 
@@ -40,11 +61,11 @@ A **Sentence** is the primary unit of knowledge and processing. It gives an Atom
 
 All sentences include a `Budget` (attentional value) and a `Stamp` (derivational history) to manage their processing.
 
-### 2.3. Concept
+### 3.3. Concept
 
 A **Concept** is an emergent structure in memory, identified by an Atom, that serves as an index for all knowledge related to that Atom. It typically stores `Sentences` in special data structures called `Bags`.
 
-### 2.4. Bag
+### 3.4. Bag
 
 A **Bag** is a probabilistic data structure used for attention management, implementing the NARS principle of Assumption of Insufficient Knowledge and Resources (AIKR). It holds a collection of items (like `Sentences` or `Concepts`) and allows for biased sampling, where items with higher priority are more likely to be selected.
 
@@ -56,11 +77,13 @@ Key properties include:
 
 ---
 
-## 3. System Data Dictionary
+## 4. System Data Dictionary
 
 This section provides the formal MeTTa-style type definitions and concrete examples for all primary data structures. This is the single source of truth for data representation.
 
-### 3.1. Metadata Types
+> **Note on Examples:** For clarity and brevity, the `Budget` and `Stamp` metadata are often omitted from the examples in this and other documents unless they are directly relevant to the point being illustrated.
+
+### 4.1. Metadata Types
 
 -   **Truth**: `(: Truth (-> Float Float Truth))`
     -   *Description*: Represents epistemic value (`frequency`, `confidence`).
@@ -77,7 +100,7 @@ This section provides the formal MeTTa-style type definitions and concrete examp
     -   *Plain English*: "A 'paper trail' to track where a piece of information came from."
     -   *Example*: `(Stamp "t_7f8a..." (Set "t_1c5b..." "t_9e2d..."))`
 
-### 3.2. Sentence Types (with Punctuation)
+### 4.2. Sentence Types (with Punctuation)
 
 These define the structure of the `Sentence` atoms. Note that `Budget` and `Stamp` are optional for question/quest types, but are shown for completeness.
 
@@ -101,7 +124,7 @@ These define the structure of the `Sentence` atoms. Note that `Budget` and `Stam
     -   *Plain English*: "An open-ended exploration task, like 'investigate the properties of birds'."
     -   *Example*: `(@ (explore-concept bird) (Budget 0.8 0.9 0.9) (Stamp ...))`
 
-### 3.3. Architectural & Metacognitive Schemas
+### 4.3. Architectural & Metacognitive Schemas
 
 -   **Event Atom**: `(: Event (-> Symbol Atom Atom TimePoint Event))`
     -   *Purpose*: Used for the internal event bus.
@@ -122,7 +145,7 @@ These define the structure of the `Sentence` atoms. Note that `Budget` and `Stam
 
 ---
 
-## 4. Self-Monitoring KPIs
+## 5. Self-Monitoring KPIs
 
 To enable self-awareness, the system materializes its own state and performance as **Key Performance Indicator (KPI)** atoms in Memory. This "cognitive telemetry" is essential for the `CognitiveExecutive`.
 
@@ -144,11 +167,11 @@ To enable self-awareness, the system materializes its own state and performance 
 
 ---
 
-## 5. Conceptual Distinctions
+## 6. Conceptual Distinctions
 
 To clarify the roles of the primary sentence types, this section provides a direct comparison.
 
-### 5.1. Belief vs. Goal vs. Question vs. Quest
+### 6.1. Belief vs. Goal vs. Question vs. Quest
 
 While all are types of `Sentence` atoms, they represent fundamentally different intentions and drive different system behaviors.
 

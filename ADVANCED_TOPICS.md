@@ -45,4 +45,4 @@ The system cannot start from a completely blank state. It requires a minimal set
 -   **Core Inference Schemas**: The essential MeTTa atoms that define the built-in inference rules, such as deduction, abduction, induction, revision, and choice.
 -   **Core Ontology**: A minimal set of concepts and relations that structure its world model, such as atoms representing `Type`, `Inheritance`, `Property`, `Time`, and `Event`.
 -   **Grounded Primitives**: A declarative understanding of the available grounded atoms (operators), including their purpose, inputs, and expected outputs.
--   **Self-Model**: A basic representation of the system itself, such as `(. (isa SELF System) ... )`, which allows it to reason about its own properties and actions.
+-   **Self-Model**: A basic representation of the system itself, such as `(. (isa SELF System))`, which allows it to reason about its own properties and actions.

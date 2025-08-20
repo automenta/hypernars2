@@ -1,6 +1,8 @@
 # System Architecture
 
-The HyperNARS architecture is a modular, dynamic system designed around a core principle: the unification of the **content** of a thought (an Atom) and the **work** it generates into a single, processable unit: the **Sentence**. All knowledge and logic are ultimately represented as MeTTa atoms, organized into this clear `Atom` -> `Sentence` hierarchy for conceptual clarity and implementability. This creates an exceptionally flexible, transparent, and self-modifiable system.
+The HyperNARS architecture is a modular, dynamic system designed around the core principle of metaprogramming. Its behavior is defined not by rigid, hard-coded components, but by the **atoms** held in its memory.
+
+The fundamental data structures, including the `Atom` and the processable `Sentence`, are formally defined in the [**Data Structures**](./DATA_STRUCTURES.md#2-the-conceptual-hierarchy) document. This approach creates an exceptionally flexible, transparent, and self-modifiable system.
 
 The architecture is centered on two core components: a **Memory** space, which holds all data, and a **MeTTa Interpreter**, which continuously evaluates atoms to drive the reasoning process.
 

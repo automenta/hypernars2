@@ -67,8 +67,9 @@ This specification is designed to be "obviously implementable." Here is a logica
     -   Implement the `deliberative_reasoning_process` pseudo-code.
     -   Begin implementing the Layer 3 metacognitive functions, such as `ContradictionManagement` and `Self-Optimization`.
 
-5.  **Phase 5: Grounding and Application.**
-    -   Implement the `GroundingInterface` and `Public API` to connect the system to the outside world.
+4.  **Phase 4: Grounding and Application.**
+    -   Implement the `GroundingInterface` as described in `GROUNDING.md`.
+    -   Implement the `Public API` as described in `API_AND_INTEGRATION.md` to connect the system to the outside world.
 
 ---
 

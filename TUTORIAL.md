@@ -19,8 +19,8 @@ Let's teach it two facts: "A cat is a type of mammal" and "Mammals have fur."
 
 Conceptually, we would provide the following sentences to the system's API:
 
--   `(. (cat --> mammal) (Truth 1.0 0.99) (Budget ...))`
--   `(. (mammal --> has-fur) (Truth 1.0 0.99) (Budget ...))`
+-   `(. (cat --> mammal) (Truth 1.0 0.99))`
+-   `(. (mammal --> has-fur) (Truth 1.0 0.99))`
 
 The system now absorbs these into its `Memory`, and the reasoning loop processes them based on their `Budget`.
 
@@ -30,7 +30,7 @@ Now that the system has some knowledge, we can ask it a question. A **question s
 
 We would provide the following question sentence to the API:
 
--   `(? (cat --> ?what) (Budget ...))`
+-   `(? (cat --> ?what))`
 
 The `?what` is a variable that we want the system to fill in.
 
@@ -53,14 +53,14 @@ Now, let's give the system a **goal sentence**. A goal is a state of the world t
 
 We could express this with a goal sentence:
 
--   `(! (user-has-pet cat) (Budget ...))`
+-   `(! (user-has-pet cat))`
 
 ### Step 5: Grounding and Acting
 
 When the system processes this goal sentence, its `Goal & Planning Function` will activate.
 
 1.  The system searches its memory for beliefs about how to achieve the goal `(user-has-pet cat)`.
-2.  It might find a procedural belief like: `(. ((execute adopt-cat-action) ==> (user-has-pet cat)) (Truth ...) (Budget ...))`. This means, "Executing the 'adopt cat' action leads to the user having a pet cat."
+2.  It might find a procedural belief like: `(. ((execute adopt-cat-action) ==> (user-has-pet cat)) (Truth ...))`. This means, "Executing the 'adopt cat' action leads to the user having a pet cat."
 3.  This belief tells the system it has a way to achieve the goal. The `execute-action` term is a special **Grounded Atom**.
 4.  The system would then form the intention to execute this action. The `Grounded Atom Interface` would translate this symbolic action into a real-world effect (which, in a real application, might mean sending an email, controlling a robot, or displaying a button on a UI).
 
