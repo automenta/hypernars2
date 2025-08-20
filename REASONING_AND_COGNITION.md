@@ -19,7 +19,7 @@ This is the default, high-throughput operational mode. It is a continuous cycle 
 Below is a more detailed, language-agnostic pseudo-code representation of a single cycle. All data structures are formally defined in `DATA_STRUCTURES.md`.
 
 ```pseudo
-function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting_strategy: BudgetingStrategy) {
+function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting: Budgeting) {
     // 1. Select a Concept from Memory's concept bag based on priority.
     concept = memory.select_concept_from_bag();
     if (!concept) { return; }
@@ -49,7 +49,7 @@ function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting
     for (new_raw_sentence in derived_raw_sentences) {
         // The new sentence from the rule already contains the derived truth value.
         // We now calculate the budget and stamp for the new sentence.
-        new_budget = budgeting_strategy.calculate_derived_budget(active_sentence.budget, belief_sentence.budget);
+        new_budget = budgeting.calculate_derived_budget(active_sentence, belief_sentence);
         new_stamp = create_stamp_from_parents({active_sentence.stamp, belief_sentence.stamp});
 
         // Assemble the final, complete sentence and dispatch it to the appropriate concept(s).
@@ -58,7 +58,7 @@ function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting
     }
 
     // 7. System-level housekeeping.
-    budgeting_strategy.perform_housekeeping(memory);
+    budgeting.perform_housekeeping();
     memory.emit_event( (Event system-cycle-complete active_sentence.id) );
 }
 ```
@@ -84,7 +84,7 @@ function deliberative_reasoning_process(memory: Memory, interpreter: MeTTa, trig
     while (deliberation_budget > 0 && !workspace.has_solution(trigger_sentence)) {
         // A solution is typically a new, high-confidence belief that directly
         // satisfies the initial goal (e.g., a plan, or a revised belief).
-        reflexive_reasoning_cycle(workspace, interpreter, get_deliberation_budgeting_strategy());
+        reflexive_reasoning_cycle(workspace, interpreter, get_deliberation_budgeting());
         deliberation_budget--;
     }
 
@@ -183,20 +183,29 @@ Responsible for goal-oriented behavior, planning, and skill acquisition.
 | Interface | Atom Schema / Description |
 | :--- | :--- |
 | **Triggers** | `(! (desired-state))` |
-| **Reads** | Beliefs of the form `(. ((operation) ==> (desired-state)) ...)` |
-| **Writes** | `(! (precondition))` (sub-goals), `(! (execute (operation)))` |
+| **Reads** | Beliefs of the form `(. ((#operation) ==> (desired-state)) ...)` |
+| **Writes** | `(! (precondition))` (sub-goals), `(! (#operation))` |
 
--   **Core Capability**: Implements a backward-chaining planner. When a `(! G)` sentence is processed, it queries memory for procedural beliefs of the form `(. ((Op) ==> G) ...)` If found, it injects a new sub-goal `(! P)` for the operation's preconditions.
+-   **Core Capability**: Implements a backward-chaining planner. When a `(! G)` sentence is processed, it queries memory for procedural beliefs of the form `(. (($op ==> G) ...))`, where `$op` is expected to be a grounded atom (e.g., `#my-action`). If found, it injects a new sub-goal for the operation's preconditions, and then a goal to execute the operation itself.
 -   **Example Implementation**:
     ```metta
-    ;; Rule for backward chaining
+    ;; Rule for backward chaining.
+    ;; When handling a goal `(! $g)`, this rule finds an operation `$op` that
+    ;; leads to `$g`, finds its precondition `$p`, and posts `$p` as a new
+    ;; goal. If the precondition is met, it posts the operation `$op` as a
+    ;; goal to be executed.
     (= (handle (! $g))
        (match &self
+              ;; Find an operation $op that results in the goal $g.
+              ;; $op is expected to be a grounded atom, e.g. #my-action.
               (. (($op ==> $g)) %true . $any)
               (match &self
+                     ;; Find a precondition $p for the operation $op.
                      (. ((has-precondition $op $p)) %true . $any)
+                     ;; Post the precondition as a new subgoal.
                      (! $p)
-                     (! (execute $op)))))
+                     ;; Once the precondition is met, post the operation as a goal.
+                     (! $op))))
     ```
 
 ---

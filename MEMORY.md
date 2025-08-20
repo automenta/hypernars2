@@ -34,20 +34,20 @@ graph TD
 
 ## Pluggable Attention Allocation
 
-A key aspect of the architecture's flexibility is its pluggable model for attention allocation. The system is not hard-coded to a single resource management algorithm. Instead, it defines a standard interface, `BudgetingStrategy`, that different allocation models can implement. The system can be configured to use a specific strategy at startup.
+A key aspect of the architecture's flexibility is its pluggable model for attention allocation. The system is not hard-coded to a single resource management algorithm. Instead, it defines a standard interface, `Budgeting`, that different allocation models can implement. The system can be configured to use a specific strategy at startup.
 
-### The `BudgetingStrategy` Interface
+### The `Budgeting` Interface
 This is a language-agnostic interface that any budgeting model must adhere to. It defines the core operations for managing the lifecycle of `Budget`s and an item's importance in memory.
 
 ```
-interface BudgetingStrategy {
+interface Budgeting {
     // Calculates the initial budget for a new sentence injected into the system.
     function calculate_initial_budget(sentence: Sentence) -> Budget;
 
     // Calculates the budget for a new sentence derived from parent sentences.
     function calculate_derived_budget(parent_1: Sentence, parent_2: Sentence) -> Budget;
 
-    // Updates the importance of an item (e.g., a Sentence or Concept) in memory after it's accessed.
+    // Updates the importance of an item (e.a., a Sentence or Concept) in memory after it's accessed.
     function update_item_importance(item: (Sentence | Concept)) -> void;
 
     // Determines whether a given item should be removed from memory.
@@ -60,7 +60,7 @@ interface BudgetingStrategy {
 
 ### Example Implementation: Economic Attention Allocation (ECAN)
 
-One possible implementation of `BudgetingStrategy` is based on Hyperon's **Economic Attention Allocation (ECAN)** model. In this model, the `priority` and `durability` of a NARS `Budget` correspond to an Atom's **Short-Term Importance (STI)** and **Long-Term Importance (LTI)**.
+One possible implementation of `Budgeting` is based on Hyperon's **Economic Attention Allocation (ECAN)** model. In this model, the `priority` and `durability` of a NARS `Budget` correspond to an Atom's **Short-Term Importance (STI)** and **Long-Term Importance (LTI)**.
 
 -   **STI (Short-Term Importance)**: Represents the immediate relevance of an item. It spikes when an item is used in reasoning and decays over time. This maps to a `Budget`'s `priority`.
 -   **LTI (Long-Term Importance)**: Represents the long-term value or usefulness of an item. It increases when an item is involved in successful, high-quality inferences. This maps to a `Budget`'s `durability`.
@@ -82,7 +82,7 @@ The `perform_housekeeping` function for ECAN would implement a decay formula for
 
 ## Forgetting Algorithms
 
-Forgetting is a natural and essential outcome of resource management under AIKR. These algorithms are typically implemented via the **`Bag`** data structure (defined in `DATA_STRUCTURES.md`), which is used within each `Concept` to hold `Sentences`. The `should_forget_item` function of a `BudgetingStrategy` then implements the logic for determining which items to remove. This ensures that the system's finite resources are focused on the most relevant and important knowledge.
+Forgetting is a natural and essential outcome of resource management under AIKR. These algorithms are typically implemented via the **`Bag`** data structure (defined in `DATA_STRUCTURES.md`), which is used within each `Concept` to hold `Sentences`. The `should_forget_item` function of the `Budgeting` interface then implements the logic for determining which items to remove. This ensures that the system's finite resources are focused on the most relevant and important knowledge.
 
 Below are more detailed, language-agnostic descriptions of common forgetting strategies.
 

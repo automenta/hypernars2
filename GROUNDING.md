@@ -17,19 +17,19 @@ The GAI facilitates a continuous **sensorimotor loop**:
 
 A key advantage of the Grounded Atom model is the deep and flexible integration of external computational models, which can be wrapped as `GroundedAtoms` or exposed as specialized Neural Spaces (often called "Neural Lobes"). This allows the system to seamlessly blend symbolic reasoning with sub-symbolic processing. MeTTa scripts can query these external Spaces to perform complex tasks.
 
--   **LLM as a Knowledge Source**: An atom like `(llm-query "What is the capital of France?")` can be grounded to an LLM API. The interpreter can evaluate this atom, and the LLM's response ("Paris") is inserted into the Memory as a new belief sentence, e.g., `(. (capital-of France Paris) (Truth 0.9 0.8))`.
--   **Embeddings for Similarity**: An atom `(get-embedding "some text")` can be grounded to a text embedding model. The resulting vector can be stored in the Memory and used for powerful similarity and analogy calculations, e.g., `(= (similarity (get-embedding $a) (get-embedding $b)) (cosine-similarity ...))`
--   **Perception via Vision Models**: An atom like `(recognize-objects (image_data))` can be grounded to a computer vision model, producing sentences that describe the contents of an image.
+-   **LLM as a Knowledge Source**: An atom like `(#llm-query "What is the capital of France?")` can be grounded to an LLM API. The interpreter can evaluate this atom, and the LLM's response ("Paris") is inserted into the Memory as a new belief sentence, e.g., `(. (capital-of France Paris) (Truth 0.9 0.8))`.
+-   **Embeddings for Similarity**: An atom `(#get-embedding "some text")` can be grounded to a text embedding model. The resulting vector can be stored in the Memory and used for powerful similarity and analogy calculations, e.g., `(= (similarity (#get-embedding $a) (#get-embedding $b)) (#cosine-similarity ...))`
+-   **Perception via Vision Models**: An atom like `(#recognize-objects (image_data))` can be grounded to a computer vision model, producing sentences that describe the contents of an image.
 
 This mechanism allows the symbolic reasoner to offload complex, pattern-based tasks to specialized ML models while still managing the high-level reasoning process.
 
 ### Grounded Atoms vs. Spaces
 
 To clarify the relationship between the two main grounding mechanisms:
--   A **`GroundedAtom`** is best understood as a single, executable foreign function. It takes atoms as arguments and returns an atom as a result, potentially with side effects. Examples include `(#move-forward)`, `(llm-query "...")`, or a math function like `(+ 1 2)`.
+-   A **`GroundedAtom`** is best understood as a single, executable foreign function, identified by a `#` prefix. It takes atoms as arguments and returns an atom as a result, potentially with side effects. Examples include `(#move-forward)`, `(#llm-query "...")`, or a math function like `(#+ 1 2)`.
 -   A **`Space`** is a larger, more complex external knowledge source that has its own internal structure and query language. Examples include a vector embedding database, a SQL database, or another AI model's knowledge graph.
 
-The two concepts are complementary. Interaction with a `Space` is typically mediated *through* a set of `GroundedAtoms`. For example, to interact with a vector database `Space`, a developer might define grounded atoms like `(query-vector-db $vec)` and `(add-to-vector-db $vec)`. This provides a clean, atom-based interface to the complex external resource.
+The two concepts are complementary. Interaction with a `Space` is typically mediated *through* a set of `GroundedAtoms`. For example, to interact with a vector database `Space`, a developer might define grounded atoms like `(#query-vector-db $vec)` and `(#add-to-vector-db $vec)`. This provides a clean, atom-based interface to the complex external resource.
 
 ## Natural Language Processing (NLP) Interface
 

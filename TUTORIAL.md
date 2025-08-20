@@ -60,9 +60,9 @@ We could express this with a goal sentence:
 When the system processes this goal sentence, its `Goal & Planning Function` will activate.
 
 1.  The system searches its memory for beliefs about how to achieve the goal `(user-has-pet cat)`.
-2.  It might find a procedural belief like: `(. ((execute adopt-cat-action) ==> (user-has-pet cat)) (Truth ...))`. This means, "Executing the 'adopt cat' action leads to the user having a pet cat."
-3.  This belief tells the system it has a way to achieve the goal. The `execute-action` term is a special **Grounded Atom**.
-4.  The system would then form the intention to execute this action. The `Grounded Atom Interface` would translate this symbolic action into a real-world effect (which, in a real application, might mean sending an email, controlling a robot, or displaying a button on a UI).
+2.  It might find a procedural belief like: `(. ((#adopt-cat) ==> (user-has-pet cat)) (Truth ...))`. This means, "Executing the 'adopt cat' action leads to the user having a pet cat."
+3.  This belief tells the system it has a way to achieve the goal. The `#adopt-cat` term is a special **Grounded Atom**, identified by the `#` prefix.
+4.  The system would then form the intention to execute this action by injecting the goal `(! (#adopt-cat))`. The `Grounded Atom Interface` would then translate this symbolic action into a real-world effect (which, in a real application, might mean sending an email, controlling a robot, or displaying a button on a UI).
 
 ---
 
