@@ -22,47 +22,63 @@ To balance efficiency and thoroughness, the reasoning cycle is architected as a 
 This is the default, high-throughput operational mode. Below is a more detailed, language-agnostic pseudo-code representation of a single cycle:
 
 ```pseudo
-function reflexive_reasoning_cycle() {
-    // 1. Select Concept and Task from Memory
-    // Concept selection is probabilistic, weighted by activation level.
+function reflexive_reasoning_cycle(budgeting_strategy: BudgetingStrategy) {
+    // 1. Select a Concept from Memory
+    // Probabilistic selection, weighted by the concept's activation/importance.
     concept = select_concept_from_memory();
     if (!concept) { return; } // No active concepts
 
-    // Task selection is deterministic, based on highest priority.
+    // 2. Select a Task from the Concept
+    // Deterministic selection of the highest-priority task.
     task = concept.select_task();
-    if (!task) { return; } // No tasks in concept
+    if (!task) { return; } // No tasks in this concept
 
-    // 2. Select a relevant Belief from the same Concept
-    // Belief selection is probabilistic, based on relevance to the task.
-    belief = concept.select_belief(task);
-    if (!belief) { return; } // No relevant beliefs in concept
+    // 3. Select a Belief from the Concept
+    // Probabilistic selection, based on relevance to the task atom.
+    belief = concept.select_belief_for_task(task);
+    if (!belief) { return; } // No relevant beliefs in this concept
 
-    // 3. Formulate Inference Atom for the MeTTa Interpreter
+    // 4. Update Importance of Accessed Knowledge
+    // The system reinforces the importance of items it has just "thought about."
+    budgeting_strategy.update_item_importance(concept);
+    budgeting_strategy.update_item_importance(task);
+    budgeting_strategy.update_item_importance(belief);
+
+    // 5. Formulate Inference Atom for the MeTTa Interpreter
     // The specific inference rule (e.g., deduce, induce, abduce) is chosen
-    // based on the task and belief type, and then matched by the interpreter.
-    // For example, two beliefs might trigger a deduction.
-    inference_atom = (deduce task.sentence.atom belief.atom);
+    // based on the task and belief type.
+    inference_atom = formulate_inference_atom(task, belief);
 
-    // 4. Invoke MeTTa Interpreter
-    // The interpreter evaluates the atom by finding matching rewrite rules
-    // in Memory, which represent the laws of NAL.
+    // 6. Invoke MeTTa Interpreter
+    // The interpreter evaluates the atom by finding matching rewrite rules (the laws of NAL)
+    // in Memory. This may produce zero, one, or multiple derived atoms.
+    // The start time is recorded to measure the cost of the inference.
+    t_start = now();
     derived_atoms = metta_interpreter.evaluate(inference_atom);
+    t_end = now();
+    inference_cost = t_end - t_start;
 
-    // 5. Process Derived Atoms into New Tasks
+
+    // 7. Process Derived Atoms into New Tasks
     for (derived_atom in derived_atoms) {
-        // Calculate budget and truth for the new task based on parent evidence
-        // and the confidence of the inference rule used.
+        // Calculate truth value for the new conclusion.
         new_truth = truth_function(task.truth, belief.truth, rule.confidence);
-        new_budget = budget_function(task.budget, belief.budget);
+
+        // Delegate budget calculation to the pluggable strategy.
+        new_budget = budgeting_strategy.calculate_derived_task_budget(task, belief);
 
         // Create and dispatch the new task to the appropriate concept(s).
         new_task = create_task(derived_atom, new_truth, new_budget, {task, belief});
         dispatch_task_to_concept(new_task);
+
+        // Record the utility of the rule that produced this result.
+        // This is a key part of the system's self-monitoring.
+        record_rule_utility(rule, new_budget.quality, inference_cost);
     }
 
-    // 6. System-level Updates
-    // Decay activation levels, forget low-budget items, etc.
-    system.perform_housekeeping();
+    // 8. System-level Housekeeping
+    // The budgeting strategy handles decay and forgetting.
+    budgeting_strategy.perform_housekeeping();
     system.emit_events(); // For cognitive managers
 }
 ```
@@ -87,8 +103,30 @@ The process follows a more structured sequence:
 ### Task and Belief Selection Algorithms
 
 The functions for selecting tasks and beliefs are critical for guiding the system's attention.
--   **Task Selection**: This should be a two-level process. First, a `Concept` is selected from the entire memory, with selection probability proportional to the concept's activation level. Second, the highest-priority `Task` is selected from that concept's local task queue.
--   **Belief Selection**: Given a task, a relevant `Belief` must be selected from the concept. This selection should be based on a relevance score, which could factor in the belief's confidence and its structural similarity to the task.
+-   **Task Selection**: This is a two-level process. First, a `Concept` is selected from the entire memory, with selection probability proportional to its importance (e.g., STI). Second, the `Task` with the highest `priority` from that concept's local task queue is selected.
+-   **Belief Selection**: Given a task, a relevant `Belief` must be selected from the same concept. This selection is probabilistic, weighted by a relevance score that considers the belief's `confidence` and its structural similarity to the task's atom.
+
+## Reasoning about Reasoning: Performance Monitoring
+
+A key feature of the HyperNARS architecture is its ability to reason about its own reasoning processes. This is crucial for self-optimization and adaptation. The system achieves this by tracking the performance of its own inference rules and storing this data as `Beliefs` in Memory, making it accessible to the `CognitiveExecutive` and `Self-Optimization Manager`.
+
+Two primary metrics are tracked for each inference rule:
+
+1.  **Utility**: How often does this rule produce useful results? "Usefulness" is measured by the `quality` of the budgets of the tasks it generates. A rule that consistently produces high-quality conclusions is considered more useful.
+2.  **Computational Cost**: How much time does it take for the MeTTa interpreter to execute this rule? This is measured by timing the `metta_interpreter.evaluate()` call.
+
+This data is collected during the reasoning cycle and periodically aggregated into `Beliefs`.
+
+| KPI Name | Description | Example MeTTa Representation |
+| :--- | :--- | :--- |
+| `rule_utility` | The average `quality` of the conclusions produced by a specific inference rule. | `(has-utility (rule Deduce) 0.82)` |
+| `rule_cost` | The average execution time for a specific inference rule in microseconds. | `(has-cost (rule Abduce) (150 microseconds))` |
+| `rule_usage_frequency` | How often a rule is successfully applied. | `(has-frequency (rule Induce) 0.05)` |
+
+This self-monitoring data enables the `Self-Optimization Manager` to perform actions like:
+-   **Identifying Inefficient Rules**: A rule with high cost and low utility is a candidate for being refactored or disabled.
+-   **Resource Allocation**: The system could learn to allocate more processing time to inference patterns that have proven to be highly effective.
+-   **Detecting Reasoning Loops**: A rule that is used very frequently but produces low-utility results might be part of an unproductive reasoning loop.
 
 ## NAL on MeTTa: The Layered Implementation
 
