@@ -1,211 +1,162 @@
 # The Reasoning Engine
 
-The core of the reasoning process is the **MeTTa Interpreter**. This component replaces a traditional, static inference engine with a dynamic, programmable reasoning system that embodies the "Everything is an Atom" principle.
+The core of the reasoning process is the **MeTTa Interpreter**. This component replaces a traditional, static inference engine with a dynamic, programmable reasoning system that embodies the "Everything is an Atom" principle. Inference is the interpretation of atoms by other atoms (inference rules), which are themselves atoms in Memory.
 
-## Inference as Interpretation
+This document details the **Control Loop** that orchestrates the interpreter, which is architected as a **dual-process system** to balance efficiency with thoroughness.
 
-In this paradigm, inference is not the application of hard-coded rules, but the **interpretation of atoms by other atoms**. The interpreter works by matching and rewriting expressions in the Memory.
+---
 
-Inference rules themselves are represented as atoms, typically using an equality `(=)` or "rewrite" pattern. For example, a classical deduction rule (Modus Ponens) can be expressed as:
-`(= (deduce (Implication $a $b) $a) $b)`
+## System 1: The Reflexive Reasoning Loop
 
-When the control unit selects a task like `(deduce (Implication (human socrates) (mortal socrates)) (human socrates))`, the interpreter can match this against the rule above and evaluate it to produce a new atom: `(mortal socrates)`.
+This is the default, high-throughput operational mode. It is a continuous cycle of selecting a `Task` and a relevant `Belief` from memory and feeding them to the MeTTa interpreter to potentially derive new knowledge.
 
-This approach provides immense flexibility. The system can learn, modify, or be given new inference rules at runtime simply by adding new atoms to the Memory. Different types of logic (probabilistic, temporal, deontic) can be implemented as sets of interpretation rules.
-
-## The Reasoning Cycle: A Dual-Process Control Unit
-
-To balance efficiency and thoroughness, the reasoning cycle is architected as a **dual-process system**. This allows the system to handle routine inferences rapidly while dedicating more resources to complex or novel situations. The **Cognitive Executive** manager is responsible for orchestrating the transition between these two modes.
-
-### System 1: The Reflexive Reasoning Loop
-
-This is the default, high-throughput operational mode. Below is a more detailed, language-agnostic pseudo-code representation of a single cycle:
+Below is a language-agnostic pseudo-code representation of a single cycle. All data structures like `Task`, `Belief`, `Budget`, etc., are defined in `DATA_STRUCTURES.md`.
 
 ```pseudo
-function reflexive_reasoning_cycle(budgeting_strategy: BudgetingStrategy) {
-    // 1. Select a Concept from Memory
-    // Probabilistic selection, weighted by the concept's activation/importance.
-    concept = select_concept_from_memory();
-    if (!concept) { return; } // No active concepts
+function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting_strategy: BudgetingStrategy) {
+    // 1. Select a Concept from Memory, weighted by importance (e.g., activation).
+    concept = memory.select_concept();
+    if (!concept) { return; }
 
-    // 2. Select a Task from the Concept
-    // Deterministic selection of the highest-priority task.
+    // 2. Select the highest-priority Task from the Concept's local queue.
+    // A Task is a wrapper around a sentence (Belief, Goal, or Question) with a Budget.
     task = concept.select_task();
-    if (!task) { return; } // No tasks in this concept
+    if (!task) { return; }
 
-    // 3. Select a Belief from the Concept
-    // Probabilistic selection, based on relevance to the task atom.
+    // 3. Select a relevant Belief from the same Concept.
+    // A Belief pairs an Atom with a TruthValue.
     belief = concept.select_belief_for_task(task);
-    if (!belief) { return; } // No relevant beliefs in this concept
+    if (!belief) { return; }
 
-    // 4. Update Importance of Accessed Knowledge
-    // The system reinforces the importance of items it has just "thought about."
-    budgeting_strategy.update_item_importance(concept);
-    budgeting_strategy.update_item_importance(task);
-    budgeting_strategy.update_item_importance(belief);
+    // 4. Formulate an inference expression for the MeTTa interpreter.
+    // This combines the task's sentence and the belief's atom under a specific inference rule.
+    inference_atom = formulate_inference_atom(task.sentence, belief.atom);
 
-    // 5. Formulate Inference Atom for the MeTTa Interpreter
-    // The specific inference rule (e.g., deduce, induce, abduce) is chosen
-    // based on the task and belief type.
-    inference_atom = formulate_inference_atom(task, belief);
+    // 5. Invoke MeTTa Interpreter to perform the core reasoning step.
+    // The interpreter finds matching inference rules (also atoms in Memory) and executes them.
+    derived_atoms = interpreter.evaluate(inference_atom);
 
-    // 6. Invoke MeTTa Interpreter
-    // The interpreter evaluates the atom by finding matching rewrite rules (the laws of NAL)
-    // in Memory. This may produce zero, one, or multiple derived atoms.
-    // The start time is recorded to measure the cost of the inference.
-    t_start = now();
-    derived_atoms = metta_interpreter.evaluate(inference_atom);
-    t_end = now();
-    inference_cost = t_end - t_start;
-
-
-    // 7. Process Derived Atoms into New Tasks
+    // 6. Process Derived Atoms into New Tasks.
     for (derived_atom in derived_atoms) {
-        // Calculate truth value for the new conclusion.
-        new_truth = truth_function(task.truth, belief.truth, rule.confidence);
+        // A derived atom is a new sentence (e.g., a conclusion).
+        // Calculate its truth value and budget based on its parents.
+        new_truth = truth_function(task.sentence.truth, belief.truth);
+        new_budget = budgeting_strategy.calculate_derived_budget(task.budget, belief.budget);
 
-        // Delegate budget calculation to the pluggable strategy.
-        new_budget = budgeting_strategy.calculate_derived_task_budget(task, belief);
+        // Create a new Belief atom from the derived sentence and its truth value.
+        new_belief_atom = (Belief derived_atom new_truth);
 
-        // Create and dispatch the new task to the appropriate concept(s).
-        new_task = create_task(derived_atom, new_truth, new_budget, {task, belief});
-        dispatch_task_to_concept(new_task);
-
-        // Record the utility of the rule that produced this result.
-        // This is a key part of the system's self-monitoring.
-        record_rule_utility(rule, new_budget.quality, inference_cost);
+        // Create and dispatch the new Task to the appropriate concept(s).
+        new_task = create_task(new_belief_atom, new_budget, {task, belief});
+        memory.dispatch_task(new_task);
     }
 
-    // 8. System-level Housekeeping
-    // The budgeting strategy handles decay and forgetting.
-    budgeting_strategy.perform_housekeeping();
-    system.emit_events(); // For cognitive managers
+    // 7. System-level housekeeping, including forgetting and emitting events.
+    budgeting_strategy.perform_housekeeping(memory);
+    memory.emit_event( (Event system-cycle-complete) );
 }
 ```
 
-### System 2: The Deliberative Reasoning Process
+---
 
-This is a resource-intensive, goal-driven process initiated by the `CognitiveExecutive` when it detects situations requiring deeper analysis. Unlike the continuous, reflexive loop of System 1, this process is discrete and purposeful.
+## System 2: The Deliberative Reasoning Process
 
-The process follows a more structured sequence:
-1.  **Initiation**: Triggered by the `CognitiveExecutive` in response to a significant event, such as a high-priority goal, a major contradiction, or an explicit user command to "think about" a topic.
-2.  **Context Scoping**: A temporary "working memory" context is created. This involves gathering a set of highly relevant concepts, beliefs, and goals related to the triggering event. This forms a temporary, high-activation subgraph of the main memory, isolating the reasoning process to the most relevant information.
-3.  **Hypothesis Generation**: The system enters a goal-driven reasoning mode within the scoped context. It may generate multiple potential lines of reasoning or "hypotheses" to explore.
-    -   For a **contradiction**, this might involve finding the weakest premises in the conflicting arguments.
-    -   For a **goal**, this might involve finding multiple possible plans (sequences of operations).
-4.  **Evidence Gathering & Evaluation**: The system dedicates a larger amount of resources (a "deliberation budget") to deeply explore the generated hypotheses by chaining multiple inference steps together. The goal is to find supporting or conflicting evidence for each hypothesis and evaluate their relative merit.
-5.  **Resolution and Commitment**: Based on the evidence gathered, the system commits to a resolution. This could be:
-    -   Revising the truth-value of one or more beliefs to resolve a contradiction.
-    -   Selecting and committing to a specific plan to achieve a goal.
-    -   Generating a detailed, multi-step answer to a complex question.
-6.  **Decommissioning**: The working memory context is dissolved. The results of the deliberation (e.g., new high-confidence beliefs, a chosen plan) are integrated back into the main memory, and their effects are propagated.
+This is a resource-intensive, goal-driven process initiated by the `CognitiveExecutive` when it detects a situation requiring deeper, focused analysis (e.g., via a `(Goal (resolve-contradiction ...))` task). Unlike the continuous System 1 loop, this process is discrete, purposeful, and operates on a temporary, scoped workspace.
 
-### Task and Belief Selection Algorithms
+```pseudo
+function deliberative_reasoning_process(memory: Memory, interpreter: MeTTa, trigger_goal: Goal) {
+    // 1. Initiation & Context Scoping
+    // Create a temporary, high-priority "working memory" space.
+    workspace = memory.create_workspace(name="deliberation_space");
 
-The functions for selecting tasks and beliefs are critical for guiding the system's attention.
--   **Task Selection**: This is a two-level process. First, a `Concept` is selected from the entire memory, with selection probability proportional to its importance (e.g., STI). Second, the `Task` with the highest `priority` from that concept's local task queue is selected.
--   **Belief Selection**: Given a task, a relevant `Belief` must be selected from the same concept. This selection is probabilistic, weighted by a relevance score that considers the belief's `confidence` and its structural similarity to the task's atom.
+    // Gather a set of highly relevant knowledge (Beliefs, procedural rules)
+    // related to the trigger_goal and copy it into the workspace.
+    relevant_knowledge = memory.find_relevant_knowledge(trigger_goal);
+    workspace.add_atoms(relevant_knowledge);
+
+    // 2. Focused, Iterative Reasoning
+    // Run a high-budget, iterative reasoning loop within the isolated workspace.
+    // This is like a super-charged System 1 loop, but goal-directed and contained.
+    deliberation_budget = get_high_budget();
+    while (deliberation_budget > 0 && !workspace.has_solution(trigger_goal)) {
+
+        // Select a sub-task and belief *within the workspace* that are most relevant to the trigger_goal.
+        sub_task = workspace.select_task_for_goal(trigger_goal);
+        belief = workspace.select_belief_for_task(sub_task);
+
+        // Formulate and evaluate inference atom.
+        inference_atom = formulate_inference_atom(sub_task.sentence, belief.atom);
+        derived_atoms = interpreter.evaluate(inference_atom);
+
+        // Add results back to the workspace, not main memory.
+        process_and_add_new_tasks(derived_atoms, workspace);
+
+        // Decrement the deliberation budget.
+        deliberation_budget--;
+    }
+
+    // 3. Resolution and Integration
+    // Extract the final result (e.g., a plan, a revised belief) from the workspace.
+    solution = workspace.get_solution(trigger_goal);
+
+    if (solution) {
+        // Inject the high-confidence solution back into the main memory.
+        // The budgeting strategy will assign it a high-quality budget, reflecting the work done.
+        final_task = create_final_task_from_solution(solution);
+        memory.dispatch_task(final_task);
+    }
+
+    // 4. Decommissioning
+    // The temporary workspace is dissolved.
+    memory.destroy_workspace(workspace);
+
+    return solution;
+}
+```
+
+---
 
 ## Reasoning about Reasoning: Performance Monitoring
 
-A key feature of the HyperNARS architecture is its ability to reason about its own reasoning processes. This is crucial for self-optimization and adaptation. The system achieves this by tracking the performance of its own inference rules and storing this data as `Beliefs` in Memory, making it accessible to the `CognitiveExecutive` and `Self-Optimization Manager`.
+The system's ability to reason about its own performance is critical for self-optimization. This is achieved by tracking the performance of its inference rules and materializing this data as `KPI` atoms in Memory, making it accessible to the `CognitiveExecutive`. The authoritative list of KPIs is defined in `DATA_STRUCTURES.md`.
 
-Two primary metrics are tracked for each inference rule:
-
-1.  **Utility**: How often does this rule produce useful results? "Usefulness" is measured by the `quality` of the budgets of the tasks it generates. A rule that consistently produces high-quality conclusions is considered more useful.
-2.  **Computational Cost**: How much time does it take for the MeTTa interpreter to execute this rule? This is measured by timing the `metta_interpreter.evaluate()` call.
-
-This data is collected during the reasoning cycle and periodically aggregated into `Beliefs`.
-
-| KPI Name | Description | Example MeTTa Representation |
-| :--- | :--- | :--- |
-| `rule_utility` | The average `quality` of the conclusions produced by a specific inference rule. | `(has-utility (rule Deduce) 0.82)` |
-| `rule_cost` | The average execution time for a specific inference rule in microseconds. | `(has-cost (rule Abduce) (150 microseconds))` |
-| `rule_usage_frequency` | How often a rule is successfully applied. | `(has-frequency (rule Induce) 0.05)` |
-
-This self-monitoring data enables the `Self-Optimization Manager` to perform actions like:
--   **Identifying Inefficient Rules**: A rule with high cost and low utility is a candidate for being refactored or disabled.
--   **Resource Allocation**: The system could learn to allocate more processing time to inference patterns that have proven to be highly effective.
--   **Detecting Reasoning Loops**: A rule that is used very frequently but produces low-utility results might be part of an unproductive reasoning loop.
+---
 
 ## NAL on MeTTa: The Layered Implementation
 
-The NARS architecture is defined by a hierarchy of Non-Axiomatic Logic (NAL) layers, each introducing more expressive forms of representation and reasoning. In this architecture, these layers are implemented as sets of MeTTa rules and programs. This provides a clear, incremental path for development and ensures that all essential NARS expressivity is retained.
+The hierarchy of Non-Axiomatic Logic (NAL) is implemented as sets of MeTTa rewrite rules. This provides a clear, incremental path for development. The examples below use the formal `(Belief <atom> <truth>)` schema defined in `DATA_STRUCTURES.md`.
 
--   **NAL 1-2 (Basic Syllogistic & Conditional Inference):** The foundational layers, dealing with inheritance (`-->`), similarity (`<->`), and basic logical inference. The classic NARS syllogisms are expressed as simple rewrite rules. Below are examples for the core inference types:
-    -   **Deduction**: From `(A --> B)` and `(B --> C)`, infer `(A --> C)`.
-        ```metta
-        (= (deduce (Belief <$a --> $b> %t1) (Belief <$b --> $c> %t2))
-           (new-belief <$a --> $c> (deduction-truth-fn %t1 %t2)))
-        ```
-    -   **Abduction**: From `(A --> B)` and `(C --> B)`, infer `(C --> A)` (a possible explanation).
-        ```metta
-        (= (abduce (Belief <$a --> $b> %t1) (Belief <$c --> $b> %t2))
-           (new-belief <$c --> $a> (abduction-truth-fn %t1 %t2)))
-        ```
-    -   **Induction**: From `(A --> B)` and `(A --> C)`, infer `(C --> B)`.
-        ```metta
-        (= (induce (Belief <$a --> $b> %t1) (Belief <$a --> $c> %t2))
-           (new-belief <$c --> $b> (induction-truth-fn %t1 %t2)))
-        ```
-    -   **Exemplification**: From `(A --> B)`, infer `(B --> A)` (with low confidence).
-        ```metta
-        (= (exemplify (Belief <$a --> $b> %t1))
-           (new-belief <$b --> $a> (exemplification-truth-fn %t1)))
-        ```
-    -   **Comparison**: From `(A --> C)` and `(B --> C)`, infer `(A <-> B)`.
-        ```metta
-        (= (compare (Belief <$a --> $c> %t1) (Belief <$b --> $c> %t2))
-           (new-belief <$a <-> $b> (comparison-truth-fn %t1 %t2)))
-        ```
-
--   **NAL 3-4 (Compound Terms):** These layers introduce term-level operators (intersection, union, etc.). These are implemented in MeTTa by defining how expressions with these operators interact with inference rules, allowing the system to form and reason about compound concepts.
-
--   **NAL 5 (Statements as Terms):** This critical layer allows the system to reason about statements themselves. In MeTTa, this is native behavior. Any expression, including a `(Belief ...)` or `(Task ...)` Atom, can be treated as an argument in another expression, enabling higher-order reasoning.
+-   **Deduction**: `(A --> B), (B --> C) ==> (A --> C)`
     ```metta
-    ;;; NAL-5 Implication Example
-    ;;; "If a belief in (A-->B) causes a belief in (C-->D),
-    ;;;  then we can form a new belief about that implication."
-    (= (causal-inference (Belief <A --> B>) (Belief <C --> D>))
-       (new-belief <(<A --> B>) ==> (<C --> D>)> ...))
+    (= (deduce (Belief <$a --> $b> $t1) (Belief <$b --> $c> $t2))
+       (Belief <$a --> $c> (deduction-truth-fn $t1 $t2)))
     ```
 
--   **NAL 6 (Variable Terms):** The introduction of variables is also native to MeTTa. MeTTa's `$`-prefixed variables can be used to define general inference rules that apply to any term, allowing for abstract and hypothetical reasoning. The NARS inference rules are written as general MeTTa programs using variables.
-
--   **NAL 7 (Temporal Reasoning):** Temporal reasoning is implemented by adding temporal predicates to statements and defining MeTTa rules that operate on them. For example, rules for temporal succession (`</>`) can be defined to allow for predictions and explanations.
+-   **Abduction**: `(A --> B), (C --> B) ==> (C --> A)` (a possible explanation)
     ```metta
-    ;;; NAL-7 Temporal Inference Example
-    (= (deduce-temporal (Belief <(A </> B)> %t1) (Belief <(B </> C)> %t2))
-       (new-belief <(A </> C)> (temporal-deduction-truth-fn %t1 %t2)))
+    (= (abduce (Belief <$a --> $b> $t1) (Belief <$c --> $b> $t2))
+       (Belief <$c --> $a> (abduction-truth-fn $t1 $t2)))
     ```
 
--   **NAL 8-9 (Procedural and Self-Reasoning):** The highest levels of NARS involve goal-directed behavior and self-reasoning. These are implemented as specialized MeTTa scripts (Cognitive Functions) that reason about the system's own state and operations. See the section below on Question Answering and Goal Pursuit.
+-   **Induction**: `(A --> B), (A --> C) ==> (C --> B)`
+    ```metta
+    (= (induce (Belief <$a --> $b> $t1) (Belief <$a --> $c> $t2))
+       (Belief <$c --> $b> (induction-truth-fn $t1 $t2)))
+    ```
 
-## Question Answering and Goal Pursuit
+-   **NAL 5 (Statements as Terms)**: This is native to MeTTa. Any atom, including a `Belief` or `Goal`, can be an argument in another expression.
+    ```metta
+    ;; "The belief that 'birds fly' implies the goal of 'checking the sky'."
+    (Implication
+      (Belief <bird --> flyer> (TruthValue 1.0 0.9))
+      (Goal <check-the-sky>))
+    ```
 
-The reasoning engine must not only process new knowledge, but also actively use its knowledge to answer questions and achieve goals. This is a core part of the NARS model and is handled by treating `Question` and `Goal` tasks as triggers for specialized reasoning patterns.
+-   **NAL 7 (Temporal Reasoning)**: Implemented with temporal operators and corresponding rules.
+    ```metta
+    ;; If (A happens before B) and (B happens before C), then (A happens before C).
+    (= (deduce-temporal (Belief <(A </> B)> $t1) (Belief <(B </> C)> $t2))
+       (Belief <(A </> C)> (temporal-deduction-truth-fn $t1 $t2)))
+    ```
 
-### Processing Questions
-
-When a `Question` task is selected by the reasoning cycle, the system's immediate objective is to find or derive a `Belief` that provides an answer.
-
--   **Direct Answer**: For a question like `(bird --> ?what)`, the system first checks the `bird` concept for an existing belief that matches this pattern, such as `(bird --> animal)`. If found, a new `Belief` task is generated for the answer.
--   **Inferred Answer**: If no direct answer is available, the question triggers inference. The system will attempt to apply inference rules to derive an answer. For example, it might combine `(bird --> vertebrate)` and `(vertebrate --> animal)` to answer `(bird --> ?what)`.
--   **Best-Answer Selection**: If multiple potential answers are found, the system will select the one with the highest confidence as the best current answer.
--   **Grounded Questions**: If a question involves a grounded symbol, the system may invoke the corresponding external function to get an answer (e.g., querying a database or web API).
-
-### Processing Goals
-
-When a `Goal` task is selected, the system initiates a backward-chaining inference process to find a sequence of operations (a plan) to achieve the desired state.
-
--   **Find Relevant Operations**: For a goal like `(Achieve <door-is open>)`, the system searches for procedural beliefs (implications of type `==>`) where the goal is the effect, such as `((execute #unlock-door) ==> <door-is open>)`.
--   **Sub-goaling**: If a relevant operation is found, its preconditions become new sub-goals. For the example above, if the `#unlock-door` operation has a precondition `(is-at SELF door)`, the system will generate a new `Goal` task: `(Achieve <is-at SELF door>)`.
--   **Plan Execution**: This process continues until a sequence of achievable operations is found. The `GoalManager` cognitive module is responsible for managing this process, monitoring execution, and handling failures.
-
-## AIKR-Constrained Interpretation
-
-While the interpreter provides the mechanism for reasoning, the **NARS-style control loop** provides the guidance. The control loop uses the `Budget` and `activation` levels to decide which atoms to feed to the interpreter. This ensures that the system's finite computational resources are always focused on the most promising and relevant lines of reasoning, in accordance with the **Assumption of Insufficient Knowledge and Resources (AIKR)**.
-
-The dual-process model is also implemented here:
--   **System 1 (Reflexive)**: The interpreter performs a shallow, fast evaluation of the selected atoms.
--   **System 2 (Deliberative)**: The interpreter is instructed to perform a deeper, more exhaustive evaluation, potentially chaining multiple rewrite steps together in pursuit of a high-priority goal.
+-   **NAL 8-9 (Procedural and Goal-oriented Reasoning)**: These are not simple rewrite rules, but are implemented by the `Goal & Planning Function` described in `COGNITIVE_ARCH.md`, which performs backward chaining on procedural `==>` implications.
