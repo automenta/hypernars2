@@ -150,9 +150,9 @@ To clarify the roles of the primary sentence types, this section provides a dire
 
 While all are types of `Sentence` atoms, they represent fundamentally different intentions and drive different system behaviors.
 
-| Sentence Type | System's Stance | Example | Typical System Response |
-| :--- | :--- | :--- | :--- |
-| **Belief (.)** | "This is a fact." | `(. (sky-is-blue) (Truth 1.0 0.99) (Budget ...))` | Store this information; use it as a premise in future reasoning. |
-| **Goal (!)** | "I want this to be true." | `(! (light-is-on) (Budget ...))` | Find a sequence of actions (a plan) to make the content true. |
-| **Question (?)** | "Is this true? What is the answer?" | `(? (is-the-door-open) (Budget ...))` | Search memory for relevant beliefs and derive an answer. |
-| **Quest (@)** | "I am curious about this." | `(@ (meaning-of-life) (Budget ...))` | Periodically devote attention and resources to exploring the topic, without a single, concrete endpoint. |
+| Sentence Type | System's Stance                      | Example                                           | Typical System Response                                          |
+| :--- |:-------------------------------------|:--------------------------------------------------|:-----------------------------------------------------------------|
+| **Belief (.)** | "This is a fact."                    | `(. (sky-is-blue) (Truth 1.0 0.99) (Budget ...))` | Store this information; use it as a premise in future reasoning. |
+| **Goal (!)** | "I want this to be true."            | `(! (light-is-on) (Budget ...))`                  | Find a sequence of actions (a plan) to make the content true.    |
+| **Question (?)** | "Is this true?"  | `(? (is-the-door-open) (Budget ...))`             | Search memory for relevant beliefs and derive an answer.         |
+| **Quest (@)** | "Do I want this?" | `(@ (open-door) (Budget ...))`                    | Search memory for relevant goals and derive an answer.           |
