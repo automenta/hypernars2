@@ -37,7 +37,7 @@ This specification is detailed and interconnected. Here are recommended reading 
 ## Table of Contents
 
 1.  [**Architecture**](./ARCHITECTURE.md): The high-level design philosophy, component diagrams, and the metaprogrammable approach to configuration and event handling.
-2.  [**Data Structures**](./DATA_STRUCTURES.md): The single source of truth for all data types, including formal MeTTa schemas for Beliefs, Tasks, KPIs, and more.
+2.  [**Data Structures**](./DATA_STRUCTURES.md): The single source of truth for all data types, including formal MeTTa schemas for `Sentences`, KPIs, and more.
 3.  [**Reasoning Engine**](./REASONING.md): The core dual-process (System 1 & 2) reasoning loops, with detailed pseudo-code and the layered implementation of Non-Axiomatic Logic (NAL) on MeTTa.
 4.  [**Cognitive Architecture**](./COGNITIVE_ARCH.md): The layered model of high-level cognitive functions, their interfaces, and their roles in the system's overall behavior.
 5.  [**Memory & Attention**](./MEMORY.md): The structure of the knowledge base and the pluggable mechanisms for attention allocation and forgetting.
@@ -53,8 +53,8 @@ This specification is detailed and interconnected. Here are recommended reading 
 This specification is designed to be "obviously implementable." Here is a logical path a development team could take to build HyperNARS:
 
 1.  **Phase 1: The Core Data Structures.**
-    -   Implement the core Atom and metadata types (`TruthValue`, `Budget`, `Stamp`) as defined in `DATA_STRUCTURES.md`.
-    -   Create the basic data wrappers for `Belief` and `Task`.
+    -   Implement the core Atom and metadata types (`Truth`, `Budget`, `Stamp`) as defined in `DATA_STRUCTURES.md`.
+    -   Implement the unified `Sentence` structure, which combines content with all processing metadata.
 
 2.  **Phase 2: The System 1 Reasoning Loop.**
     -   Implement the `reflexive_reasoning_cycle` pseudo-code from `REASONING.md`. This requires:
@@ -82,5 +82,5 @@ This specification is designed to be "obviously implementable." Here is a logica
 -   **Everything is an Atom:** All forms of knowledge—declarative facts, procedural rules, goals, and the system's own logic and configuration—are represented as MeTTa expressions in a unified knowledge store.
 -   **Inference is Interpretation:** The system has no hard-coded inference rules. Reasoning is the process of the MeTTa interpreter evaluating expressions against other expressions that represent the laws of logic.
 -   **Assumption of Insufficient Knowledge and Resources (AIKR):** The system must operate under the assumption that its knowledge is incomplete and its computational resources are finite. This guides the entire attention and resource allocation process.
--   **Continuous, Experience-Grounded Learning:** All knowledge is derived from the stream of tasks the system processes, and its beliefs are constantly revised based on new evidence.
+-   **Continuous, Experience-Grounded Learning:** All knowledge is derived from the stream of `Sentences` the system processes, and its beliefs are constantly revised based on new evidence.
 -   **Deep Introspection and Metaprogrammability:** The system's own structure and processes are represented as knowledge, enabling a unique capacity for self-understanding, self-regulation, and self-improvement.

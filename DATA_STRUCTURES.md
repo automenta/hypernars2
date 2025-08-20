@@ -1,25 +1,22 @@
 # Core Data Structures
 
-This document defines the fundamental data structures of the HyperNARS system. It is the authoritative source for the structure and representation of all knowledge and processes. The data model is designed to be elegant, consistent, and "obviously implementable" by adhering to a strict conceptual hierarchy.
+This document defines the fundamental data structures of the HyperNARS system. It is the authoritative source for the structure and representation of all knowledge. The data model is designed to be elegant, consistent, and "obviously implementable" by adhering to a strict conceptual hierarchy.
 
-A core principle is the clear separation between the **content** of a thought (an Atom), its **meaning in context** (a Sentence), and the **work** it generates (a Task).
+A core principle is the unification of the **content** of a thought (an Atom) and the **work** it generates into a single, processable unit: the **Sentence**.
 
 ---
 
 ## 1. The Conceptual Hierarchy
 
-The system's data is organized into three main levels of abstraction:
+The system's data is organized into two main levels of abstraction:
 
 1.  **Atom**: The raw content of thought. A universal, context-free representation of a piece of information, directly corresponding to a MeTTa atom (`Symbol`, `Variable`, `Expression`, etc.).
-    -   Example: `<bird --> flyer>`
+    -   Example: `(bird --> flyer)`
 
-2.  **Sentence**: An Atom placed in a specific context. It combines an Atom with **Punctuation** to define its role (e.g., as a Belief, a Goal, or a Question). This is the primary unit of knowledge.
-    -   Example: A `Belief` about `<bird --> flyer>`, represented as `(Belief <bird --> flyer> (TruthValue 0.9 0.9))`.
+2.  **Sentence**: An Atom placed in a specific context. It combines an Atom with **Punctuation** (e.g., `.`, `!`, `?`, `@`) to define its role, and includes all necessary processing metadata like `Truth`, `Budget`, and `Stamp`. This is the primary unit of knowledge and work.
+    -   Example: A belief about `(bird --> flyer)`, represented as `(. (bird --> flyer) (Truth 0.9 0.9) (Budget 0.9 0.8 0.7) (Stamp ...))`.
 
-3.  **Task**: The unit of work for the reasoning engine. It is a wrapper around a `Sentence` that provides the necessary metadata for processing, such as its attentional `Budget` and derivational `Stamp`.
-    -   Example: `(Task (Belief <bird --> flyer> (TruthValue 0.9 0.9)) (Budget 0.9 0.8 0.7) (Stamp ...))`
-
-This layered model ensures a clean separation of concerns: the Atom is the what, the Sentence is the how it's framed, and the Task is the how it's processed.
+This layered model ensures a clean, efficient representation where any piece of knowledge is immediately a processable unit.
 
 ---
 
@@ -34,24 +31,22 @@ The **Atom** is the fundamental, universal data type for representing any piece 
 
 ### 2.2. Sentence & Punctuation
 
-A **Sentence** gives an Atom meaning by assigning it a **Punctuation**. Punctuation specifies the type of information being conveyed.
+A **Sentence** is the primary unit of knowledge and processing. It gives an Atom meaning by assigning it a **Punctuation** and attaching all relevant metadata. Punctuation specifies the type of information being conveyed using the NARS convention.
 
--   **Belief**: A piece of knowledge the system holds to be true, to some degree. It is punctuated with a `TruthValue`.
--   **Goal**: A state the system desires to achieve.
--   **Question**: A request for information.
--   **Quest**: A request to explore a concept or fulfill a long-term curiosity.
+-   **Belief (.)**: A piece of knowledge the system holds to be true, to some degree. It is punctuated with a `Truth` value.
+-   **Goal (!)**: A state the system desires to achieve.
+-   **Question (?)**: A request for information.
+-   **Quest (@)**: A request to explore a long-term curiosity.
 
-### 2.3. Task
+All sentences include a `Budget` (attentional value) and a `Stamp` (derivational history) to manage their processing.
 
-A **Task** represents a unit of work. It is a wrapper around a `Sentence` that includes all metadata required by the reasoning engine. When a new piece of information enters the system (e.g., from an API call or as the result of an inference), it is packaged into a Task and dispatched to be processed.
+### 2.3. Concept
 
-### 2.4. Concept
+A **Concept** is an emergent structure in memory, identified by an Atom, that serves as an index for all knowledge related to that Atom. It typically stores `Sentences` in special data structures called `Bags`.
 
-A **Concept** is an emergent structure in memory, identified by an Atom, that serves as an index for all knowledge related to that Atom. It typically stores `Sentences` (e.g., beliefs about the concept) and `Tasks` in special data structures called `Bags`.
+### 2.4. Bag
 
-### 2.5. Bag
-
-A **Bag** is a probabilistic data structure used for attention management, implementing the NARS principle of Assumption of Insufficient Knowledge and Resources (AIKR). It holds a collection of items (like `Tasks` or `Concepts`) and allows for biased sampling, where items with higher priority are more likely to be selected.
+A **Bag** is a probabilistic data structure used for attention management, implementing the NARS principle of Assumption of Insufficient Knowledge and Resources (AIKR). It holds a collection of items (like `Sentences` or `Concepts`) and allows for biased sampling, where items with higher priority are more likely to be selected.
 
 Key properties include:
 -   **Capacity**: A `Bag` has a maximum number of items it can hold.
@@ -65,12 +60,12 @@ Key properties include:
 
 This section provides the formal MeTTa-style type definitions and concrete examples for all primary data structures. This is the single source of truth for data representation.
 
-### 3.1. Metadata & Wrapper Types
+### 3.1. Metadata Types
 
--   **TruthValue**: `(: TruthValue (-> Float Float TruthValue))`
+-   **Truth**: `(: Truth (-> Float Float Truth))`
     -   *Description*: Represents epistemic value (`frequency`, `confidence`).
     -   *Plain English*: "How much the system believes something is true."
-    -   *Example*: `(TruthValue 0.9 0.8)`
+    -   *Example*: `(Truth 0.9 0.8)`
 
 -   **Budget**: `(: Budget (-> Float Float Float Budget))`
     -   *Description*: Represents attentional value (`priority`, `durability`, `quality`).
@@ -82,41 +77,36 @@ This section provides the formal MeTTa-style type definitions and concrete examp
     -   *Plain English*: "A 'paper trail' to track where a piece of information came from."
     -   *Example*: `(Stamp "t_7f8a..." (Set "t_1c5b..." "t_9e2d..."))`
 
--   **Task**: `(: Task (-> Sentence Budget Stamp Task))`
-    -   *Description*: The wrapper for a `Sentence` that makes it a processable unit of work.
-    -   *Plain English*: "An item on the system's 'to-do' list."
-    -   *Example*: `(Task <Sentence> <Budget> <Stamp>)`
-
 ### 3.2. Sentence Types (with Punctuation)
 
-These define the structure of the `Sentence` atoms that are wrapped by `Tasks`.
+These define the structure of the `Sentence` atoms. Note that `Budget` and `Stamp` are optional for question/quest types, but are shown for completeness.
 
--   **Belief Sentence**: `(: Belief (-> Atom TruthValue Belief))`
+-   **Belief Sentence (.)**: `(: . (-> Atom Truth Budget Stamp .))`
     -   *Purpose*: Represents a piece of knowledge to be processed or stored.
     -   *Plain English*: "A statement of fact, like 'the sky is blue'."
-    -   *Example*: `(Belief <bird --> flyer> (TruthValue 0.9 0.9))`
+    -   *Example*: `(. (bird --> flyer) (Truth 0.9 0.9) (Budget 0.9 0.8 0.7) (Stamp ...))`
 
--   **Goal Sentence**: `(: Goal (-> Atom Goal))`
+-   **Goal Sentence (!)**: `(: ! (-> Atom Budget Stamp !))`
     -   *Purpose*: Represents a state to be achieved.
     -   *Plain English*: "A desired state, like 'the light is on'."
-    -   *Example*: `(Goal <door-is-open>)`
+    -   *Example*: `(! (door-is-open) (Budget 0.9 0.5 0.8) (Stamp ...))`
 
--   **Question Sentence**: `(: Question (-> Atom Question))`
+-   **Question Sentence (?)**: `(: ? (-> Atom Budget Stamp ?))`
     -   *Purpose*: Represents a request for information.
     -   *Plain English*: "A request for information, like 'what color is the sky?'."
-    -   *Example*: `(Question <what-is-a-bird>)`
+    -   *Example*: `(? (what-is-a-bird) (Budget 0.9 0.1 0.2) (Stamp ...))`
 
--   **Quest Sentence**: `(: Quest (-> Atom Quest))`
+-   **Quest Sentence (@)**: `(: @ (-> Atom Budget Stamp @))`
     -   *Purpose*: Represents a long-term, curiosity-driven exploration goal.
     -   *Plain English*: "A long-term, open-ended goal, like 'understand physics'."
-    -   *Example*: `(Quest <discover-meaning-of-life>)`
+    -   *Example*: `(@ (discover-meaning-of-life) (Budget 0.8 0.9 0.9) (Stamp ...))`
 
 ### 3.3. Architectural & Metacognitive Schemas
 
 -   **Event Atom**: `(: Event (-> Symbol Atom Atom TimePoint Event))`
     -   *Purpose*: Used for the internal event bus.
     -   *Plain English*: "A notification that something has happened, like 'a contradiction was found'."
-    -   *Example*: `(Event contradiction-detected <belief-1> <belief-2> (now))`
+    -   *Example*: `(Event contradiction-detected (belief-1) (belief-2) (now))`
 
 -   **Configuration Atom**: `(: Config (-> Atom Atom Config))`
     -   *Purpose*: Defines a configuration setting. The key is often a Symbol or an Expression.
@@ -138,17 +128,17 @@ To enable self-awareness, the system materializes its own state and performance 
 
 | KPI Name | Description | Data Structure | Example MeTTa Representation |
 | :--- | :--- | :--- | :--- |
-| `avg_belief_confidence` | The average confidence of all Belief sentences in Memory. | `Sentence` | `(has-value (kpi avg_belief_confidence) 0.78)` |
-| `avg_task_priority` | The average priority of all tasks in the system. | `Task` | `(has-value (kpi avg_task_priority) 0.65)` |
+| `avg_belief_confidence` | The average confidence of all belief sentences in Memory. | `Sentence` | `(has-value (kpi avg_belief_confidence) 0.78)` |
+| `avg_task_priority` | The average priority of all sentences in the system. | `Sentence` | `(has-value (kpi avg_task_priority) 0.65)` |
 | `stamp_overlap_rate` | The percentage of potential inferences that are prevented by stamp overlaps. | `Stamp` | `(has-value (kpi stamp_overlap_rate) 0.02)` |
-| `belief_count` | The total number of Belief sentences currently in Memory. | `Sentence` | `(has-value (kpi belief_count) 150000)` |
+| `belief_count` | The total number of belief sentences currently in Memory. | `Sentence` | `(has-value (kpi belief_count) 150000)` |
 | `memory_utilization`| The percentage of total memory capacity currently being used. | `Bag` | `(has-value (kpi memory_utilization) 0.6)` |
-| `concept_hit_rate` | % of times a selected `Concept` contains a useful `Belief` for the current `Task`. | `Concept`| `(has-value (kpi concept_hit_rate) 0.35)` |
+| `concept_hit_rate` | % of times a selected `Concept` contains a useful belief for the current `Sentence`. | `Concept`| `(has-value (kpi concept_hit_rate) 0.35)` |
 | `forgetting_rate` | The number of items being forgotten per second from `Bags`. | `Bag` | `(has-value (kpi forgetting_rate) 12.5)` |
-| `rule_utility` | Average `quality` of conclusions produced by a specific inference rule. | `Task` | `(has-value (kpi (rule_utility Deduce)) 0.82)` |
-| `rule_cost` | Average execution time for a specific inference rule, in seconds. | `Task` | `(has-value (kpi (rule_cost Abduce)) 0.000150)` |
-| `goal_success_rate` | The percentage of goals that are successfully achieved. | `Sentence` | `(has-value (kpi goal_success_rate) 0.95)` |
-| `contradiction_rate` | The percentage of new Beliefs that cause contradictions. | `Sentence` | `(has-value (kpi contradiction_rate) 0.01)` |
+| `rule_utility` | Average `quality` of conclusions produced by a specific inference rule. | `Sentence` | `(has-value (kpi (rule_utility Deduce)) 0.82)` |
+| `rule_cost` | Average execution time for a specific inference rule, in seconds. | `Sentence` | `(has-value (kpi (rule_cost Abduce)) 0.000150)` |
+| `goal_success_rate` | The percentage of goals that are successfully achieved. | `Sentence` | `(has-value (kpi goal__success_rate) 0.95)` |
+| `contradiction_rate` | The percentage of new beliefs that cause contradictions. | `Sentence` | `(has-value (kpi contradiction_rate) 0.01)` |
 
 ---
 
@@ -162,7 +152,7 @@ While all are types of `Sentence` atoms, they represent fundamentally different 
 
 | Sentence Type | System's Stance | Example | Typical System Response |
 | :--- | :--- | :--- | :--- |
-| **Belief** | "This is a fact." | `(Belief <sky-is-blue> (TruthValue 1.0 0.99))` | Store this information; use it as a premise in future reasoning. |
-| **Goal** | "I want this to be true." | `(Goal <light-is-on>)` | Find a sequence of actions (a plan) to make the content true. |
-| **Question** | "Is this true? What is the answer?" | `(Question <is-the-door-open>)` | Search memory for relevant beliefs and derive an answer. |
-| **Quest** | "I am curious about this." | `(Quest <meaning-of-life>)` | Periodically devote attention and resources to exploring the topic, without a single, concrete endpoint. |
+| **Belief (.)** | "This is a fact." | `(. (sky-is-blue) (Truth 1.0 0.99) (Budget ...))` | Store this information; use it as a premise in future reasoning. |
+| **Goal (!)** | "I want this to be true." | `(! (light-is-on) (Budget ...))` | Find a sequence of actions (a plan) to make the content true. |
+| **Question (?)** | "Is this true? What is the answer?" | `(? (is-the-door-open) (Budget ...))` | Search memory for relevant beliefs and derive an answer. |
+| **Quest (@)** | "I am curious about this." | `(@ (meaning-of-life) (Budget ...))` | Periodically devote attention and resources to exploring the topic, without a single, concrete endpoint. |

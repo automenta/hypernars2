@@ -7,8 +7,7 @@ This document covers the practical aspects of using, configuring, and extending 
 The public API is designed to be clean, language-agnostic, and powerful. It is event-driven and asynchronous where appropriate.
 
 -   **Core Input/Output API**: Provides methods to:
-    -   Input a MeTTa atom as a task or belief.
-    -   Ask a question by providing a query atom.
+    -   Input a complete MeTTa `Sentence` (e.g., a belief, goal, or question).
     -   Subscribe to system events like `answer-generated`, `contradiction-detected`, or `goal-achieved`.
 -   **Control & Configuration API**: Provides methods to:
     -   Run the reasoning cycle.
@@ -17,7 +16,7 @@ The public API is designed to be clean, language-agnostic, and powerful. It is e
 -   **Inspection & Explainability API**: Provides methods to:
     -   Retrieve the full state of a concept.
     -   Get detailed operational KPIs.
-    -   Request a structured explanation for a belief.
+    -   Request a structured explanation for a derived sentence.
 
 ### 1.1. The Semantic API Layer
 To improve usability, the system can provide a higher-level, intention-driven API that wraps the raw MeTTa input. This "semantic API" would allow developers to interact with the system more naturally (e.g., via methods like `createInheritanceBelief()` or `addGoal()`).
@@ -56,7 +55,7 @@ The system follows a well-defined sequence to ensure a stable startup:
 
 The architecture is designed to be extensible at multiple levels, allowing developers to add new capabilities without modifying the core kernel.
 
--   **Adding New Cognitive Functions**: A developer can create a new function that subscribes to kernel events and injects tasks to implement novel high-level cognitive functions. This is the primary way to add new behaviors.
+-   **Adding New Cognitive Functions**: A developer can create a new function that subscribes to kernel events and injects new `Sentences` to implement novel high-level cognitive functions. This is the primary way to add new behaviors.
 -   **Adding New Inference Rules**: Since inference rules are just MeTTa atoms, new forms of reasoning can be introduced at runtime by simply adding new rule atoms to the Memory.
 -   **Adding Grounded Atoms**: New capabilities for interacting with the external world can be added by implementing new grounded atoms and registering them with the Grounded Atom Interface. This is how the system learns new "skills".
 -   **Swapping Core Components**: The pluggable module architecture allows for different implementations of components like the Memory system or budget functions to be swapped out at initialization.
@@ -65,9 +64,9 @@ The architecture is designed to be extensible at multiple levels, allowing devel
 
 To support long-running operation and recovery from shutdowns, the system must be able to serialize its entire state to persistent storage. A complete snapshot should include:
 
--   **Memory Content**: All atoms, beliefs, concepts, and their associated metadata (TruthValues, activation levels). This should ideally be stored in a format that is both efficient and human-readable, such as a stream of MeTTa expressions.
+-   **Memory Content**: All atoms, `Sentences`, concepts, and their associated metadata (`Truth` values, activation levels). This should ideally be stored in a format that is both efficient and human-readable, such as a stream of MeTTa expressions.
 -   **Cognitive Function State**: The internal state of all cognitive functions (e.g., the Goal Manager's current goal stack).
 -   **System Configuration**: The configuration parameters the system is currently running with.
--   **Event Queues**: A snapshot of any pending events or tasks to ensure a seamless restart.
+-   **Event Queues**: A snapshot of any pending events or `Sentences` to ensure a seamless restart.
 
 This capability is also essential for debugging, as it allows developers to capture and replay the exact state of the system at a specific moment.

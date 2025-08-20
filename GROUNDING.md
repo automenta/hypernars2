@@ -7,26 +7,26 @@ The integrated architecture provides a powerful framework for neural-symbolic in
 ## The Sensorimotor Loop
 
 The GAI facilitates a continuous **sensorimotor loop**:
-1.  **Perception**: External sensors provide data to GAI handlers, which translate the data into atoms. For example, an image recognition handler might inject the atom `(sees (shape square) (color red))`.
-2.  **Reasoning**: The MeTTa interpreter processes these atoms under the guidance of the AIKR-driven control loop.
-3.  **Action**: The reasoning process may conclude that a goal can be achieved by executing an action. This results in the evaluation of a **Grounded Atom** representing that action (e.g., `(#move-forward)`).
-4.  **Actuation**: GAI handlers translate the symbolic grounded atom into a concrete action in the external world.
-5.  **Feedback**: The consequences of the action are observed by sensors, generating new perception atoms and closing the loop.
+1.  **Perception**: External sensors provide data to GAI handlers, which translate the data into sentences. For example, an image recognition handler might inject the sentence `(. (sees (shape square) (color red)) (Truth 1.0 1.0) (Budget ...))`.
+2.  **Reasoning**: The MeTTa interpreter processes these sentences under the guidance of the AIKR-driven control loop.
+3.  **Action**: The reasoning process may conclude that a goal can be achieved by executing an action. This results in a goal to execute a **Grounded Atom** representing that action, e.g., `(! (#move-forward))`.
+4.  **Actuation**: GAI handlers translate the symbolic goal into a concrete action in the external world.
+5.  **Feedback**: The consequences of the action are observed by sensors, generating new perception sentences and closing the loop.
 
 ## Machine Learning and LLM Integration
 
 A key advantage of the Grounded Atom model is the deep and flexible integration of external computational models, which can be wrapped as `GroundedAtoms` or exposed as specialized Neural Spaces (often called "Neural Lobes"). This allows the system to seamlessly blend symbolic reasoning with sub-symbolic processing. MeTTa scripts can query these external Spaces to perform complex tasks.
 
--   **LLM as a Knowledge Source**: An atom like `(llm-query "What is the capital of France?")` can be grounded to an LLM API. The interpreter can evaluate this atom, and the LLM's response ("Paris") is inserted into the Memory as a new atom, e.g., `(capital-of France Paris)`.
+-   **LLM as a Knowledge Source**: An atom like `(llm-query "What is the capital of France?")` can be grounded to an LLM API. The interpreter can evaluate this atom, and the LLM's response ("Paris") is inserted into the Memory as a new belief sentence, e.g., `(. (capital-of France Paris) (Truth 0.9 0.8) (Budget ...))`.
 -   **Embeddings for Similarity**: An atom `(get-embedding "some text")` can be grounded to a text embedding model. The resulting vector can be stored in the Memory and used for powerful similarity and analogy calculations, e.g., `(= (similarity (get-embedding $a) (get-embedding $b)) (cosine-similarity ...))`
--   **Perception via Vision Models**: An atom like `(recognize-objects <image_data>)` can be grounded to a computer vision model, producing atoms that describe the contents of an image.
+-   **Perception via Vision Models**: An atom like `(recognize-objects (image_data))` can be grounded to a computer vision model, producing sentences that describe the contents of an image.
 
 This mechanism allows the symbolic reasoner to offload complex, pattern-based tasks to specialized ML models while still managing the high-level reasoning process.
 
 ## Natural Language Processing (NLP) Interface
 
 The NLP interface is a specialized part of the GAI, responsible for bridging the gap between symbolic atoms and human language.
--   **Natural Language Understanding (NLU)**: Parsing human language into MeTTa atoms (e.g., "A bird is an animal" becomes `(Inheritance bird animal)`).
+-   **Natural Language Understanding (NLU)**: Parsing human language into MeTTa sentences (e.g., "A bird is an animal" becomes `(. (Inheritance bird animal) (Truth 1.0 0.9) (Budget ...))`).
 -   **Natural Language Generation (NLG)**: Generating human-readable language from atoms in the Memory.
 
 ## Grounded Atom Registry

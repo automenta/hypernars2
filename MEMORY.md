@@ -41,17 +41,17 @@ This is a language-agnostic interface that any budgeting model must adhere to. I
 
 ```
 interface BudgetingStrategy {
-    // Calculates the initial budget for a new task injected into the system.
-    function calculate_initial_budget(task: Task) -> Budget;
+    // Calculates the initial budget for a new sentence injected into the system.
+    function calculate_initial_budget(sentence: Sentence) -> Budget;
 
-    // Calculates the budget for a new task derived from parent premises.
-    function calculate_derived_task_budget(parent_task: Task, parent_belief: Belief) -> Budget;
+    // Calculates the budget for a new sentence derived from parent sentences.
+    function calculate_derived_budget(parent_1: Sentence, parent_2: Sentence) -> Budget;
 
-    // Updates the importance of an item (e.g., a Belief) in memory after it's accessed.
-    function update_item_importance(item: (Belief | Concept)) -> void;
+    // Updates the importance of an item (e.g., a Sentence or Concept) in memory after it's accessed.
+    function update_item_importance(item: (Sentence | Concept)) -> void;
 
     // Determines whether a given item should be removed from memory.
-    function should_forget_item(item: (Belief | Task)) -> bool;
+    function should_forget_item(item: Sentence) -> bool;
 
     // A periodic function to handle system-wide updates, like importance decay.
     function perform_housekeeping() -> void;
@@ -66,15 +66,15 @@ One possible implementation of `BudgetingStrategy` is based on Hyperon's **Econo
 -   **LTI (Long-Term Importance)**: Represents the long-term value or usefulness of an item. It increases when an item is involved in successful, high-quality inferences. This maps to a `Budget`'s `durability`.
 
 ***Algorithm for STI Update and Spreading:***
-When a `Belief` is accessed during an inference step:
-1.  The `Belief`'s STI is boosted by a fixed amount.
+When a `Sentence` is accessed during an inference step:
+1.  The `Sentence`'s STI is boosted by a fixed amount.
 2.  A fraction of this boosted STI is then spread to neighboring `Concept`s in the hypergraph, making related knowledge more accessible.
 3.  The `CognitiveExecutive` can dynamically adjust the spreading factor based on system goals (e.g., increase for "focused thought", decrease for "brainstorming").
 
 ***Algorithm for LTI Update:***
-When a derived `Task` is created:
-1.  The `quality` of the new `Task`'s `Budget` is calculated based on the confidence of the inference and the truth-values of the parents.
-2.  The LTI of the parent `Belief`s is increased proportionally to the `quality` of the conclusion they helped produce. A belief that consistently contributes to high-quality conclusions will see its LTI increase over time.
+When a derived `Sentence` is created:
+1.  The `quality` of the new `Sentence`'s `Budget` is calculated based on the confidence of the inference and the truth-values of the parents.
+2.  The LTI of the parent `Sentence`s is increased proportionally to the `quality` of the conclusion they helped produce. A sentence that consistently contributes to high-quality conclusions will see its LTI increase over time.
 
 ***Housekeeping and Decay:***
 The `perform_housekeeping` function for ECAN would implement a decay formula for all STI values in memory:
@@ -86,7 +86,7 @@ Forgetting is a natural and essential outcome of resource management under AIKR.
 
 Below are more detailed, language-agnostic descriptions of common forgetting strategies.
 
--   **Capacity-Based Forgetting**: Each `Concept` has a limited capacity for `Beliefs` and `Tasks`. When a new item is added and the capacity is exceeded, the item with the lowest importance (e.g., lowest STI in the ECAN model) is removed.
+-   **Capacity-Based Forgetting**: Each `Concept` has a limited capacity for `Sentences`. When a new item is added and the capacity is exceeded, the item with the lowest importance (e.g., lowest STI in the ECAN model) is removed.
     ```pseudo
     function add_item_to_concept(item, concept) {
         if concept.size() >= concept.capacity() {
@@ -96,13 +96,13 @@ Below are more detailed, language-agnostic descriptions of common forgetting str
         concept.add(item);
     }
     ```
--   **TTL-Based Pruning (Time-to-Live)**: A background process periodically scans `Beliefs`. If a belief is both old (based on its creation timestamp) and has an importance value below a certain threshold, it is pruned.
+-   **TTL-Based Pruning (Time-to-Live)**: A background process periodically scans `Sentences`. If a sentence is both old (based on its creation timestamp) and has an importance value below a certain threshold, it is pruned.
     ```pseudo
-    function prune_old_beliefs() {
-        FOR belief IN all_beliefs {
-            IF (now() - belief.created_at > TTL_THRESHOLD) AND
-               (belief.importance < IMPORTANCE_THRESHOLD) {
-                memory.remove(belief);
+    function prune_old_sentences() {
+        FOR sentence IN all_sentences {
+            IF (now() - sentence.created_at > TTL_THRESHOLD) AND
+               (sentence.importance < IMPORTANCE_THRESHOLD) {
+                memory.remove(sentence);
             }
         }
     }
@@ -111,12 +111,12 @@ Below are more detailed, language-agnostic descriptions of common forgetting str
 
 ## Memory Performance Monitoring
 
-The system must be able to reason about the efficiency of its own memory system. The `CognitiveExecutive` monitors these KPIs, which are stored as `Beliefs` in Memory, to detect problems and guide optimization.
+The system must be able to reason about the efficiency of its own memory system. The `CognitiveExecutive` monitors these KPIs, which are stored as beliefs in Memory, to detect problems and guide optimization.
 
 | KPI Name | Description | Example MeTTa Representation |
-| :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- |
 | `memory_utilization`| The percentage of total memory capacity currently being used. | `(has-value (kpi memory_utilization) 0.85)` |
-| `concept_hit_rate` | The percentage of times a selected `Concept` contains a useful `Belief` for the current `Task`. Low rates may indicate poor concept formation or activation spreading. | `(has-value (kpi concept_hit_rate) 0.60)` |
+| `concept_hit_rate` | The percentage of times a selected `Concept` contains a useful `Sentence` for the current reasoning step. Low rates may indicate poor concept formation or activation spreading. | `(has-value (kpi concept_hit_rate) 0.60)` |
 | `forgetting_rate` | The number of items being forgotten per second. Can be used to tune forgetting algorithm aggressiveness. | `(has-value (kpi forgetting_rate) 50)` |
 | `index_lookup_time` | The average time taken to retrieve an item from an index. Spikes might indicate a need for index maintenance. | `(has-value (kpi index_lookup_time) (2 milliseconds))` |
 | `lti_distribution` | A histogram of the LTI values of all items. Can reveal if the system is failing to identify long-term important knowledge. | `(has-value (kpi lti_distribution) (histogram ...))` |

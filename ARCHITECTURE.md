@@ -1,6 +1,6 @@
 # System Architecture
 
-The HyperNARS architecture is a modular, dynamic system designed around a refined principle: **"The Content is an Atom, the Work is a Task."** While all knowledge and logic are ultimately represented as MeTTa atoms, the system organizes these atoms into a clear hierarchy (`Atom` -> `Sentence` -> `Task`) for conceptual clarity and implementability. This creates an exceptionally flexible, transparent, and self-modifiable system.
+The HyperNARS architecture is a modular, dynamic system designed around a refined principle: **"The Content is an Atom, the Work is a Sentence."** All knowledge and logic are ultimately represented as MeTTa atoms, and the system organizes these atoms into a clear hierarchy (`Atom` -> `Sentence`) for conceptual clarity and implementability. This creates an exceptionally flexible, transparent, and self-modifiable system.
 
 The architecture is centered on two core components: a **Memory** space, which holds all data, and a **MeTTa Interpreter**, which continuously evaluates atoms to drive the reasoning process. Higher-level cognitive capabilities are not implemented as separate software modules, but as collections of MeTTa atoms called **Cognitive Functions**.
 
@@ -33,8 +33,7 @@ graph TD
     subgraph MettaSpace [Memory Space]
         direction TB
         subgraph Knowledge [Knowledge Base]
-            Sentences("Knowledge (Sentences)")
-            Workload("Workload (Tasks)")
+            Sentences("Knowledge & Workload (Sentences)")
             EventStream("Event Stream (Atoms)")
         end
         subgraph Logic [Logic & Configuration]
@@ -49,16 +48,16 @@ graph TD
         MeTTaInterpreter(MeTTa Interpreter)
     end
 
-    API -- "Injects new Tasks" --> Workload
+    API -- "Injects new Sentences" --> Sentences
     GroundingInterface -- "Provides Grounded Atoms" --> Knowledge
 
-    ControlLoop -- "Selects Task & Sentence" --> MettaSpace
+    ControlLoop -- "Selects Sentences" --> MettaSpace
     ControlLoop -- "Passes to Interpreter" --> MeTTaInterpreter
     MeTTaInterpreter -- "Matches & Evaluates using Logic" --> Logic
-    MeTTaInterpreter -- "Produces new Sentences" --> Knowledge
+    MeTTaInterpreter -- "Produces new Sentences" --> Sentences
 
-    Workload -- "Triggers" --> CognitiveFunctions
-    CognitiveFunctions -- "Inject New Tasks" --> Workload
+    Sentences -- "Triggers" --> CognitiveFunctions
+    CognitiveFunctions -- "Inject New Sentences" --> Sentences
     Sentences -- "Emits Events" --> EventStream
     EventStream -- "Triggers" --> CognitiveFunctions
 
@@ -98,14 +97,14 @@ These capabilities define a powerful, generic symbolic rule engine. A full MeTTa
 The system avoids a traditional, external event bus. Instead, eventing and messaging are handled directly within the Memory space, making the communication process itself introspectable and modifiable.
 
 -   **Events as Atoms**: An "event" is simply the act of adding a specific `Event` atom to Memory. (See `DATA_STRUCTURES.md` for the formal schema).
-    -   `sentence-added` -> `(Event sentence-added <sentence-1> (now))`
-    -   `contradiction-detected` -> `(Event contradiction-detected <sentence-1> <sentence-2> (now))`
+    -   `sentence-added` -> `(Event sentence-added (sentence-1) (now))`
+    -   `contradiction-detected` -> `(Event contradiction-detected (sentence-1) (sentence-2) (now))`
 
--   **Handlers as MeTTa Rules**: Cognitive Functions "handle" events by defining MeTTa rules that match on these `Event` atoms. They are, in effect, persistent queries over the event stream.
+-   **Handlers as MeTTa Rules**: Cognitive Functions "handle" events by defining MeTTa rules that match on these `Event` atoms. They are, in effect, a persistent query over the event stream.
     ```metta
     ;; The ContradictionManager function is just a MeTTa rule.
     (= (handle (Event contradiction-detected $s1 $s2 $t))
-       (Goal (resolve-contradiction $s1 $s2)))
+       (! (resolve-contradiction $s1 $s2)))
     ```
 
 ---
@@ -140,10 +139,10 @@ This configuration file defines a simple reasoner with only the most basic cogni
 ;; Define the system's operational parameters.
 ;; All schemas are formally defined in DATA_STRUCTURES.md.
 
-;; Default budget for new Beliefs asserted from outside (uses Budget schema)
+;; Default budget for new beliefs asserted from outside (uses Budget schema)
 (Config default-belief-budget (Budget 0.9 0.9 0.5))
 
-;; Default budget for new Goals asserted from outside (uses Budget schema)
+;; Default budget for new goals asserted from outside (uses Budget schema)
 (Config default-goal-budget (Budget 0.99 0.9 0.9))
 
 ;; Threshold for the CognitiveExecutive to trigger contradiction management
@@ -152,7 +151,6 @@ This configuration file defines a simple reasoner with only the most basic cogni
 ;; == Initial Knowledge ==
 ;; The configuration can also include initial Sentences to seed the system's memory.
 
-;; A foundational ethical principle, as a Belief Sentence.
-(Belief <(Forbid (Goal (cause-harm-to-human)))> (TruthValue 1.0 0.99))
+;; A foundational ethical principle, as a belief sentence.
+(. (Forbid (! (cause-harm-to-human))) (Truth 1.0 0.99) (Budget 0.99 0.99 0.99))
 ```
-This approach makes the system's architecture transparent, dynamically reconfigurable, and deeply aligned with the metaprogramming philosophy.
