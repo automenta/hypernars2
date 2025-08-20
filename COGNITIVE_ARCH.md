@@ -53,13 +53,24 @@ Implements strategies for resolving contradictions detected by the kernel.
 The system's master control program, responsible for self-monitoring, strategic control, and adaptation. It orchestrates the dual-process reasoning modes.
 -   *Subscribes to*: All major system events (`contradiction-detected`, `system-idle`, `goal-achieved`, etc.).
 -   **Core Function**: It runs a continuous self-monitoring loop to maintain operational health and strategic focus:
-    1.  **Calculate Metrics**: It computes Key Performance Indicators (KPIs) like `inferenceRate`, `contradictionRate`, `goalSuccessRate`, and `resourceUtilization`.
+    1.  **Calculate Metrics**: It computes Key Performance Indicators (KPIs) and represents them as beliefs in Memory.
     2.  **Detect Issues & Opportunities**: It compares these metrics against configurable thresholds to identify problems (e.g., high contradiction rate) or opportunities (e.g., system is idle).
     3.  **Adapt & Control**: It initiates strategic responses, which include:
         -   Switching between **System 1 (Reflexive)** and **System 2 (Deliberative)** reasoning.
         -   Adjusting system parameters (e.g., inference selectivity, budget allocation weights).
         -   Triggering other managers (e.g., tasking the `Test Generation Manager` to investigate a low-utility rule).
 -   *Injects*: High-level control tasks, such as `(Achieve (reduce-contradictions))` or `(Analyze (rule 'AbductionRule'))`.
+
+-   **Key Performance Indicators (KPIs)**: The executive monitors a variety of metrics to assess system health. Below are some examples:
+| KPI Name | Description | Example MeTTa Representation |
+| :--- | :--- | :--- |
+| `inferenceRate` | The number of inferences performed per second. | `(has-value (kpi inferenceRate) 1500)` |
+| `contradictionRate` | The percentage of new beliefs that cause contradictions. | `(has-value (kpi contradictionRate) 0.05)` |
+| `goalSuccessRate` | The percentage of goals that are successfully achieved. | `(has-value (kpi goalSuccessRate) 0.8)` |
+| `memoryUtilization`| The percentage of memory being used. | `(has-value (kpi memoryUtilization) 0.75)` |
+| `ruleUtility` | A measure of how often an inference rule leads to useful (high-budget) conclusions. | `(has-utility (rule 'Deduction') 0.9)` |
+| `conceptNovelty` | A measure of how many new concepts are being created, indicating active learning. | `(has-value (kpi conceptNovelty) 10)` |
+
 -   **Verification Scenarios**:
     -   **Mode Switching**: If a high-priority goal is set, the `CognitiveExecutive` should switch the system to Deliberative (System 2) mode to focus resources on it.
     -   **Rule Pruning**: If an inference rule is observed to consistently produce low-quality results, the system should form a belief like `((rule, 'AbductionRule') --> (has_utility, 'low'))` and lower the budget allocated to tasks derived from it.
@@ -86,3 +97,23 @@ Responsible for enforcing ethical constraints and safety protocols.
 -   *Subscribes to*: `task-selected`, `goal-generated`.
 -   *Action*: It evaluates potential actions and goals against a set of inviolable ethical rules.
 -   *Injects*: High-priority tasks to veto or modify unethical goals, and can trigger alerts for human supervision.
+
+## 10. Self-Optimization Manager
+A highly advanced manager responsible for improving the system's own operational efficiency by analyzing and refactoring its own codebase (represented as MeTTa atoms).
+-   *Subscribes to*: `rule-utility-updated`, `performance-bottleneck-detected`.
+-   **Core Capabilities**:
+    -   **Rule Performance Analysis**: It analyzes the computational cost of inference rules. For example, it might discover that a very general rule with many variables is slow to match.
+    -   **Rule Refactoring**: It can autonomously rewrite rules to be more efficient. For example, it might reorder the clauses in a rule's premises to fail faster, or it might propose a more specialized, faster version of a general rule.
+    -   **Automated Memoization**: It can identify "pure" MeTTa functions (those that always return the same output for the same input) and wrap them in a memoized form to cache results, trading memory for speed.
+-   *Injects*: Goals to test the refactored rules in a sandbox environment and, if successful, high-priority tasks to replace the old rules with their more efficient versions.
+-   **Verification Scenario**: The manager detects that a rule `(= (complex-calc $a $b $c) ...)` is frequently called with the same arguments and is flagged as a bottleneck. It hypothesizes a refactoring: `(= (complex-calc $a $b $c) (memoize (slow-complex-calc $a $b $c)))`. It then tests this new rule, and if it improves performance without changing results, proposes it as a replacement.
+
+## 11. Implementation Manager
+A manager designed to assist human developers by automating parts of the implementation process, embodying the principle of the system helping to build itself.
+-   *Subscribes to*: Triggered by a high-level developer goal, e.g., `(Implement (feature "new-inference-rule"))`.
+-   **Core Capabilities**:
+    -   **Specification Ingestion**: It reads a developer-provided specification, written as a MeTTa atom. The spec would define the rule's name, its premises, and its conclusion.
+    -   **Stub Generation**: It generates a "stub" MeTTa rule with the correct structure but with placeholders for the logic (e.g., the truth function), saving the developer from writing boilerplate code.
+    -   **Test Case Generation**: It can automatically task the `Test Generation Manager` to create a basic unit test for the newly created rule stub.
+-   *Injects*: The generated stub code and the new test goal into a development space in Memory for the developer to review, complete, and approve.
+-   **Verification Scenario**: A developer adds the task: `(Implement (rule (name "new-deduction") (premises ((A --> B), (B --> C))) (conclusion (A --> C))))`. The `ImplementationManager` would generate the MeTTa atom: `(= (new-deduction (Belief <$a --> $b> %t1) (Belief <$b --> $c> %t2)) (new-belief <$a --> $c> (placeholder-truth-fn %t1 %t2)))` and a corresponding test goal.

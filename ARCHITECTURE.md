@@ -57,25 +57,44 @@ graph TD
     class AppLayer,CogManagers,Kernel,Grounding layer;
 ```
 
-## Event-Based Communication
-The Reasoning Kernel emits events at key points in the reasoning cycle. Cognitive Managers subscribe to these events to perform their functions. Below are core events and their conceptual payloads:
+## Event-Driven Architecture via MeTTa
+To push the principle of "everything is an atom" further, the system avoids a traditional, external event bus. Instead, eventing and messaging are handled directly within the MeTTa Memory space.
 
--   **`task-selected`**: Fired when a task is chosen for processing.
-    -   **Payload**: The selected `Task`.
--   **`belief-updated`**: Fired when a belief's truth-value is updated.
-    -   **Payload**: The `Belief` and its previous `TruthValue`.
--   **`belief-added`**: Fired when a new belief is added to a concept.
-    -   **Payload**: The new `Belief`.
--   **`contradiction-detected`**: Fired when a new task or belief directly contradicts an existing belief.
-    -   **Payload**: The conflicting `Statement` and the two conflicting `Belief`s.
--   **`concept-activated`**: Fired when a concept's activation level changes.
-    -   **Payload**: The `Concept` and its new activation value.
--   **`concept-created`**: Fired when a new concept is created.
-    -   **Payload**: The new `Concept`.
--   **`system-idle`**: Fired when the reasoning cycle has no tasks to process.
-    -   **Payload**: The duration of the idle period.
+-   **Events as Atoms**: The Reasoning Kernel "emits" an event by adding a timestamped `Event` atom to a special, high-priority `&events` atomspace.
+    -   `belief-added` -> `(Event belief-added <belief-id> (now))`
+    -   `contradiction-detected` -> `(Event contradiction-detected <belief-id-1> <belief-id-2> (now))`
+-   **Managers as Event Handlers**: Cognitive Managers are implemented as sets of MeTTa rules that match on these `Event` atoms. They are, in effect, persistent queries over the `&events` space.
+    ```metta
+    ;; The ContradictionManager is just a MeTTa rule.
+    (= (handle (Event contradiction-detected $b1 $b2 $t))
+       (resolve-contradiction $b1 $b2))
+    ```
+-   **Benefits of this Approach**:
+    -   **Unified Representation**: The eventing mechanism is no longer a separate, special-purpose piece of engineering. It is part of the core knowledge and reasoning system.
+    -   **Introspection**: The system can reason about its own event stream. It can analyze event frequency, detect patterns, and even learn to anticipate events.
+    -   **Dynamic Handlers**: New event handlers can be added or modified at runtime simply by adding new MeTTa rules to Memory, enabling powerful runtime adaptability.
 
-Managers can inject new tasks into the system via a dedicated API on the kernel. This is the primary mechanism for managers to influence the reasoning process.
+## Configurable Architecture via MeTTa
+A core design principle is modularity. To embody this in a "dogfooding" spirit, the system's own architectural configuration is defined as a set of MeTTa atoms, typically loaded from a `config.metta` file at startup.
 
-## Pluggable Module Architecture
-A core design principle is modularity, allowing different implementations of key components to be swapped out. The system should support a mechanism to select between different versions of its modules at initialization time (e.g., a `SimpleMemoryManager` vs. an `AdvancedMemoryManager`). This allows the system's footprint and complexity to be tailored to the specific application.
+This allows the system's footprint and complexity to be tailored to the specific application using its own native representation.
+
+-   **Module Selection**: The configuration file specifies which implementation to use for each pluggable component.
+    ```metta
+    ;; Select the memory manager implementation for this run
+    (= (config MemoryManager) (GroundedAtom "SimpleMemoryManager"))
+
+    ;; For a more advanced setup, one might use:
+    ; (= (config MemoryManager) (GroundedAtom "DistributedActorMemoryManager"))
+    ```
+-   **Cognitive Manager Activation**: The configuration can also enable or disable specific cognitive managers, allowing for different "personalities" or operational profiles.
+    ```metta
+    ;; Configure the set of active cognitive managers for this run
+    (= (active-manager GoalManager) True)
+    (= (active-manager TemporalReasoner) True)
+    (= (active-manager SelfOptimizationManager) False) ;; Disabled for this run
+    ```
+-   **Parameter Tuning**: Other system parameters, such as default budget allocations or forgetting rates, can also be defined in this file, making the system's fundamental behaviors transparent and modifiable.
+    ```metta
+    (= (config default-belief-budget) (Budget 0.9 0.9 0.5))
+    ```
