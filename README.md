@@ -727,8 +727,13 @@ The Goal Manager is responsible for the entire lifecycle of goal-oriented behavi
     3.  **Rule Formation**: The manager forms a new procedural rule as a MeTTa expression and asserts it into the Atomspace: `(Implication (#push_button) (light is_on))`. This new rule is now available for the MeTTa interpreter to use in future reasoning.
     4.  **Refinement**: The confidence of this new rule starts low and is adjusted over time based on its success or failure when applied in the future.
 -   **Verification Scenarios**:
-    -   **Goal Decomposition**: A test verifies that a conjunctive goal like `goal: <(&&, A, B)>` is correctly decomposed. The system should create two new active goals for `A` and `B`, and the original goal's status should become `waiting`.
-    -   **Procedural Skill Execution**: A test verifies that the system can execute a grounded action to achieve a goal.
+    -   **Scenario: Goal Decomposition (GD-01)**
+        > Given the system receives a conjunctive goal `goal: <(&&, A, B)>`
+        > When the Goal Manager processes the goal
+        > Then the system should create two new active goals for `A` and `B`
+        > And the original goal's status should become `waiting`.
+
+    -   **Scenario: Procedural Skill Execution (PR-01)**
         > Given a mock function `unlock_door` is registered with the Symbol Grounding Interface for the term `<#unlock_door>`
         > And the system knows the procedural rule: `(<(*, (&, <SELF --> (is_at, door)>, <door --> (is, locked)>), <#unlock_door>)> ==> <door --> (is, unlocked)>)`
         > And the system has the beliefs:
@@ -738,7 +743,8 @@ The Goal Manager is responsible for the entire lifecycle of goal-oriented behavi
         > And the system has the goal: `goal: <door --> (is, unlocked)>`
         > When the `OperationalRule` is applied
         > Then the mock function `unlock_door` should be called
-        > And the system should form a new belief `<#unlock_door --> executed>`
+        > And the system should form a new belief `<#unlock_door --> executed>`.
+
     -   **Scenario: Temporal-Goal Interaction (TGI-01)**
         > Given the system has a goal `goal: <(achieve, 'report_submission')>` with a deadline of "now + 10s"
         > And the system knows two procedural rules:
@@ -770,32 +776,33 @@ Provides a comprehensive framework for understanding and reasoning about time, m
         >   | "important_meeting" | now + 1h    | now + 2h    |
         > And there is a constraint that "important_meeting" happens "during" "daytime_event"
         > When the system runs for 50 steps
-        > Then the system should be able to infer that the relationship between "important_meeting" and "daytime_event" is "during"
+        > Then the system should be able to infer that the relationship between "important_meeting" and "daytime_event" is "during".
     -   **Scenario: Chained Temporal Inference (Transitivity)**
         > Given the system knows the following temporal statements:
         >   | statement                                | truth       |
         >   | "<(event_A) [/] (event_B)>"               | <%1.0,0.9%> | # A happens before B
         >   | "<(event_B) [/] (event_C)>"               | <%1.0,0.9%> | # B happens before C
         > When the system runs for 100 inference steps
-        > Then the system should derive the belief "<(event_A) [/] (event_C)>" with high confidence
+        > Then the system should derive the belief "<(event_A) [/] (event_C)>" with high confidence.
 
 ### 4.3. Learning Engine
 Responsible for abstracting knowledge and forming new concepts.
 -   *Subscribes to*: `concept-created`, `belief-added`, `afterInference`.
 -   *Action*: Detects patterns and correlations across the Atomspace to form higher-level abstractions. Its most critical function is to learn new **MeTTa expressions** that function as novel inference rules or heuristics. It also provides performance statistics on existing MeTTa rules to the `CognitiveExecutive` to aid in self-optimization.
 -   *Injects*: New `ExpressionAtoms` into the Atomspace, particularly new `=` expressions that define new rewrite rules for the MeTTa interpreter.
--   **Verification Scenario: Meta-Learning Verification of a New Inference Rule (ML-01)**
-    > Given the system's LearningEngine is active and monitoring derivation patterns
-    > And the system repeatedly observes derivations of the form: `(Location $x west_of $y)` and `(Location $y west_of $z)` leads to `(Location $x west_of $z)`
-    > When the LearningEngine's pattern detection threshold is met
-    > Then the system should assert a new MeTTa rule into the Atomspace, such as:
-    > `(= (Location $x west_of $z) (match &self (, (Location $x west_of $y) (Location $y west_of $z))))`
-    > And when the system is later given the premises:
-    >   | atom                                | truth       |
-    >   | "(Location new_york west_of london)"  | <%1.0,0.9%> |
-    >   | "(Location london west_of beijing)" | <%1.0,0.9%> |
-    > And the MeTTa interpreter runs
-    > Then a new task for `(Location new_york west_of beijing)` should be derived
+-   **Verification Scenarios**:
+    -   **Scenario: Meta-Learning Verification of a New Inference Rule (ML-01)**
+        > Given the system's LearningEngine is active and monitoring derivation patterns
+        > And the system repeatedly observes derivations of the form: `(Location $x west_of $y)` and `(Location $y west_of $z)` leads to `(Location $x west_of $z)`
+        > When the LearningEngine's pattern detection threshold is met
+        > Then the system should assert a new MeTTa rule into the Atomspace, such as:
+        > `(= (Location $x west_of $z) (match &self (, (Location $x west_of $y) (Location $y west_of $z))))`
+        > And when the system is later given the premises:
+        >   | atom                                | truth       |
+        >   | "(Location new_york west_of london)"  | <%1.0,0.9%> |
+        >   | "(Location london west_of beijing)" | <%1.0,0.9%> |
+        > And the MeTTa interpreter runs
+        > Then a new task for `(Location new_york west_of beijing)` should be derived.
 
 ### 4.4. Contradiction Manager
 The Contradiction Manager implements sophisticated strategies for resolving contradictions. When a `contradiction-detected` event is fired, the manager analyzes the evidence, source reliability, and recency of the conflicting beliefs to decide on a resolution strategy.
@@ -804,12 +811,24 @@ The Contradiction Manager implements sophisticated strategies for resolving cont
 
 #### Contradiction Resolution Strategies
 The choice of strategy can be determined by the `CognitiveExecutive` based on the context of the contradiction. The available strategies include:
--   **`DominantEvidenceStrategy` (Default)**: Identifies the single belief with the highest evidence strength. This "winning" belief is kept, while all other conflicting beliefs are "weakened" by having their confidence and budget reduced and their doubt increased. This is a conservative strategy that trusts the strongest evidence without discarding other viewpoints entirely.
--   **`MergeStrategy`**: Takes the two strongest conflicting beliefs and merges them using the NAL revision formula (`TruthValue.revise`). This creates a new, synthesized belief that incorporates evidence from both parents. This strategy is useful for integrating conflicting information into a single, more nuanced belief.
--   **`EvidenceWeightedStrategy`**: A more comprehensive merge, this strategy calculates a new truth value and budget by taking a weighted average of *all* conflicting beliefs. The weight for each belief is its evidence strength. This results in a single new belief that represents the consensus of all available evidence.
--   **`RecencyBiasedStrategy`**: A simple but effective strategy that resolves a conflict by keeping only the most recent belief and discarding all others. This is useful in dynamic environments where newer information is more likely to be correct.
--   **`SourceReliabilityStrategy`**: Similar to `EvidenceWeightedStrategy`, but the weight for each belief is determined by the historical reliability of its source, modulated by the belief's priority. This allows the system to trust information from sources that have been proven trustworthy in the past.
--   **`SpecializationStrategy`**: Instead of merging or deleting beliefs, this strategy resolves a contradiction by creating a more specific, contextual MeTTa expression. For example, if the system believes `(Inheritance bird flyer)` but encounters a strong contradiction with `(Inheritance penguin (Not flyer))`, this strategy might generate a new, more nuanced rule like `(Inheritance (And bird (Not penguin)) flyer)`, resolving the conflict. This is a key mechanism for learning and refining knowledge.
+
+-   **`DominantEvidenceStrategy` (Default)**: Identifies the single belief with the highest evidence strength (e.g., highest confidence). This "winning" belief is kept, while all other conflicting beliefs are "weakened" by having their confidence and budget reduced and their doubt increased. This is a conservative strategy that trusts the strongest evidence without discarding other viewpoints entirely.
+    -   **Verification (CS-01):** The confidence of the dominant belief should remain high, while the confidence of all other conflicting beliefs is significantly reduced.
+
+-   **`MergeStrategy`**: Takes the two strongest conflicting beliefs and merges them using the standard NAL revision formula (`TruthValue.revise`). This creates a single, new, synthesized belief that incorporates evidence from both parents, and the original beliefs are removed or replaced. This strategy is useful for integrating conflicting information into a single, more nuanced belief.
+    -   **Verification (CS-02):** A new belief should be created whose truth value is the result of revising the original two. The two original beliefs should be removed from the concept.
+
+-   **`EvidenceWeightedStrategy`**: A more comprehensive merge, this strategy calculates a new truth value and budget by taking a weighted average of *all* conflicting beliefs. The weight for each belief is its evidence strength (e.g., confidence). This results in a single new belief that represents the consensus of all available evidence, which then replaces all the original conflicting beliefs.
+    -   **Verification (CS-03):** A single new belief should be created whose truth value is the weighted average of all prior conflicting beliefs. All original conflicting beliefs should be removed.
+
+-   **`RecencyBiasedStrategy`**: A simple but effective strategy that resolves a conflict by keeping only the most recent belief (based on its timestamp) and discarding all others. This is useful in dynamic environments where newer information is more likely to be correct.
+    -   **Verification (CS-04):** After resolution, only the single belief with the most recent timestamp should remain in the concept.
+
+-   **`SourceReliabilityStrategy`**: Similar to `EvidenceWeightedStrategy`, but the weight for each belief is determined not just by its confidence but by the historical reliability of its source, a metric tracked by the `CognitiveExecutive`. This allows the system to trust information from sources that have been proven trustworthy in the past.
+    -   **Verification (CS-05):** The resulting merged belief's truth value should be skewed towards the belief that originated from the more reliable source, even if its confidence is lower than a competing belief from an unreliable source.
+
+-   **`SpecializationStrategy`**: Instead of merging or deleting beliefs, this strategy resolves a contradiction by creating a more specific, contextual MeTTa expression. For example, if the system believes `(Inheritance bird flyer)` but encounters a strong contradiction with `(Inheritance penguin (Not flyer))`, this strategy generates a new, more nuanced rule like `(Inheritance (And bird (Not penguin)) flyer)`, resolving the conflict by refining the knowledge. This is a key mechanism for learning.
+    -   **Verification (CS-06):** Given a general rule like `(Inheritance bird flyer)` and a specific contradiction `(Inheritance penguin (Not flyer))`, the system should produce a new, more specific rule, such as `(Inheritance (And bird (Not penguin)) flyer)`, and potentially lower the confidence of the original general rule.
 
 #### Verification Scenarios
 The following scenarios verify the functionality of the Contradiction Manager and its various strategies.
@@ -854,7 +873,7 @@ The system's master control program, responsible for monitoring and adapting the
         > And the system experiences a sudden spike of over 50 contradictory events within a short time frame
         > When the `MetaReasoner`'s `analyzeSystemHealth` function is triggered
         > Then the `MetaReasoner` should inject a task to update the doubt parameter, e.g., by replacing the existing expression with `(= (DoubtParameter) 0.2)`
-        > And a new goal should be injected to investigate the cause of the high contradiction rate
+        > And a new goal should be injected to investigate the cause of the high contradiction rate.
     -   **Scenario: Self-Optimization of Inference Rules (META-02)**
         > Given the system's `MetaReasoner` is active
         > And a MeTTa rule for abduction, `(= (Abduce $s $p $m) ...)` has generated 20 tasks in the last 100 cycles
@@ -869,26 +888,34 @@ The system's master control program, responsible for monitoring and adapting the
         > And as a result, the `inferenceRate` metric drops below the `LOW_INFERENCE_THRESHOLD`
         > When the `CognitiveExecutive`'s `selfMonitor` method is called
         > Then it should detect the 'low-inference-rate' issue
-        > And it should adapt by lowering the system's `inferenceThreshold` to a value less than 0.3
+        > And it should adapt by lowering the system's `inferenceThreshold` to a value less than 0.3.
 
 ### 4.6. Explanation System
 Generates human-readable explanations for the system's conclusions.
 -   *Subscribes to*: `belief-updated`, `belief-added`.
 -   *Action*: Maintains a trace of derivations. When the public API's `explain()` method is called, this manager is queried to construct the explanation graph.
 -   *Injects*: Does not typically inject tasks; primarily responds to API requests.
+-   **Verification Scenarios**:
+    -   **Scenario: Multi-Format Explanation Generation**
+        > Given the system has derived a belief through a multi-step inference chain
+        > When the `explain()` API method is called with a `format` option of 'technical'
+        > Then the system should return a detailed derivation graph including intermediate beliefs, rule names, and truth values.
+        > And when the `explain()` API method is called with a `format` option of 'concise'
+        > Then the system should return a simplified path showing only the key premises and the final conclusion.
 
 ### 4.7. Test Generation Manager
 Proactively ensures the system's reasoning capabilities are robust by identifying and filling gaps in its test coverage.
 -   *Subscribes to*: `afterCycle`, `rule-utility-updated`.
 -   *Action*: Periodically analyzes metrics to find under-utilized MeTTa rules or concepts with low activity. It then formulates premises that would specifically trigger these rules.
 -   *Injects*: Goals to execute under-tested components, logging the proposed test case for developer review. This is a key part of the system's "dogfooding" capability, allowing it to help improve its own quality.
--   **Verification Scenario: Self-Generation of a New Test Case (META-03)**
-    > Given the system's `TestGenerationManager` is active
-    > And the system has run for 1000 cycles
-    > And the MeTTa rule for Induction `(= (Induce ...))` has been used 0 times.
-    > When the `TestGenerationManager` analyzes rule usage frequency
-    > Then the system should generate a new goal: `(Goal (ExecuteRule (Induce $s $p)))`
-    > And in pursuit of this goal, the system should log a "Proposed Test Case" containing the necessary premises in MeTTa syntax, e.g., `(Inheritance raven is_black)` and `(Inheritance raven is_bird)`, and the expected conclusion `(Inheritance bird is_black)`.
+-   **Verification Scenarios**:
+    -   **Scenario: Self-Generation of a New Test Case (META-03)**
+        > Given the system's `TestGenerationManager` is active
+        > And the system has run for 1000 cycles
+        > And the MeTTa rule for Induction `(= (Induce ...))` has been used 0 times.
+        > When the `TestGenerationManager` analyzes rule usage frequency
+        > Then the system should generate a new goal: `(Goal (ExecuteRule (Induce $s $p)))`
+        > And in pursuit of this goal, the system should log a "Proposed Test Case" containing the necessary premises in MeTTa syntax, e.g., `(Inheritance raven is_black)` and `(Inheritance raven is_bird)`, and the expected conclusion `(Inheritance bird is_black)`.
 
 ### 4.8. Codebase Integrity Manager
 A specialized manager for self-analysis, responsible for ingesting the system's own source code and design documents to reason about their structure and consistency.
@@ -900,7 +927,7 @@ A specialized manager for self-analysis, responsible for ingesting the system's 
         > Given the system has ingested its DESIGN.md file, creating atoms like `(has_property RealTime_Dashboard fast)` and `(has_property RealTime_Dashboard slow)`
         > And the system knows the MeTTa rule: `(= (is_inconsistent $x) (match &self (, (has_property $x $p1) (has_property $x (Not $p1)))))`
         > When the system is given the goal `(Goal (is_inconsistent ?x))`
-        > Then the system should produce an answer where `?x` is `RealTime_Dashboard`
+        > Then the system should produce an answer where `?x` is `RealTime_Dashboard`.
     -   **Scenario: Self-Governing Evolution Identifies and Proposes Fixes (META-04)**
         > Given the `CodebaseIntegrityManager` is active and has ingested `DESIGN.md` (with a flaw), `AGENTS.md` (with a 'no comments' rule), and a mock source file `src/core/Memory.js` (with a comment).
         > When the system is given the goal: `(Goal (has_self_consistency system))`
@@ -912,14 +939,15 @@ Facilitates communication and coordination between multiple independent HyperNAR
 -   *Subscribes to*: `goal-received-from-agent`, `belief-received-from-agent`.
 -   *Action*: Manages incoming and outgoing messages with other agents using a defined communication protocol. It wraps MeTTa expressions in a message envelope that includes sender/receiver information and a conversation context. It also maintains a model of other agents' knowledge and reliability.
 -   *Injects*: Tasks received from other agents, with budgets adjusted based on the perceived reliability of the source agent. It can also generate goals to ask other agents for information it lacks.
--   **Verification Scenario: Collaborative Problem Solving**
-    > Given Agent_A and Agent_B are two separate HyperNARS instances
-    > And Agent_A knows `(Implication A B)`
-    > And Agent_B knows `(Implication B C)`
-    > And Agent_A has the goal `(Goal (Implication A C))` but cannot solve it
-    > When Agent_A's Multi-Agent Manager sends a broadcast query for `(Implication B C)`
-    > And Agent_B receives the query and sends its belief `(Implication B C)` back to Agent_A
-    > Then Agent_A should receive the belief and be able to derive `(Implication A C)`, achieving its goal.
+-   **Verification Scenarios**:
+    -   **Scenario: Collaborative Problem Solving**
+        > Given Agent_A and Agent_B are two separate HyperNARS instances
+        > And Agent_A knows `(Implication A B)`
+        > And Agent_B knows `(Implication B C)`
+        > And Agent_A has the goal `(Goal (Implication A C))` but cannot solve it
+        > When Agent_A's Multi-Agent Manager sends a broadcast query for `(Implication B C)`
+        > And Agent_B receives the query and sends its belief `(Implication B C)` back to Agent_A
+        > Then Agent_A should receive the belief and be able to derive `(Implication A C)`, achieving its goal.
 
 ## 5. Reasoning via MeTTa Interpretation
 
@@ -1042,6 +1070,7 @@ The Memory System is the core of the system's knowledge base, structured as a dy
     > Then the system should not crash and should remain responsive to API calls
     > And when a question `nalq("<concept_X --> ?what>.")` is asked about a highly connected concept
     > Then the system should return an answer within 1 second
+    > And the system's memory usage should not exceed the configured limits by a significant margin.
 
 -   **Activation Spreading**: This is the mechanism for managing the system's focus of attention. When a concept is accessed, a portion of its activation energy is spread to related concepts.
     -   `Activation_new(C) = Activation_old(C) * (1 - decay_rate) + Sum(Activation_in(S, C))`
@@ -1167,7 +1196,8 @@ A critical application of symbol grounding is understanding and generating human
 -   **Grammar Induction (Advanced Capability)**: As a long-term development goal, the NLP interface should be capable of *learning* the grammar of a language through exposure, rather than relying solely on pre-programmed parsers. This would be a function of the `Learning Engine` interacting with the NLP interface, identifying patterns in linguistic input over time.
 
 ## 9. Extension Points
-(Content unchanged)
+
+The system is designed with multiple extension points to allow for deep customization and the addition of new functionalities without altering the core source code. This is primarily achieved through the pluggable `CognitiveManager` architecture and the `SpecializedSpace` API. Developers can create their own managers to implement novel cognitive functions or wrap new data sources and computational engines (like custom neural networks or external APIs) as specialized Atomspaces that the MeTTa interpreter can query.
 
 ## 10. System Initialization and Configuration
 
@@ -1237,7 +1267,8 @@ interface SystemConfig {
 (Content unchanged)
 
 ## 11. Concurrency and Parallelism
-(Content unchanged)
+
+To leverage modern multi-core processors, the system's architecture supports concurrent and parallel execution. The primary model for this is the **Actor Model**, where each `Concept` in the Atomspace can be managed by a dedicated, lightweight actor. This allows for high-throughput, parallel processing of tasks across the concept graph, as multiple concepts can be processed simultaneously on different cores. Communication between actors is handled asynchronously via message passing, which aligns well with the system's event-driven nature.
 
 ### 11.1. Actor Lifecycle and Supervision
 
@@ -1258,7 +1289,7 @@ To make the Actor Model implementation robust and resource-efficient, a clear li
 
 This lifecycle management ensures that the system can scale to millions of concepts without holding them all in active memory, while the supervision strategy provides resilience against internal failures.
 
-#### Verification Scenario
+#### Verification Scenarios
 
 **Scenario: Concurrency Model - Actor Passivation and Awakening (CON-01)**
 > Given the system is running with the Actor Model enabled
@@ -1270,17 +1301,91 @@ This lifecycle management ensures that the system can scale to millions of conce
 > Then the `Supervisor` should awaken the actor by loading its state from storage
 > And the new task should be successfully added to its task queue.
 
+**Scenario: Supervisor Fault Tolerance (CON-02)**
+> Given a `Concept` actor for "problematic_concept" is running
+> And the actor experiences an unrecoverable internal error, causing it to crash
+> When the `Supervisor` detects the failure
+> Then the Supervisor should log the error with the problematic concept's details
+> And it should restart the actor from its last known-good passivated state
+> And the system should remain stable.
+
 ## 12. State Serialization and Persistence
-(Content unchanged)
+
+To support long-term learning and recovery from shutdowns, the system must be able to serialize its entire state to persistent storage and reload it. The state includes the full Atomspace (all concepts, beliefs, and tasks) and the internal state of all Cognitive Managers.
+
+### 12.1. Serialization Format
+
+The primary serialization format will be JSON. While less space-efficient than a binary format, it offers human-readability, which is invaluable for debugging and manual inspection of the system's knowledge base. For performance-critical applications, a binary format like MessagePack could be offered as a configuration option.
+
+The serialized output will be a single JSON object with a well-defined schema, including a header with metadata and a main body containing the system's state.
+
+```json
+{
+  "header": {
+    "version": "1.0.0",
+    "timestamp": "2025-08-19T16:00:00Z",
+    "checksum": "sha256-of-body"
+  },
+  "state": {
+    "concepts": [ /* ... array of serialized Concept objects ... */ ],
+    "eventQueue": [ /* ... array of serialized Task objects ... */ ],
+    "managers": {
+      "goalManager": { /* ... serialized state ... */ },
+      "temporalReasoner": { /* ... serialized state ... */ }
+    }
+  }
+}
+```
+
+### 12.2. Data Integrity and Corruption Handling
+
+To prevent system failure from corrupted state files, a checksum (e.g., SHA-256) of the `state` block will be included in the header. Before loading, the system will verify this checksum. If the checksum fails, the system will refuse to load the state file and will report a critical error, preventing the propagation of corrupted data into the live system.
+
+### 12.3. Schema Versioning and Migration
+
+To allow for future evolution of the system's data structures, the serialization format includes a `version` field in its header. When loading a state file, the system will compare this version against its own.
+
+-   If the versions match, the state is loaded directly.
+-   If the state file's version is older than the system's current version, the system will attempt to apply a series of migration scripts. Each script will be responsible for transforming the data from one specific version to the next (e.g., a `v1.0_to_v1.1.js` script). This ensures a clear and maintainable upgrade path.
+-   If the state file's version is newer than the system's, it cannot be loaded, and an error will be reported.
+
+### 12.4. Performance Considerations
+
+Serializing a large knowledge base (millions of concepts) can be a time-consuming and memory-intensive operation. To mitigate this, the system can employ a streaming approach, writing the JSON output incrementally to disk rather than building the entire string in memory. Asynchronous I/O operations will be used to prevent blocking the main reasoning loop during saves.
+
+### 12.5. Verification Scenarios
+
+-   **Scenario: Corrupted State File Handling (SER-01)**
+    > Given a serialized state file where the `checksum` in the header does not match the actual checksum of the `state` block
+    > When the system attempts to load this file
+    > Then the system should fail gracefully with a clear error message about the checksum mismatch
+    > And the system should not crash or load any of the corrupted data.
+
+-   **Scenario: Schema Version Migration (SER-02)**
+    > Given a serialized state file with an older schema version (e.g., "1.0.0")
+    > And the running system is at a newer version (e.g., "1.1.0")
+    > And a valid migration script exists for upgrading from 1.0.0 to 1.1.0
+    > When the system loads the state file
+    > Then the migration script should be applied successfully
+    > And the system's state should be correctly initialized from the migrated data.
+
+-   **Scenario: Large State Serialization Performance (SER-03)**
+    > Given a system with a large knowledge base (e.g., 2,000,000 concepts)
+    > When the system is instructed to serialize its state
+    > Then the process should complete within an acceptable time frame without causing Out-of-Memory errors
+    > And the main reasoning loop should remain responsive to queries during the serialization process.
 
 ## 13. Self-Governing Evolution: An Ambition for Autonomy
-(Content unchanged)
+
+A long-term ambition for HyperNARS is to achieve a state of self-governing evolution. By representing its own source code, design documents, and test specifications as Atoms within a `CodebaseIntegrity` Atomspace, the system can reason about its own structure and behavior. The `CognitiveExecutive` and `CodebaseIntegrityManager` can then work together to identify inconsistencies, find bugs, propose fixes, and even generate new tests for under-utilized components. This creates a feedback loop where the system actively participates in its own development and improvement, moving towards greater autonomy.
 
 ## 14. System Bootstrapping and Foundational Knowledge
-(Content unchanged)
+
+A new HyperNARS instance starts as a blank slate. To be effective, it must be bootstrapped with a set of foundational knowledge. This includes the core MeTTa expressions that define the NAL inference rules, as well as a small, curated set of ontological and procedural knowledge (e.g., definitions of `Type`, `Inheritance`, basic temporal relations). This foundational knowledge can be loaded from a standard "core.metta" file during system initialization, ensuring that all instances start with a common, stable reasoning framework.
 
 ## 15. Ethical Alignment and Safety
-(Content unchanged)
+
+Ensuring the safe and ethical operation of a powerful reasoning system is paramount. HyperNARS addresses this through a dedicated `ConscienceManager`, which acts as an internal ethical governor. This manager is bootstrapped with a set of inviolable, high-priority goals representing core ethical principles (e.g., "do no harm," "avoid deception"). It monitors the system's generated goals and plans, and if it detects one that conflicts with its core principles, it can veto the goal by injecting a high-confidence belief that marks the goal as "unethical," effectively preventing its pursuit. This mechanism provides a crucial layer of self-regulation and safety.
 
 ### 15.1. Worked Example: Vetoing an Unethical Goal
 To make the `ConscienceManager`'s function concrete, consider the following scenario:
@@ -1306,57 +1411,55 @@ This example shows how safety is not just a hard-coded "if statement" but an int
 > And the budget of the unethical subgoal should be reduced to near-zero, effectively vetoing it.
 
 ## 16. Error Handling and System Resilience
-(Content unchanged)
+
+A robust system must be resilient to internal errors, such as malformed data or failed assertions. HyperNARS is designed to handle errors gracefully without crashing. The `Supervisor` for the Actor Model provides fault tolerance by catching and logging errors within individual `Concept` actors and restarting them (see Section 11.1). Additionally, all public API methods perform rigorous validation on their inputs and return detailed error messages or reject promises for invalid requests, ensuring that the system's core remains in a consistent state.
 
 ## 17. Interactive Debugging and Diagnostics (TUI)
 
-The emergent and non-deterministic nature of a NARS-like system makes debugging exceptionally challenging. To address this, the system includes a comprehensive, interactive Text-based User Interface (TUI) for real-time inspection and control. This TUI is not merely a passive log viewer but an active diagnostics console that allows a developer to interact with the reasoning process as it unfolds. It is built using a terminal rendering library for React (e.g., Ink).
+The emergent and non-deterministic nature of a NARS-like system makes debugging exceptionally challenging. To address this, the system shall include a comprehensive, interactive Text-based User Interface (TUI) for real-time inspection and control. This TUI is not merely a passive log viewer but an active diagnostics console that allows a developer to interact with the reasoning process as it unfolds. It should be built using a terminal rendering library (e.g., Ink for React) and must be robust to user interaction and terminal environment changes.
 
 ### 17.1. TUI Architecture
 
-The TUI is structured around a main application component (`App.js`) that manages state and a `MainLayout` that organizes various specialized view components into a tabbed interface. This allows the user to switch between different perspectives on the system's internal state. A shared `TuiContext` provides all components with access to the core NAR system instance and its control functions.
+The TUI is structured around a main application component that manages state and a `MainLayout` that organizes various specialized view components. This allows the user to switch between different perspectives on the system's internal state. A shared context (e.g., `TuiContext`) should provide all components with access to the core NAR system instance and its control functions.
 
 ### 17.2. Core Components and Views
 
-The TUI provides a multi-pane layout that typically includes a status bar, a main content view (tab-switchable), and an interaction/log panel.
+The TUI shall provide a multi-pane layout that is robust to terminal resizing events (**TUI-06**). It typically includes a status bar, a main content view (tab-switchable), and an interaction/log panel.
 
--   **Status View**: A persistent header or footer that displays key real-time metrics, such as:
-    -   **System Status**: `Running`, `Paused`, `Idle`.
-    -   **SPS (Steps Per Second)**: The current inference rate.
-    -   **Run Delay**: The configured delay between reasoning cycles.
-    -   **Active Concepts / Beliefs / Tasks**: A high-level count of entities in memory.
+-   **Status View**: A persistent header or footer that displays key real-time metrics.
+    -   **Requirement (TUI-03):** This view must update in real-time to reflect the system's current state, including:
+        -   **System Status**: `Running`, `Paused`, `Idle`.
+        -   **SPS (Steps Per Second)**: The current inference rate.
+        -   **Run Delay**: The configured delay between reasoning cycles.
+        -   **Active Concepts / Beliefs / Tasks**: A high-level count of entities in memory.
 
--   **Tabbed Views**: The main panel of the TUI allows the user to switch between several views, each focused on a different aspect of the system:
-    -   **Memory View**: Displays a list of all concepts currently in memory, sorted by activation. The user can navigate this list and select a concept to open a detailed `ConceptView`.
-    -   **Queue View**: Shows the contents of the main task priority queue, allowing the user to see which tasks are about to be processed.
-    -   **System View**: A dashboard showing the current values of key system parameters and configurations.
-    -   **Contradiction View**: Lists all active contradictions that have been detected but not yet resolved.
-    -   **Temporal View**: Visualizes the temporal relationships between events known to the system.
+-   **Tabbed Views**: The main panel of the TUI shall allow the user to switch between several views using keyboard shortcuts (e.g., `1` through `5`).
+    -   **Requirement (TUI-02):** The TUI must correctly switch the main content view when the corresponding keyboard shortcut is pressed.
+    -   The views include:
+        -   **Memory View**: Displays a list of all concepts currently in memory, sorted by activation.
+        -   **Queue View**: Shows the contents of the main task priority queue.
+        -   **System View**: A dashboard showing key system parameters.
+        -   **Contradiction View**: Lists active, unresolved contradictions.
+        -   **Temporal View**: Visualizes temporal relationships between events.
 
--   **Concept View**: When a concept is selected from the Memory View, this detailed view opens, showing:
-    -   The concept's term.
-    -   Its current activation level.
-    -   A list of all beliefs held by the concept, including their truth values and budgets.
-    -   The tasks currently in the concept's local task queue.
+-   **Concept View**:
+    -   **Requirement (TUI-05):** When a concept is selected from the Memory View, a detailed view must open, showing the concept's term, activation level, a list of its beliefs (with truth values and budgets), and its local task queue.
 
 -   **Interaction View**: A command-line input box and a log panel.
-    -   **Command Input**: Allows the user to directly inject NAL statements, ask questions, or issue control commands.
-        -   `nal(...)`: Inputs a belief or goal.
-        -   `/ask <question>`: Asks a question and displays the answer.
-        -   `/run <steps>`: Runs the system for a specific number of steps.
-        -   `/contradict <b1> <b2>`: Manually flags two beliefs as contradictory.
-        -   `/resolve <id> <strategy>`: Manually resolves a contradiction with a specific strategy.
-        -   `/quit`: Exits the TUI.
-    -   **Log Panel**: Displays a stream of real-time events from the system, including task processing, belief revisions, contradictions, and errors.
+    -   **Requirement (TUI-01):** The command input must correctly parse and inject commands into the system. This includes:
+        -   NAL statements via `nal(...)`.
+        -   Questions via `/ask <question>`.
+        -   Control commands like `/run`, `/contradict`, `/resolve`.
+    -   The log panel should display a real-time stream of system events.
 
 ### 17.3. Keyboard Controls
 
-The TUI is fully controllable via the keyboard:
--   **`s`**: Start the reasoning loop.
--   **`p`**: Pause the reasoning loop.
--   **`t`**: Execute a single step.
--   **`c`**: Clear the system's memory.
--   **`+` / `-`**: Increase or decrease the run delay.
--   **`1`-`5`**: Switch between the main tabs.
--   **`Esc`**: Exit the TUI or close the current detailed view.
+The TUI must be fully controllable via the keyboard.
+-   **Requirement (TUI-04):** The following keyboard controls must correctly trigger their corresponding system actions:
+    -   `s`: Start the reasoning loop.
+    -   `p`: Pause the reasoning loop.
+    -   `t`: Execute a single reasoning step.
+    -   `c`: Clear the system's memory.
+    -   `+` / `-`: Increase or decrease the run delay.
+    -   `Esc`: Exit the TUI or close the current detailed view.
 
