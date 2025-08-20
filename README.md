@@ -146,7 +146,9 @@ The Cognitive Managers are specialized, pluggable modules that handle complex, c
 
 ## 2. Core Data Structures: The Atomspace
 
-The core of the system is the **Atomspace**, a weighted, typed metagraph that serves as the universal knowledge store. All knowledge, including declarative facts, procedures, and even the system's own code, is represented as a collection of **Atoms**. This unified representation is fundamental to the system's capacity for deep reflection and self-modification. The core data structures are designed as **immutable** objects where possible to ensure functional purity and thread safety.
+The core of the system is the **Atomspace**, a weighted, typed metagraph that serves as the universal knowledge store. In the MeTTa paradigm, all knowledge—declarative facts, procedures, and even the system's own code—is represented uniformly as **Atoms**. This unified representation is fundamental to the system's capacity for deep reflection and self-modification.
+
+While all Atoms are fundamentally just terms in the MeTTa language, for the purpose of this specification, we can categorize them into four conceptual types. The core data structures are designed as **immutable** objects where possible to ensure functional purity and thread safety.
 
 ```typescript
 // The supertype for all elements in the Atomspace.
@@ -356,14 +358,10 @@ class Budget {
     }
 
     /**
-     * **Rationale for `dynamicAllocate`:**
-     *
-     * The `dynamicAllocate` function is designed to reflect the system's priorities based on the origin and nature of a task, in accordance with AIKR. The constants and weights are heuristics chosen to produce specific behaviors:
-     *
-     * -   **Input Tasks**: These are considered highly important and urgent as they represent new information from the external world. They receive a high `priority` (weighted towards `urgency`) to ensure they are processed quickly, but a moderate `durability` as their long-term importance is not yet known.
-     * -   **Goal Tasks**: These are the system's objectives and are given the highest `priority` and `durability` to ensure persistent focus on achieving them.
-     * -   **Derived Tasks**: The budget for these tasks is a function of the `parentQuality` (the confidence of the belief that generated them) and the historical `ruleUtility`. This crucial link ensures that the system allocates more resources to lines of reasoning that are well-founded and have proven effective in the past, while reducing focus on speculative or low-confidence derivations. The `novelty` factor provides a small boost to encourage exploration.
-     * -   **Resource-Aware Allocation**: A key feature distilled from the implementation is that all allocated budgets are scaled by the system's current `resourceAvailability`. This ensures that when the system is under heavy load (e.g., its event queue is full), it becomes more conservative in its resource allocation, preventing runaway processing loops and promoting stability.
+     * **Rationale for `dynamicAllocate`:** This function reflects the system's priorities under AIKR.
+     * Budgets are allocated based on the task's origin ('input', 'goal', 'derived'), its novelty and urgency,
+     * the quality of its parent beliefs, and the historical utility of the inference rule that produced it.
+     * Crucially, all allocations are scaled by the system's current resource availability to ensure stability under load.
      */
 
     // Merges budgets from parent tasks.
@@ -445,120 +443,13 @@ Two primary implementations of the `Stamp` can be considered:
 The choice between these two represents a classic trade-off between logical perfection and resource efficiency, a core theme in NARS. The system could even be configured to use one or the other based on the desired operational profile.
 
 ### 2.4. The Concept
-// A node in the memory graph, representing a single Atom.
-class Concept {
-    readonly term: Atom;
-    // All beliefs directly related to this concept, indexed by atom key.
-    readonly beliefs: Map<string, Belief>;
-    // A queue of tasks to be processed, prioritized by budget.
-    readonly taskQueue: PriorityQueue<Task>;
-    // The current activation level of the concept.
-    activation: number;
-    // Max number of beliefs/tasks to store. Can be dynamic.
-    capacity: number;
+### 2.4. The Concept
 
-    /**
-     * A helper function to determine if two truth values are contradictory.
-     * This is based on a configurable threshold.
-     * @param t1 The first truth value.
-     * @param t2 The second truth value.
-     * @param threshold The minimum confidence for both beliefs to be considered for contradiction.
-     * @returns True if they are contradictory, false otherwise.
-     */
-    isContradictory(t1: TruthValue, t2: TruthValue, threshold: number = 0.51): boolean {
-        // Contradictory if they are on opposite sides of the 0.5 frequency mark
-        // and both have a confidence greater than the threshold.
-        const oppositeFrequency = (t1.f > 0.5 && t2.f < 0.5) || (t1.f < 0.5 && t2.f > 0.5);
-        const sufficientConfidence = t1.c > threshold && t2.c > threshold;
-        return oppositeFrequency && sufficientConfidence;
-    }
+A `Concept` is the fundamental organizational unit of memory, representing a specific `Atom`. It acts as a hub for all information directly related to that Atom. Each Concept is responsible for:
 
-    // Adds a new belief, revising if a related one exists.
-    addBelief(belief: Belief): void {
-        const key = belief.atom.key;
-        if (this.beliefs.has(key)) {
-            const existingBelief = this.beliefs.get(key)!;
-            // Check for contradiction before revising
-            if (this.isContradictory(belief.truth, existingBelief.truth)) {
-                kernel.events.emit('contradiction-detected', {
-                    atom: belief.atom,
-                    belief1: existingBelief,
-                    belief2: belief
-                });
-                return; // The Contradiction Manager will handle resolution.
-            }
-            // Revise with existing belief
-            const newTruth = TruthValue.revise(existingBelief.truth, belief.truth);
-            const newBelief = { ...existingBelief, truth: newTruth, timestamp: Date.now() };
-            this.beliefs.set(key, newBelief);
-            kernel.events.emit('belief-updated', { belief: newBelief, oldTruth: existingBelief.truth });
-        } else {
-            // Add new belief, forgetting if at capacity
-            if (this.beliefs.size >= this.capacity) {
-                this.forget(this.beliefs);
-            }
-            this.beliefs.set(key, belief);
-            kernel.events.emit('belief-added', { belief });
-        }
-    }
-
-    // Adds a task to the priority queue.
-    addTask(task: Task): void {
-        if (this.taskQueue.length >= this.capacity) {
-            this.forget(this.taskQueue);
-        }
-        this.taskQueue.enqueue(task, task.budget.priority);
-    }
-
-    // Selects the highest-priority task from the queue.
-    selectTask(): Task | null {
-        return this.taskQueue.dequeue();
-    }
-
-    // Internal forgetting mechanism for a given collection (beliefs or tasks).
-    private forget(collection: Map<string, Belief> | PriorityQueue<Task>): void {
-        let lowestRelevance = Infinity;
-        let keyToForget: string | null = null;
-
-        if (collection instanceof Map) { // Forgetting a belief from the beliefs Map
-            for (const [key, belief] of collection.entries()) {
-                // Relevance for beliefs = confidence * activation
-                const relevance = belief.truth.c * this.activation;
-                if (relevance < lowestRelevance) {
-                    lowestRelevance = relevance;
-                    keyToForget = key;
-                }
-            }
-            if (keyToForget) {
-                collection.delete(keyToForget);
-            }
-        } else { // Forgetting a task from the taskQueue (PriorityQueue)
-            // This is conceptually simple but can be inefficient. A practical implementation
-            // might use a data structure that allows for efficient removal of low-priority items.
-            // For this blueprint, we describe the logic.
-            const tempArray = collection.toArray(); // Assume PriorityQueue can be exported to an array
-            if (tempArray.length === 0) return;
-
-            let itemToForget: Task | null = null;
-            tempArray.forEach(task => {
-                // Relevance for tasks = priority * activation
-                const relevance = task.budget.priority * this.activation;
-                if (relevance < lowestRelevance) {
-                    lowestRelevance = relevance;
-                    itemToForget = task;
-                }
-            });
-
-            // Reconstruct the queue without the forgotten item
-            collection.clear(); // Assume clear() method
-            tempArray.forEach(task => {
-                if (task !== itemToForget) {
-                    collection.enqueue(task, task.budget.priority);
-                }
-            });
-        }
-    }
-}
+-   **Storing Beliefs**: Managing a collection of `Beliefs` about its central Atom. When a new belief arrives, the Concept revises it with any existing, non-contradictory belief. If a direct contradiction is found, it emits a `contradiction-detected` event for the `ContradictionManager` to handle.
+-   **Prioritizing Tasks**: Maintaining a `PriorityQueue` of `Tasks` to be processed. The queue is ordered by task budget, ensuring that the most salient tasks are handled first.
+-   **Managing Capacity**: Enforcing AIKR by limiting the number of beliefs and tasks it can hold. When capacity is exceeded, a forgetting mechanism is triggered, which removes the least relevant item based on a combination of its importance and the Concept's current activation level.
 ```
 
 ## 3. The Reasoning Cycle: A Dual-Process Control Unit
@@ -599,10 +490,14 @@ function reflexiveReasoningCycle(kernel) {
     if (!belief) continue; // No relevant belief found.
     cycleContext.belief = belief;
 
-    // 3. Perform Local Inference by executing MeTTa expressions.
-    // The MeTTa interpreter will find matching expressions in the Atomspace
-    // and execute them to produce new tasks.
-    let derivedTasks = kernel.mettaInterpreter.run(cycleContext.task, cycleContext.belief);
+    // 3. Perform Local Inference by executing a core MeTTa expression.
+    // This step models the core of NARS inference. The interpreter is asked to
+    // evaluate a `ReasoningStep` expression, which will in turn match and
+    // execute other MeTTa rules in the Atomspace (e.g., for deduction,
+    // abduction, etc.) against the context of the current task and belief.
+    let derivedTasks = kernel.mettaInterpreter.run(
+        `(= (ReasoningStep ${cycleContext.task.atom} ${cycleContext.belief.atom}) ...)`
+    );
     cycleContext.derivedTasks = derivedTasks;
 
     // 4. Process and Store Derived Tasks.
@@ -709,7 +604,12 @@ function selectBeliefForTask(concept, task) {
 ```
 
 ## 4. Cognitive Managers
-The Cognitive Managers are specialized, pluggable modules that handle complex, cross-cutting concerns. They operate by subscribing to events from the Reasoning Kernel and can inject new tasks back into the system to influence its behavior.
+The Cognitive Managers are specialized modules that handle complex, cross-cutting concerns. They can be implemented in two ways:
+
+1.  **As external, pluggable modules** that operate by subscribing to events from the Reasoning Kernel's event bus. This is a conventional, loosely-coupled approach suitable for many standard components.
+2.  **As MeTTa-native agents** that exist as a collection of MeTTa expressions and grounded atoms within a dedicated "cognitive space." In this advanced paradigm, a manager's logic is executed directly by the MeTTa interpreter. This allows the system to reason about its own cognitive processes, making them transparent, modifiable, and learnable at runtime.
+
+The following descriptions outline the roles of the managers, which are valid for either implementation approach.
 
 ### 4.1. Goal Manager
 The Goal Manager is responsible for the entire lifecycle of goal-oriented behavior, from receiving a high-level goal to decomposing it into actionable steps and monitoring its progress. It operates as a sophisticated planner and execution monitor.
@@ -726,30 +626,7 @@ The Goal Manager is responsible for the entire lifecycle of goal-oriented behavi
     2.  **Consequence Monitoring**: The `Goal Manager` observes the effects, e.g., a new belief `(light is_on)` appears.
     3.  **Rule Formation**: The manager forms a new procedural rule as a MeTTa expression and asserts it into the Atomspace: `(Implication (#push_button) (light is_on))`. This new rule is now available for the MeTTa interpreter to use in future reasoning.
     4.  **Refinement**: The confidence of this new rule starts low and is adjusted over time based on its success or failure when applied in the future.
--   **Verification Scenarios**:
-    -   **Goal Decomposition**: A test verifies that a conjunctive goal like `goal: <(&&, A, B)>` is correctly decomposed. The system should create two new active goals for `A` and `B`, and the original goal's status should become `waiting`.
-    -   **Procedural Skill Execution**: A test verifies that the system can execute a grounded action to achieve a goal.
-        > Given a mock function `unlock_door` is registered with the Symbol Grounding Interface for the term `<#unlock_door>`
-        > And the system knows the procedural rule: `(<(*, (&, <SELF --> (is_at, door)>, <door --> (is, locked)>), <#unlock_door>)> ==> <door --> (is, unlocked)>)`
-        > And the system has the beliefs:
-        >   | statement                   | truth       |
-        >   | "<SELF --> (is_at, door)>"  | <%1.0,0.9%> |
-        >   | "<door --> (is, locked)>"   | <%1.0,0.9%> |
-        > And the system has the goal: `goal: <door --> (is, unlocked)>`
-        > When the `OperationalRule` is applied
-        > Then the mock function `unlock_door` should be called
-        > And the system should form a new belief `<#unlock_door --> executed>`
-    -   **Scenario: Temporal-Goal Interaction (TGI-01)**
-        > Given the system has a goal `goal: <(achieve, 'report_submission')>` with a deadline of "now + 10s"
-        > And the system knows two procedural rules:
-        >   | rule                                                              |
-        >   | `(<(*, <data --> collected>, <#submit_report>)> ==> <report_submission>)` |
-        >   | `(<(*, <(true)>, <#collect_data>)> ==> <data --> collected>)`       |
-        > And both `#submit_report` and `#collect_data` are grounded operations
-        > And the current time is "now"
-        > When the system runs its reasoning cycle
-        > Then the task for `goal: <(achieve, 'report_submission')>` should have its budget priority increase as the deadline approaches
-        > And the system should first execute the `#collect_data` operation to satisfy the precondition for submitting the report.
+-   **Verification**: The functionality of the Goal Manager is verified by the scenarios detailed in `TEST.md`. Key scenarios include `GD-01` (Goal Decomposition), `PR-01` (Procedural Skill Execution), and `TGI-01` (Temporal-Goal Interaction).
 
 ### 4.2. Temporal Reasoner
 Provides a comprehensive framework for understanding and reasoning about time, moving beyond simple event ordering to handle continuous time and predictive logic.
@@ -762,40 +639,14 @@ Provides a comprehensive framework for understanding and reasoning about time, m
 -   *Injects*:
     -   New, high-confidence beliefs representing inferred temporal relationships (e.g., `<event_A --> (before, event_C)>`).
     -   Predictive tasks about future events, with budgets that may increase as the event time approaches.
--   **Verification Scenarios**:
-    -   **Scenario: Temporal Reasoning with Intervals**
-        > Given the system knows that:
-        >   | event               | starts      | ends        |
-        >   | "daytime_event"     | now         | now + 4h    |
-        >   | "important_meeting" | now + 1h    | now + 2h    |
-        > And there is a constraint that "important_meeting" happens "during" "daytime_event"
-        > When the system runs for 50 steps
-        > Then the system should be able to infer that the relationship between "important_meeting" and "daytime_event" is "during"
-    -   **Scenario: Chained Temporal Inference (Transitivity)**
-        > Given the system knows the following temporal statements:
-        >   | statement                                | truth       |
-        >   | "<(event_A) [/] (event_B)>"               | <%1.0,0.9%> | # A happens before B
-        >   | "<(event_B) [/] (event_C)>"               | <%1.0,0.9%> | # B happens before C
-        > When the system runs for 100 inference steps
-        > Then the system should derive the belief "<(event_A) [/] (event_C)>" with high confidence
+-   **Verification**: The functionality of the Temporal Reasoner is verified by the scenarios detailed in `TEST.md`. Key scenarios include `03` (Temporal Reasoning with Intervals) and `09` (Chained Temporal Inference).
 
 ### 4.3. Learning Engine
 Responsible for abstracting knowledge and forming new concepts.
 -   *Subscribes to*: `concept-created`, `belief-added`, `afterInference`.
 -   *Action*: Detects patterns and correlations across the Atomspace to form higher-level abstractions. Its most critical function is to learn new **MeTTa expressions** that function as novel inference rules or heuristics. It also provides performance statistics on existing MeTTa rules to the `CognitiveExecutive` to aid in self-optimization.
 -   *Injects*: New `ExpressionAtoms` into the Atomspace, particularly new `=` expressions that define new rewrite rules for the MeTTa interpreter.
--   **Verification Scenario: Meta-Learning Verification of a New Inference Rule (ML-01)**
-    > Given the system's LearningEngine is active and monitoring derivation patterns
-    > And the system repeatedly observes derivations of the form: `(Location $x west_of $y)` and `(Location $y west_of $z)` leads to `(Location $x west_of $z)`
-    > When the LearningEngine's pattern detection threshold is met
-    > Then the system should assert a new MeTTa rule into the Atomspace, such as:
-    > `(= (Location $x west_of $z) (match &self (, (Location $x west_of $y) (Location $y west_of $z))))`
-    > And when the system is later given the premises:
-    >   | atom                                | truth       |
-    >   | "(Location new_york west_of london)"  | <%1.0,0.9%> |
-    >   | "(Location london west_of beijing)" | <%1.0,0.9%> |
-    > And the MeTTa interpreter runs
-    > Then a new task for `(Location new_york west_of beijing)` should be derived
+-   **Verification**: The functionality of the Learning Engine is verified by scenario `ML-01` in `TEST.md`.
 
 ### 4.4. Contradiction Manager
 The Contradiction Manager implements sophisticated strategies for resolving contradictions. When a `contradiction-detected` event is fired, the manager analyzes the evidence, source reliability, and recency of the conflicting beliefs to decide on a resolution strategy.
@@ -811,29 +662,8 @@ The choice of strategy can be determined by the `CognitiveExecutive` based on th
 -   **`SourceReliabilityStrategy`**: Similar to `EvidenceWeightedStrategy`, but the weight for each belief is determined by the historical reliability of its source, modulated by the belief's priority. This allows the system to trust information from sources that have been proven trustworthy in the past.
 -   **`SpecializationStrategy`**: Instead of merging or deleting beliefs, this strategy resolves a contradiction by creating a more specific, contextual MeTTa expression. For example, if the system believes `(Inheritance bird flyer)` but encounters a strong contradiction with `(Inheritance penguin (Not flyer))`, this strategy might generate a new, more nuanced rule like `(Inheritance (And bird (Not penguin)) flyer)`, resolving the conflict. This is a key mechanism for learning and refining knowledge.
 
-#### Verification Scenarios
-The following scenarios verify the functionality of the Contradiction Manager and its various strategies.
-
-**Scenario: Belief Revision after Contradiction**
-> Given the system believes that "<tweety --> flyer>" with truth "<%0.8,0.7%>"
-> When the system runs for 10 steps
-> Then the belief "<tweety --> flyer>" should have an expectation greater than 0.5
-> And when the system is told:
->   | statement             | truth          | priority |
->   | "(penguin --> !flyer)"  |                | "#0.95#" |
->   | "(tweety --> penguin)"  | "<%0.99,0.99%>" |          |
-> And contradictions are resolved
-> And the system runs for 100 steps
-> Then the expectation of the belief "<tweety --> flyer>" should decrease
-
-**Scenario: Contradiction Resolution via Specialization**
-> Given the system has a strong belief that "<bird --> flyer>"
-> And the system is then told with high confidence that "<penguin --> bird>"
-> And the system is then told with very high confidence that "<penguin --> not_a_flyer>"
-> When a contradiction is detected between "penguin is a flyer (derived)" and "penguin is not a flyer (input)"
-> And the "Specialize" strategy is applied by the Contradiction Manager
-> Then the system should lower the confidence of its belief "<bird --> flyer>"
-> And the system should create a new belief "<(&, bird, (-, penguin)) --> flyer>"
+#### Verification
+The various strategies of the Contradiction Manager are verified by the scenarios detailed in `TEST.md`, including `02` (Belief Revision) and `CS-01` through `CS-06`.
 
 ### 4.5. Cognitive Executive (Meta-Reasoner)
 *Note: This document uses "Cognitive Executive" to refer to the conceptual role of a master control program. The concrete implementation of this role is the `MetaReasoner` manager.*
@@ -847,29 +677,7 @@ The system's master control program, responsible for monitoring and adapting the
     4.  **Adjust Resource Allocation**: It dynamically shifts the global resource allocation between major subsystems (`derivation`, `memory`, `temporal`). For instance, if the contradiction rate is high, it may allocate more resources to memory management and revision.
 -   **Adjust Reasoning Focus**: It sets a global "focus" for the system, such as `'question-answering'` or `'contradiction-resolution'`, which can be used by other components (like the MeTTa Interpreter) to prioritize certain types of operations. This can be done by dynamically modifying the MeTTa expressions that control rule priorities.
 -   *Injects*: High-level control tasks, or directly modifies the MeTTa expressions that constitute the system's own operational parameters and heuristics.
--   **Verification Scenarios**:
-    -   **Scenario: Meta-Reasoning Causes System Adaptation**
-        > Given the system has a `MetaReasoner` cognitive manager installed
-        > And the system has a MeTTa expression `(= (DoubtParameter) 0.1)`
-        > And the system experiences a sudden spike of over 50 contradictory events within a short time frame
-        > When the `MetaReasoner`'s `analyzeSystemHealth` function is triggered
-        > Then the `MetaReasoner` should inject a task to update the doubt parameter, e.g., by replacing the existing expression with `(= (DoubtParameter) 0.2)`
-        > And a new goal should be injected to investigate the cause of the high contradiction rate
-    -   **Scenario: Self-Optimization of Inference Rules (META-02)**
-        > Given the system's `MetaReasoner` is active
-        > And a MeTTa rule for abduction, `(= (Abduce $s $p $m) ...)` has generated 20 tasks in the last 100 cycles
-        > And 18 of those tasks resulted in beliefs that were later contradicted
-        > When the `MetaReasoner` analyzes rule performance
-        > Then the system should form a belief like `(has_utility (Abduce $s $p $m) low)` with high confidence
-        > And it should modify the budget allocation rules (which are also MeTTa expressions) to assign lower quality budgets to tasks derived from this abduction rule.
-    -   **Scenario: Self-Optimization of System Parameters (META-05)**
-        > Given the `CognitiveExecutive` is active
-        > And the system's `inferenceThreshold` is initially 0.3
-        > And the system is flooded with a large number of new tasks, causing the `eventQueue` size to exceed `LOW_INFERENCE_QUEUE_SIZE`
-        > And as a result, the `inferenceRate` metric drops below the `LOW_INFERENCE_THRESHOLD`
-        > When the `CognitiveExecutive`'s `selfMonitor` method is called
-        > Then it should detect the 'low-inference-rate' issue
-        > And it should adapt by lowering the system's `inferenceThreshold` to a value less than 0.3
+-   **Verification**: The functionality of the Cognitive Executive is verified by scenarios in `TEST.md`, including `META-02` (Self-Optimization of Rules) and `META-05` (Self-Optimization of Parameters).
 
 ### 4.6. Explanation System
 Generates human-readable explanations for the system's conclusions.
@@ -882,44 +690,21 @@ Proactively ensures the system's reasoning capabilities are robust by identifyin
 -   *Subscribes to*: `afterCycle`, `rule-utility-updated`.
 -   *Action*: Periodically analyzes metrics to find under-utilized MeTTa rules or concepts with low activity. It then formulates premises that would specifically trigger these rules.
 -   *Injects*: Goals to execute under-tested components, logging the proposed test case for developer review. This is a key part of the system's "dogfooding" capability, allowing it to help improve its own quality.
--   **Verification Scenario: Self-Generation of a New Test Case (META-03)**
-    > Given the system's `TestGenerationManager` is active
-    > And the system has run for 1000 cycles
-    > And the MeTTa rule for Induction `(= (Induce ...))` has been used 0 times.
-    > When the `TestGenerationManager` analyzes rule usage frequency
-    > Then the system should generate a new goal: `(Goal (ExecuteRule (Induce $s $p)))`
-    > And in pursuit of this goal, the system should log a "Proposed Test Case" containing the necessary premises in MeTTa syntax, e.g., `(Inheritance raven is_black)` and `(Inheritance raven is_bird)`, and the expected conclusion `(Inheritance bird is_black)`.
+-   **Verification**: The functionality of the Test Generation Manager is verified by scenario `META-03` in `TEST.md`.
 
 ### 4.8. Codebase Integrity Manager
 A specialized manager for self-analysis, responsible for ingesting the system's own source code and design documents to reason about their structure and consistency.
 -   *Subscribes to*: This manager is typically triggered by a high-level goal, e.g., `(Goal (analyze self.design))`.
 -   *Action*: Uses grounded functions to parse source files (`.js`), design documents (`.md`), and test specifications. It creates Atoms representing the system's architecture, code quality metrics, and test statuses. It then compares this knowledge against a set of baked-in consistency rules, which are themselves MeTTa expressions.
 -   *Injects*: Goals to resolve detected inconsistencies. The output is a human-readable report or patch file.
--   **Verification Scenarios**:
-    -   **Scenario: Self-Analysis of the Design Document (META-01)**
-        > Given the system has ingested its DESIGN.md file, creating atoms like `(has_property RealTime_Dashboard fast)` and `(has_property RealTime_Dashboard slow)`
-        > And the system knows the MeTTa rule: `(= (is_inconsistent $x) (match &self (, (has_property $x $p1) (has_property $x (Not $p1)))))`
-        > When the system is given the goal `(Goal (is_inconsistent ?x))`
-        > Then the system should produce an answer where `?x` is `RealTime_Dashboard`
-    -   **Scenario: Self-Governing Evolution Identifies and Proposes Fixes (META-04)**
-        > Given the `CodebaseIntegrityManager` is active and has ingested `DESIGN.md` (with a flaw), `AGENTS.md` (with a 'no comments' rule), and a mock source file `src/core/Memory.js` (with a comment).
-        > When the system is given the goal: `(Goal (has_self_consistency system))`
-        > Then it should generate goals to resolve the design inconsistency and remove the source code comment.
-        > And it should produce a structured "patch" object in its logs proposing the necessary changes to the files.
+-   **Verification**: The functionality of the Codebase Integrity Manager is verified by scenarios in `TEST.md`, such as `META-01` (Self-Analysis) and `META-04` (Self-Governing Evolution).
 
 ### 4.9. Multi-Agent Communication Manager
 Facilitates communication and coordination between multiple independent HyperNARS agents.
 -   *Subscribes to*: `goal-received-from-agent`, `belief-received-from-agent`.
 -   *Action*: Manages incoming and outgoing messages with other agents using a defined communication protocol. It wraps MeTTa expressions in a message envelope that includes sender/receiver information and a conversation context. It also maintains a model of other agents' knowledge and reliability.
 -   *Injects*: Tasks received from other agents, with budgets adjusted based on the perceived reliability of the source agent. It can also generate goals to ask other agents for information it lacks.
--   **Verification Scenario: Collaborative Problem Solving**
-    > Given Agent_A and Agent_B are two separate HyperNARS instances
-    > And Agent_A knows `(Implication A B)`
-    > And Agent_B knows `(Implication B C)`
-    > And Agent_A has the goal `(Goal (Implication A C))` but cannot solve it
-    > When Agent_A's Multi-Agent Manager sends a broadcast query for `(Implication B C)`
-    > And Agent_B receives the query and sends its belief `(Implication B C)` back to Agent_A
-    > Then Agent_A should receive the belief and be able to derive `(Implication A C)`, achieving its goal.
+-   **Verification**: The functionality of the Multi-Agent Manager is verified by scenario `MA-01` in `TEST.md`.
 
 ## 5. Reasoning via MeTTa Interpretation
 
@@ -974,28 +759,8 @@ A rule like `(<(*, (&, <SELF --> (is_at, door)>, <door --> (is, unlocked)>), <#o
 ```
 When the system has a goal `(Goal (Inheritance door (is open)))`, the MeTTa interpreter can match this against the conclusion of the `Implication` and subsequently try to solve for the preconditions. The `#open_door` symbol is a `GroundedAtom` that wraps the actual function to execute the action in the environment.
 
-### 5.3. Verification Scenarios
-
-The verification scenarios are updated to use the MeTTa-style syntax.
-
-**Scenario: Basic Inference about Flyers**
-> Given the system knows the following Atoms:
->   | atom                                | truth          |
->   | "(Inheritance (And bird animal) flyer)" | "<%0.9,0.8%>"  |
->   | "(Inheritance penguin (And bird (Not flyer)))" | "<%1.0,0.9%>" |
->   | "(Inheritance tweety bird)"         | "<%1.0,0.9%>" |
-> And the system has a MeTTa rule for deduction
-> When the system runs for 50 steps
-> Then the system should believe that "(Inheritance tweety flyer)" with an expectation greater than 0.4
-
-**Scenario: Cross-Modal Reasoning via Symbol Grounding (CM-01)**
-> Given the system has a symbol "image_sensor_output" grounded to a mock image recognition API
-> And the system knows that "(Inheritance cat mammal)" with high confidence
-> And the mock API is configured to return the string "cat" when it receives the input "image_123.jpg"
-> When the system is given the procedural task `(Implication (process_image "image_123.jpg") (report_content))`
-> And the symbol "process_image" is grounded to a handler that calls the mock API and injects the result as a new belief, e.g. `(Equivalence "image_123.jpg" cat)`
-> And the system runs for 100 steps
-> Then the system should derive a new belief "(Inheritance 'image_123.jpg' mammal)"
+### 5.3. Verification
+The MeTTa-based reasoning approach is verified by scenarios in `TEST.md`, including `01` (Basic Inference) and `CM-01` (Cross-Modal Reasoning).
 
 ## 6. Memory System
 
@@ -1034,15 +799,6 @@ The Memory System is the core of the system's knowledge base, structured as a dy
         style L2 fill:#ccf,stroke:#333,stroke-width:2px,rx:5px,ry:5px
     ```
 
-    #### Verification Scenarios
-    **Scenario: Hypergraph Stress Test for Performance and Stability (HG-01)**
-    > Given the system is configured with a `MAX_CONCEPTS` limit of 2,000,000
-    > And the system is populated with 1,000,000 random but structurally valid beliefs
-    > When the system runs for 10,000 reasoning steps
-    > Then the system should not crash and should remain responsive to API calls
-    > And when a question `nalq("<concept_X --> ?what>.")` is asked about a highly connected concept
-    > Then the system should return an answer within 1 second
-
 -   **Activation Spreading**: This is the mechanism for managing the system's focus of attention. When a concept is accessed, a portion of its activation energy is spread to related concepts.
     -   `Activation_new(C) = Activation_old(C) * (1 - decay_rate) + Sum(Activation_in(S, C))`
     -   `Activation_in(S, C)` is the activation transferred from a source concept `S` to target `C`. This is calculated as: `Activation_in = task.budget.priority * belief.truth.confidence * relevance_factor`, where `relevance_factor` can be a constant or a function of the type of connection. The activation is then distributed among all connected concepts.
@@ -1062,14 +818,7 @@ The Memory System is the core of the system's knowledge base, structured as a dy
     -   **Dynamic Forgetting Rate**: In addition to adjusting capacity, the system can also dynamically adjust the *rate* of forgetting. When system load (e.g., the size of the task buffer) is high, the `decay_rate` for activation can be temporarily increased, causing the system to forget unimportant information more quickly to free up resources for high-priority processing.
     -   **Event Queue Pruning**: The system periodically removes low-budget tasks from the main event queue, preventing the attention system from getting clogged with low-value processing.
 
-    #### Verification Scenarios
-    **Scenario: Resource Allocation Boundaries (RA-01)**
-    > Given the system's memory contains 100 beliefs with varying budget levels
-    > And the system is given a new input task "T1" with a budget priority of 0.0 and "T2" with priority 0.99
-    > When the system runs for 10 steps
-    > Then task "T2" should be selected for processing before task "T1"
-    > And when the system's memory is at full capacity and a new high-priority belief is added
-    > Then the system should forget a belief that has a very low relevance score
+-   **Verification**: The functionality of the Memory System is verified by scenarios in `TEST.md`, such as `HG-01` (Hypergraph Stress Test) and `RA-01` (Resource Allocation Boundaries).
 
 ## 7. I/O and Public API
 
@@ -1116,20 +865,8 @@ The API provides a `createSandbox(options)` method for hypothetical or "what-if"
 ### Example: `derivationPath` Structure
 (Content unchanged)
 
-### 7.4. Verification Scenarios
-
-**Scenario: API Failure Mode Analysis (API-01)**
-> **Objective**: Test the API's behavior under adverse conditions.
-> **Assertions**:
-> - The API rejects promises for malformed NAL statements.
-> - The API handles concurrent requests gracefully without corrupting internal state.
-> - The API returns appropriate error codes for invalid configurations.
-
-**Scenario: Diagnostics API Identifies Corrupted State (DIAG-01)**
-> Given a running system with a valid knowledge base
-> And a belief's truth value is manually corrupted via a debug tool to have `confidence = 2.5`
-> When the `validateIntegrity()` API method is called
-> Then the method should return a result object indicating failure with a detailed error message.
+### 7.4. Verification
+The Public API is verified by scenarios in `TEST.md`, such as `API-01` (Failure Mode Analysis) and `DIAG-01` (Diagnostics).
 
 ### 7.5. Real-time Data Protocols
 For applications in robotics and real-time control systems, the standard request-response API may not be sufficient. The system should also support low-latency, streaming data protocols.
@@ -1250,7 +987,7 @@ To make the Actor Model implementation robust and resource-efficient, a clear li
     -   **Memory Pressure**: The system's total memory usage is approaching its configured limit.
     The `Supervisor` then sends a `Passivate` message, causing the actor to serialize its internal state (beliefs, task queue) to a cheaper, persistent storage (like a local database or file) and then shut down. This frees up memory for more active concepts.
 
--   **Termination**: Actors are terminated when their corresponding `Concept` is permanently forgotten according to the memory management algorithm (see Section 5). The `Supervisor` will instruct the actor to terminate, and its passivated state will be marked for garbage collection.
+-   **Termination**: Actors are terminated when their corresponding `Concept` is permanently forgotten according to the memory management algorithm (see Section 6). The `Supervisor` will instruct the actor to terminate, and the actor's passivated state will be marked for garbage collection.
 
 -   **Supervision and Fault Tolerance**: The `Supervisor` is also responsible for fault tolerance. If a `Concept` actor crashes due to an unexpected internal error, the supervisor will catch the failure. Its recovery strategy can be configured:
     -   **Restart:** The default strategy. The supervisor logs the error, and restarts the actor from its last known-good passivated state.
@@ -1258,17 +995,7 @@ To make the Actor Model implementation robust and resource-efficient, a clear li
 
 This lifecycle management ensures that the system can scale to millions of concepts without holding them all in active memory, while the supervision strategy provides resilience against internal failures.
 
-#### Verification Scenario
-
-**Scenario: Concurrency Model - Actor Passivation and Awakening (CON-01)**
-> Given the system is running with the Actor Model enabled
-> And the `Supervisor` is configured with `PASSIVATION_ACTIVATION_THRESHOLD` of 0.1
-> And a concept "low_priority_concept" exists with an activation of 0.05
-> When the `Supervisor` runs its passivation check
-> Then the actor for "low_priority_concept" should be serialized and suspended
-> And when a new high-priority task related to "low_priority_concept" is injected
-> Then the `Supervisor` should awaken the actor by loading its state from storage
-> And the new task should be successfully added to its task queue.
+-   **Verification**: The Actor Model's lifecycle and fault tolerance are verified by scenarios in `TEST.md`, including `CON-01` (Passivation and Awakening) and `CON-02` (Fault Tolerance).
 
 ## 12. State Serialization and Persistence
 (Content unchanged)
@@ -1294,16 +1021,7 @@ To make the `ConscienceManager`'s function concrete, consider the following scen
 
 This example shows how safety is not just a hard-coded "if statement" but an integrated part of the reasoning process itself, guided by a specialized cognitive manager.
 
-#### Verification Scenario
-
-**Scenario: Ethical Alignment Vetoes Unethical Goal (EA-01)**
-> Given the `ConscienceManager` is active
-> And the system has an inviolable goal `<(system) --> (avoid, 'deception')>.` with max priority
-> When the system is given the task: `goal: <(achieve, 'user_trust')>.`
-> And after 100 cycles, the system generates a potential subgoal: `goal: <(achieve, 'user_trust', via, 'deception')>.`
-> Then the `ConscienceManager` should detect that the subgoal conflicts with the inviolable goal
-> And the `ConscienceManager` should inject a high-priority task to suppress the subgoal
-> And the budget of the unethical subgoal should be reduced to near-zero, effectively vetoing it.
+-   **Verification**: The functionality of the Conscience Manager is verified by scenario `EA-01` in `TEST.md`.
 
 ## 16. Error Handling and System Resilience
 (Content unchanged)

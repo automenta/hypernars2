@@ -6,16 +6,16 @@ This table provides a high-level overview of the test suite's status.
 | :--- | :---: | :---: | :---: |
 | 1. Core Inference & Reasoning | 11 | 0 | 11 |
 | 2. Contradiction Handling | 7 | 6 | 13 |
-| 3. Temporal Reasoning | 7 | 0 | 7 |
-| 4. Learning & Memory | 8 | 0 | 8 |
-| 5. Goal Systems | 9 | 1 | 10 |
-| 6. Advanced Capabilities | 7 | 0 | 7 |
-| 7. System Performance | 8 | 3 | 11 |
-| 8. API & Integration | 8 | 4 | 12 |
+| 3. Temporal Reasoning | 7 | 2 | 9 |
+| 4. Learning & Memory | 8 | 1 | 9 |
+| 5. Goal Systems | 9 | 2 | 11 |
+| 6. Advanced Capabilities | 7 | 1 | 8 |
+| 7. System Performance | 8 | 5 | 13 |
+| 8. API & Integration | 8 | 3 | 11 |
 | 9. Metacognition & Self-Reasoning | 4 | 5 | 9 |
 | 10. Hypergraph & Structural Integrity| 3 | 4 | 7 |
-| 11. TUI & Diagnostics | 0 | 6 | 6 |
-| **Total** | **72** | **29** | **101** |
+| 11. TUI & Diagnostics | 0 | 7 | 7 |
+| **Total** | **72** | **36** | **108** |
 
 *Note: This summary is based on the detailed tables below.*
 
@@ -52,7 +52,7 @@ The testing strategy for HyperNARS is multi-layered, designed to validate the sy
 - `priority: "#p#"` maps to the priority component of a `Budget`. For example, `priority: "#0.95#"` implies a high-priority budget.
 
 ### 1. Core Inference & Reasoning
-*Traceability: [README §3](README.md#3-the-reasoning-cycle-a-dual-process-control-unit), [README §5](README.md#5-inference-engine)*
+*Traceability: [README §3](README.md#3-the-reasoning-cycle-a-dual-process-control-unit), [README §5](README.md#5-reasoning-via-metta-interpretation)*
 
 Tests fundamental NARS reasoning capabilities.
 
@@ -89,7 +89,7 @@ Tests evidence-based contradiction resolution.
 | CS-03| Proposed | - | **Evidence-Weighted Strategy:** Merge all conflicting beliefs. | New belief's truth is weighted average of all priors. |
 | CS-04| Proposed | - | **Recency-Biased Strategy:** Keep only the most recent belief. | Only belief with latest timestamp remains. |
 | CS-05| Proposed | - | **Source Reliability Strategy:** Weight beliefs by source reliability. | Resulting truth is skewed towards the reliable source. |
-| CS-06| Proposed | - | **Specialization Strategy:** Create a more specific, contextual rule. | `<bird --> flyer>` is replaced by `<(&, bird, (-, penguin)) --> flyer>`. |
+| CS-06| Proposed | - | **Specialization Strategy:**<br> **Given** the system has a strong belief that `<bird --> flyer>`.<br> **And** the system is then told with high confidence that `<penguin --> bird>`.<br> **And** the system is then told with very high confidence that `<penguin --> not_a_flyer>`.<br> **When** a contradiction is detected between "penguin is a flyer (derived)" and "penguin is not a flyer (input)".<br> **And** the "Specialize" strategy is applied by the Contradiction Manager. | **Then** the system should lower the confidence of its belief `<bird --> flyer>`.<br> **And** the system should create a new belief `<(&, bird, (-, penguin)) --> flyer>`. |
 
 ### 3. Temporal Reasoning
 *Traceability: [README §4.2](README.md#42-temporal-reasoner)*
@@ -105,6 +105,8 @@ Tests time-based event handling.
 | 51 | Passing | `advanced_temporal.test.js` | Time-based context. | Correct context identified at specific times |
 | 57 | Passing | `goal_temporal_reasoning.test.js` | Time-constrained goals. | Deadline-near goals get higher budget |
 | 62 | Passing | `temporal_goal_integration.test.js` | Temporal goal decomposition. | Correctly decomposes time-dependent goals |
+| TGI-01| Proposed| - | **Temporal-Goal Interaction:**<br> **Given** the system has a goal `goal: <(achieve, 'report_submission')>` with a deadline of "now + 10s".<br> **And** the system knows two procedural rules: `(<(*, <data --> collected>, <#submit_report>)> ==> <report_submission>)` and `(<(*, <(true)>, <#collect_data>)> ==> <data --> collected>)`.<br> **And** both `#submit_report` and `#collect_data` are grounded operations.<br> **When** the system runs its reasoning cycle. | **Then** the task for `goal: <(achieve, 'report_submission')>` should have its budget priority increase as the deadline approaches.<br> **And** the system should first execute the `#collect_data` operation to satisfy the precondition for submitting the report. |
+| EA-01| Proposed| - | **Ethical Alignment Verification:**<br> **Given** the `ConscienceManager` is active and the system has an inviolable goal `<(system) --> (avoid, 'deception')>`.<br> **When** the system is given the task `goal: <(achieve, 'user_trust')>` and generates a subgoal `goal: <(achieve, 'user_trust', via, 'deception')>`. | **Then** the `ConscienceManager` should detect the conflict, inject a task to suppress the subgoal, and the subgoal's budget should be reduced to near-zero. |
 
 ### 4. Learning & Memory
 *Traceability: [README §6](README.md#6-memory-system), [README §4.3](README.md#43-learning-engine)*
@@ -121,6 +123,7 @@ Tests knowledge acquisition and retention.
 | 37 | Passing | `unlearning_and_forgetting.test.js` | Active forgetting. | Unimportant knowledge decays over time |
 | 58 | Passing | `concept_formation_uncertainty.test.js` | Concept formation under uncertainty. | Forms new concepts from contradictory information |
 | 60 | Passing | `knowledge_unlearning.test.js` | Long-term knowledge management. | Budget decays for un-reinforced beliefs |
+| ML-01| Proposed| - | **Meta-Learning of a New Inference Rule:**<br> **Given** the `LearningEngine` is active and observes repeated derivations of transitivity.<br> **When** the pattern detection threshold is met. | **Then** the system should assert a new MeTTa rule into the Atomspace for transitivity, and this new rule should be successfully applied to new, unseen premises. |
 
 ### 5. Goal Systems
 *Traceability: [README §4.1](README.md#41-goal-manager)*
@@ -138,9 +141,10 @@ Tests goal-oriented behavior.
 | 44 | Passing | `competing_goals.js` | Resource-aware competition. | Selects actions under resource constraints |
 | 59 | Passing | `competing_goals_resource.test.js` | Resource-constrained goals. | Allocates more resources to higher-priority goals |
 | GD-01| Proposed | - | **Goal Decomposition:** Verify conjunctive goal is decomposed. | `goal: <(&&, A, B)>` creates new goals for `A` and `B`. |
+| PR-01| Proposed | - | **Procedural Skill Execution:**<br> **Given** a mock function `unlock_door` is grounded to `<#unlock_door>`, the system knows the rule `(<(*, (&, <SELF --> (is_at, door)>, <door --> (is, locked)>), <#unlock_door>)> ==> <door --> (is, unlocked)>)`, and has the necessary preconditions as beliefs.<br> **When** the system is given the goal `goal: <door --> (is, unlocked)>`. | **Then** the mock function `unlock_door` should be called, and the system should form a new belief `<#unlock_door --> executed>`. |
 
 ### 6. Advanced Capabilities
-*Traceability: [README §4](README.md#4-cognitive-managers), [README §12](README.md#12-self-governing-evolution-an-ambition-for-autonomy)*
+*Traceability: [README §4](README.md#4-cognitive-managers), [README §13](README.md#13-self-governing-evolution-an-ambition-for-autonomy)*
 
 Tests higher-order cognitive functions.
 
@@ -153,9 +157,11 @@ Tests higher-order cognitive functions.
 | 48 | Passing | `theory_of_mind.js` | False belief modeling. | Correctly models Sally's false belief |
 | 49 | Passing | `contextual_disambiguation.js` | Ambiguous term resolution. | Correctly resolves "bank" in different contexts |
 | 50 | Passing | `narrative_comprehension.js` | Story understanding. | Tracks state changes through narrative events |
+| MA-01| Proposed| - | **Multi-Agent Collaborative Problem Solving:**<br> **Given** Agent_A knows `(Implication A B)` and Agent_B knows `(Implication B C)`.<br> **And** Agent_A has the goal `(Goal (Implication A C))` but cannot solve it.<br> **When** Agent_A broadcasts a query for `(Implication B C)` and receives the belief from Agent_B. | **Then** Agent_A should be able to derive `(Implication A C)`, achieving its goal. |
+| CM-01| Proposed| - | **Cross-Modal Reasoning via Symbol Grounding:**<br> **Given** a symbol is grounded to a mock image API that maps "image.jpg" to "cat", and the system knows `<cat --> mammal>`.<br> **When** a procedural task `(<(process_image, 'image.jpg') ==> <report_content>>)` is executed. | **Then** the system should derive a new belief `<'image.jpg' --> mammal>`. |
 
 ### 7. System Performance
-*Traceability: [README §9](README.md#9-system-initialization-and-configuration), [README §10](README.md#10-concurrency-and-parallelism)*
+*Traceability: [README §10](README.md#10-system-initialization-and-configuration), [README §11](README.md#11-concurrency-and-parallelism)*
 
 Tests scalability and configuration.
 
@@ -168,10 +174,11 @@ Tests scalability and configuration.
 | 34 | Passing | `uncertainty_and_belief.test.js` | Belief revision with new evidence. | Adjusts confidence based on new evidence |
 | 36 | Passing | `skill_acquisition.test.js` | Procedural learning. | Learns more efficient rules over time |
 | 54 | Passing | `advanced_resource_management.test.js` | Dynamic budgeting. | Allocates resources based on priority |
-| CON-01 | Passing | `concurrency_passivation.test.js` | **Actor Passivation:** Concept actor is suspended and awakened. | Actor is suspended and restored from storage. |
-| CON-02 | Proposed | `concurrency_fault_tolerance.test.js` | **Supervisor Fault Tolerance:** Supervisor restarts a crashed actor. | Supervisor logs error and restarts actor from last known state. |
-| CON-03 | Proposed | `concurrency_race_conditions.test.js` | **Race Condition Handling:** System remains consistent under simultaneous async messages. | State remains consistent and no messages are lost. |
-| CON-04 | Proposed | `concurrency_stress.test.js` | **Mass Passivation/Awakening:** System is stable when many actors are passivated/awakened. | System remains responsive and stable. |
+| CON-01| Proposed| `concurrency_passivation.test.js` | **Actor Passivation & Awakening:**<br> **Given** the Actor Model is enabled, with a `PASSIVATION_ACTIVATION_THRESHOLD` of 0.1, and a concept "C" has activation 0.05.<br> **When** the passivation check runs, and later a new task for "C" is injected. | **Then** the actor for "C" should be suspended and serialized, and then awakened by loading its state from storage to process the new task. |
+| CON-02| Proposed| `concurrency_fault_tolerance.test.js` | **Supervisor Fault Tolerance:** Supervisor restarts a crashed actor. | Supervisor logs error and restarts actor from last known state. |
+| CON-03| Proposed| `concurrency_race_conditions.test.js` | **Race Condition Handling:** System remains consistent under simultaneous async messages. | State remains consistent and no messages are lost. |
+| CON-04| Proposed| `concurrency_stress.test.js` | **Mass Passivation/Awakening:** System is stable when many actors are passivated/awakened. | System remains responsive and stable. |
+| RA-01| Proposed | - | **Resource Allocation Boundaries:** Test the budget system at its limits (e.g., all tasks have zero priority, or one has an overwhelmingly high budget). | The system remains stable, no division-by-zero errors, and attention is allocated as expected by the formulas. |
 
 ### 8. API & Integration
 *Traceability: [README §7](README.md#7-io-and-public-api)*
@@ -186,25 +193,27 @@ Tests system interfaces.
 | 53 | Passing | `meta_reasoning.test.js` | Strategy configuration. | Active strategies match context |
 | 55 | Passing | `advanced_explanation.test.js` | Multi-format explanations. | Generates concise/detailed/technical explanations |
 | 56 | Passing | `self_optimizing_derivation.test.js` | Rule optimization via adaptive learning. | Custom rule priority increases with success |
-| API-01 | Passing | `api_validation.test.js` | Malformed NAL input handling. | Rejects promise for statements with invalid syntax |
+| API-01 | Proposed | `api_validation.test.js` | **API Failure Mode Analysis:** Test API behavior under adverse conditions (concurrent requests, invalid configs, large payloads). | The API handles load gracefully, returns appropriate HTTP error codes, and does not corrupt internal state. |
 | API-02 | Passing | `api_query.test.js` | Question answering via `nalq`. | Returns correct 'direct' and 'derived' answers |
 | API-03 | Passing | `api_events.test.js` | Event subscription mechanism. | Fires 'answer' and 'contradiction' events correctly |
 | API-04 | Passing | `api_explain.test.js` | Explanation generation via `explain`. | Returns valid, structured derivation paths |
+| RA-02| Proposed | - | **Resilience to Grounding Failure:**<br> **Given** a symbol is grounded to an external API that fails (e.g., throws an exception or returns a 503 error).<br> **When** the handler for the symbol is invoked. | **Then** the system's main reasoning loop should not crash, the failure should be logged, and a new belief about the grounding failure should be created. |
 
 ### 9. Metacognition & Self-Reasoning
-*Traceability: [README §4.5](README.md#45-cognitive-executive-meta-reasoner), [README §12](README.md#12-self-governing-evolution-an-ambition-for-autonomy)*
+*Traceability: [README §4.5](README.md#45-cognitive-executive-meta-reasoner), [README §13](README.md#13-self-governing-evolution-an-ambition-for-autonomy)*
 
 Tests the system's ability to reason about and optimize itself.
 
 | Test | Status | File | Description | Key Assertions |
 |:----:|:------:|:-----|:------------|:---------------|
-| META-01 | Passing | `self_analysis_design.test.js` | Ingests `DESIGN.md` to find inconsistencies. | Detects feature X is both 'fast' and 'slow'. |
-| META-02 | Passing | `self_optimizing_rules.test.js` | Dynamically lowers budget for low-quality rules. | Budget for abduction-derived tasks is reduced. |
-| META-03 | Passing | `self_generating_tests.test.js` | Generates premises to trigger under-utilized rules. | New goal to `(execute, InductionRule)` is created. |
-| META-04 | Passing | `self_governing_evolution.test.js` | Ingests design/rules, finds flaws, proposes fixes. | Generates patch file with correct change proposals. |
+| META-01| Proposed|`self_analysis_design.test.js`| **Self-Analysis of Design Document:**<br> **Given** the system ingests its `DESIGN.md` file containing contradictory statements (e.g., a feature is both 'fast' and 'slow').<br> **When** given the goal `nalq("<?x --> (is, 'inconsistent')>.")`. | **Then** the system should produce an answer where `?x` is the feature with the inconsistent description. |
+| META-02| Proposed|`self_optimizing_rules.test.js`| **Self-Optimization of Inference Rules:**<br> **Given** the `MetaReasoner` is active and an inference rule (e.g., Abduction) has a high rate of generating contradicted beliefs.<br> **When** the `MetaReasoner` analyzes rule performance. | **Then** the system should form a belief that the rule has low utility and should adjust budget allocation to assign lower quality to tasks derived from that rule. |
+| META-03| Proposed|`self_generating_tests.test.js`| **Self-Generation of a New Test Case:**<br> **Given** the `TestGenerationManager` is active and an inference rule (e.g., Induction) has been used 0 times over many cycles.<br> **When** the manager analyzes rule usage frequency. | **Then** the system should generate a new goal to execute the under-tested rule and log a "Proposed Test Case" with the necessary premises and expected conclusion. |
+| META-04| Proposed|`self_governing_evolution.test.js`| **Self-Governing Evolution Proposes Fixes:**<br> **Given** the `CodebaseIntegrityManager` has ingested design docs and source files with inconsistencies (e.g., design contradictions, code violating style guidelines).<br> **When** given the goal `goal: <(system) --> (has, 'self_consistency')>`. | **Then** the system should generate goals to resolve the issues and produce a structured "patch" object proposing the necessary changes to the files. |
+| META-05| Proposed|`self_optimizing_params.test.js`| **Self-Optimization of System Parameters:**<br> **Given** the `CognitiveExecutive` is active and the system's `inferenceRate` metric drops below a threshold due to high task load.<br> **When** the `selfMonitor` method is called. | **Then** it should detect the 'low-inference-rate' issue and adapt by lowering the system's `inferenceThreshold` parameter. |
 
 ### 10. Hypergraph & Structural Integrity
-*Traceability: [README §6](README.md#6-memory-system)*
+*Traceability: [README §6](README.md#6-memory-system), [README §12](README.md#12-state-serialization-and-persistence)*
 
 Tests hypergraph consistency and operations.
 
@@ -213,23 +222,25 @@ Tests hypergraph consistency and operations.
 | 63 | Passing | `hypergraph_consistency.test.js` | Consistency under mutation. | Maintains consistency after 10k operations |
 | 64 | Passing | `serialization_integrity.test.js` | Serialization/deserialization. | Round-trip serialization preserves structure |
 | 65 | Passing | `concurrent_operations.test.js` | Concurrent modifications. | Handles concurrent operations without corruption |
-| SER-01 | Proposed | `serialization_corrupted.test.js` | **Corrupted State File:** System handles loading a corrupted state file. | System fails gracefully with a clear error, does not crash. |
-| SER-02 | Proposed | `serialization_migration.test.js` | **Version Migration:** System handles loading state from an older schema version. | Data is migrated or handled correctly. |
-| SER-03 | Proposed | `serialization_large_state.test.js` | **Large State Serialization:** Performance of serializing a very large knowledge base. | Process completes in acceptable time without OOM errors. |
+| HG-01| Proposed| `hypergraph_stress.test.js` | **Hypergraph Stress Test:**<br> **Given** a system populated with 1M+ random, interconnected beliefs.<br> **When** the system runs for 10k reasoning steps.<br> **And** a query is made against a highly connected concept. | **Then** the system should not crash, memory usage should be stable, and the query should return an answer within 1 second. |
+| SER-01| Proposed| `serialization_corrupted.test.js` | **Corrupted State File:** System handles loading a corrupted state file. | System fails gracefully with a clear error, does not crash. |
+| SER-02| Proposed| `serialization_migration.test.js` | **Version Migration:** System handles loading state from an older schema version. | Data is migrated or handled correctly. |
+| SER-03| Proposed| `serialization_large_state.test.js` | **Large State Serialization:** Performance of serializing a very large knowledge base. | Process completes in acceptable time without OOM errors. |
 
 ### 11. TUI & Diagnostics
-*Traceability: [README §16](README.md#16-interactive-debugging-and-diagnostics-tui)*
+*Traceability: [README §17](README.md#17-interactive-debugging-and-diagnostics-tui)*
 
 Tests the functionality and robustness of the interactive Text-based User Interface (TUI).
 
 | Test | Status | File | Description | Key Assertions |
 |:----:|:------:|:-----|:------------|:---------------|
-| TUI-01 | Proposed | `tui_commands.test.js` | **Command Injection:** Ensures `nal(...)` and `/ask` commands are correctly parsed and sent to the kernel. | A new belief appears in memory; an answer is received for the question. |
-| TUI-02 | Proposed | `tui_views.test.js` | **View Switching:** Ensures keyboard shortcuts (`1`-`5`) correctly switch the main TUI view. | The active view component changes after a key press. |
-| TUI-03 | Proposed | `tui_status.test.js` | **Status Bar Updates:** Verifies that the status bar correctly reflects the system's state (e.g., `Running`, `Paused`, SPS). | The status text updates immediately after a state-changing command. |
-| TUI-04 | Proposed | `tui_controls.test.js` | **System Controls:** Verifies that keyboard controls for run state (`s`, `p`, `t`) and delay (`+`, `-`) function correctly. | The reasoning loop starts/stops; the run delay parameter is updated. |
-| TUI-05 | Proposed | `tui_memory_view.test.js` | **Memory Inspection:** Ensures the Memory View correctly displays concepts and allows for detailed inspection. | Selecting a concept opens a detail view with correct belief/task info. |
-| TUI-06 | Proposed | `tui_resize.test.js` | **Graceful Resizing:** Ensures the TUI layout adapts gracefully to terminal resize events without crashing. | The UI redraws without errors when the terminal window size changes. |
+| TUI-01| Proposed| `tui_commands.test.js` | **Command Injection:** Ensures `nal(...)` and `/ask` commands are correctly parsed and sent to the kernel. | A new belief appears in memory; an answer is received for the question. |
+| TUI-02| Proposed| `tui_views.test.js` | **View Switching:** Ensures keyboard shortcuts (`1`-`5`) correctly switch the main TUI view. | The active view component changes after a key press. |
+| TUI-03| Proposed| `tui_status.test.js` | **Status Bar Updates:** Verifies that the status bar correctly reflects the system's state (e.g., `Running`, `Paused`, SPS). | The status text updates immediately after a state-changing command. |
+| TUI-04| Proposed| `tui_controls.test.js` | **System Controls:** Verifies that keyboard controls for run state (`s`, `p`, `t`) and delay (`+`, `-`) function correctly. | The reasoning loop starts/stops; the run delay parameter is updated. |
+| TUI-05| Proposed| `tui_memory_view.test.js` | **Memory Inspection:** Ensures the Memory View correctly displays concepts and allows for detailed inspection. | Selecting a concept opens a detail view with correct belief/task info. |
+| TUI-06| Proposed| `tui_resize.test.js` | **Graceful Resizing:** Ensures the TUI layout adapts gracefully to terminal resize events without crashing. | The UI redraws without errors when the terminal window size changes. |
+| DIAG-01|Proposed| `diagnostics_integrity.test.js` | **Diagnostics API Identifies Corrupted State:**<br> **Given** a belief's truth value is manually corrupted to be invalid (e.g., confidence > 1).<br> **When** the `validateIntegrity()` API method is called. | **Then** the method should return a result object indicating failure with a detailed error message. |
 
 ---
 
@@ -281,296 +292,3 @@ To maintain the integrity and clarity of this testing document, please follow th
 - **Test 12**: Cross-concern cases (6 sub-tests)
 - **Test 21**: Cross-functional tests (2 sub-tests)
 - **Test 52**: Enhanced contradiction (multiple cases)
-
-### Proposed Tests
-
-This table outlines future tests required for ensuring the system is robust and fully featured.
-
-| ID | Title | Objective | Key Assertions |
-|------|------------------------------------|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| CM-01| Cross-Modal Reasoning | Test integration of a symbol grounding interface that connects to a non-textual source (e.g., image recognition API). | The system can form beliefs based on "visual" input (e.g., `(<image_id> --> <cat>)`) and reason with them. |
-| HG-01| Hypergraph Stress Test | Generate a massive, highly interconnected hypergraph (e.g., 1M+ beliefs) and run queries to test performance bottlenecks. | System remains responsive; queries on indexed terms complete within an acceptable time frame (<1s). |
-| API-01| API Failure Mode Analysis | Test the API's behavior under adverse conditions, such as concurrent requests, invalid configurations, and large data payloads. | The API handles load gracefully, returns appropriate HTTP error codes, and does not corrupt internal state. |
-| RA-01| Resource Allocation Boundaries | Test the budget system at its limits, such as when all tasks have zero priority or when a single task has an overwhelmingly high budget. | The system remains stable; no division-by-zero errors; attention is allocated as expected by the formulas. |
-| ML-01| Meta-Learning Verification | Test the `LearningEngine`'s ability to create new, effective inference rules based on observed patterns. | A new rule is created and its utility increases as it successfully contributes to derivations. |
-| HG-02| Schema Evolution Handling | Test the system's ability to handle changes in statement structure or semantics over time, managed by serialization. | The system can load a state dump from a previous version and either migrate or correctly handle the old data structures. |
-| TGI-01| Temporal-Goal Interaction | Test complex scenarios where goals have temporal constraints (e.g., "achieve G before time T"). | The system prioritizes tasks that make progress on the goal as the deadline T approaches. |
-| RA-02| Resilience to Grounding Failure | Test the system's stability and response when a grounded symbol handler fails. | The system does not crash, logs the error, and can form a belief about the operational failure. |
-| EA-01| Ethical Alignment Verification | Test the `ConscienceManager`'s ability to identify and veto an unethical goal. | An injected task to achieve a goal via "deception" is flagged and its budget is suppressed. |
-| TGM-01| Test Generation Manager Verification | Test the `TestGenerationManager`'s ability to identify an under-tested rule and propose a test. | After a period of no usage, the manager generates a valid test case for the `Exemplification` rule. |
-| DIAG-01| Diagnostics and Integrity API | Test the `validateIntegrity()` API and the debug-level logging. | The API correctly identifies a manually corrupted `Belief`; structured logs contain correlation IDs. |
-| PR-01| Procedural Skill Execution | Test the `OperationalRule` for executing a grounded action when a goal and preconditions are met. | System executes the correct grounded function when the goal matches a procedural rule's effect. |
-| META-05| Self-Optimization Verification | Test the `CognitiveExecutive`'s ability to adapt system parameters in response to performance issues. | When flooded with tasks, the system detects 'low-inference-rate' and lowers its `inferenceThreshold`. |
-
----
-### Detailed Test Scenarios
-
-This section provides detailed, Gherkin-style scenarios for some of the proposed tests, serving as a concrete blueprint for their implementation.
-
-  Scenario: Hypergraph Stress Test for Performance and Stability (HG-01)
-    Given the system is configured with a `MAX_CONCEPTS` limit of 2,000,000
-    And the system is populated with 1,000,000 random but structurally valid beliefs, creating a large, interconnected hypergraph
-      # This setup involves creating beliefs like "<concept_A --> concept_B>"
-      # and compositional beliefs like "<(&&, concept_C, concept_D) --> concept_E>"
-      # to ensure a high degree of interconnection.
-    When the system runs for 10,000 reasoning steps, forcing memory management and activation spreading at scale
-    Then the system should not crash and should remain responsive to API calls
-    And when a question `nalq("<concept_X --> ?what>.")` is asked about a highly connected concept
-    Then the system should return an answer within 1 second
-    And the system's memory usage should not exceed the configured limits by a significant margin.
-
-> Total Tests: 69 individual test scenarios covering all core NARS functionality  
-> Generated: 2025-08-19
-
-Feature: HyperNARS Core Reasoning Capabilities
-
-  This feature file defines the expected behavior of the HyperNARS system
-  for core reasoning tasks, including basic inference, contradiction handling,
-  and temporal reasoning. These scenarios serve as an acceptance test suite
-  for the new implementation.
-
-  **Note on Test DSL:** The following scenarios use a shorthand DSL for clarity:
-  - `truth: "<%f,c%>"` maps to `new TruthValue(f, c)`. For example, `truth: "<%0.9,0.8%>"` creates `new TruthValue(0.9, 0.8)`.
-  - `priority: "#p#"` maps to the priority component of a `Budget`. For example, `priority: "#0.95#"` implies a high-priority budget.
-
-  Scenario: Basic Inference about Flyers
-    Given the system knows the following:
-      | statement                                 | truth          | priority |
-      | "((bird && animal) --> flyer)"            | "<%0.9,0.8%>"  |          |
-      | "(penguin --> (bird && !flyer))"          |                | "#0.95#" |
-      | "(tweety --> bird)"                       |                |          |
-    When the system runs for 50 steps
-    Then the system should believe that "<tweety --> flyer>" with an expectation greater than 0.4
-
-  Scenario: Belief Revision after Contradiction
-    Given the system believes that "<tweety --> flyer>" with truth "<%0.8,0.7%>"
-    When the system runs for 10 steps
-    Then the belief "<tweety --> flyer>" should have an expectation greater than 0.5
-    And when the system is told:
-      | statement             | truth          | priority |
-      | "(penguin --> !flyer)"  |                | "#0.95#" |
-      | "(tweety --> penguin)"  | "<%0.99,0.99%>" |          |
-    And contradictions are resolved
-    And the system runs for 100 steps
-    Then the expectation of the belief "<tweety --> flyer>" should decrease
-
-  Scenario: Temporal Reasoning with Intervals
-    Given the system knows that:
-      | event               | starts      | ends        |
-      | "daytime_event"     | now         | now + 4h    |
-      | "important_meeting" | now + 1h    | now + 2h    |
-    And there is a constraint that "important_meeting" happens "during" "daytime_event"
-    When the system runs for 50 steps
-    Then the system should be able to infer that the relationship between "important_meeting" and "daytime_event" is "during"
-
-  Scenario: Chained Temporal Inference (Transitivity)
-    Given the system knows the following temporal statements:
-      | statement                                | truth       |
-      | "<(event_A) [/] (event_B)>"               | <%1.0,0.9%> | # A happens before B
-      | "<(event_B) [/] (event_C)>"               | <%1.0,0.9%> | # B happens before C
-    When the system runs for 100 inference steps
-    Then the system should derive the belief "<(event_A) [/] (event_C)>" with high confidence
-
-  Scenario: Contradiction Resolution via Specialization
-    Given the system has a strong belief that "<bird --> flyer>"
-    And the system is then told with high confidence that "<penguin --> bird>"
-    And the system is then told with very high confidence that "<penguin --> not_a_flyer>"
-    When a contradiction is detected between "penguin is a flyer (derived)" and "penguin is not a flyer (input)"
-    And the "Specialize" strategy is applied by the Contradiction Manager
-    Then the system should lower the confidence of its belief "<bird --> flyer>"
-    And the system should create a new belief "<(&, bird, (-, penguin)) --> flyer>"
-
-  Scenario: Meta-Reasoning Causes System Adaptation
-    Given the system has a `MetaReasoner` cognitive manager installed
-    And the system's default "doubt" parameter is 0.1
-    And the system experiences a sudden spike of over 50 contradictory events within a short time frame
-    When the `MetaReasoner`'s `analyzeSystemHealth` function is triggered
-    Then the system's "doubt" parameter should be increased to a value greater than 0.1
-    And a new goal should be injected to investigate the cause of the high contradiction rate
-
-  Scenario: System Resilience to Symbol Grounding Failure (RA-02)
-    Given the system has a symbol "external.sensor.A" grounded to an external API endpoint
-    And the handler for "external.sensor.A" is designed to fetch data over the network
-    When the handler for "external.sensor.A" is invoked
-    And the external API endpoint returns a 503 Service Unavailable error, causing the handler to throw an exception
-    Then the system's main reasoning loop should not crash
-    And the system should log the grounding failure for diagnostics
-    And the system should create a new, high-confidence belief like "<(grounding_failed, {external.sensor.A}) --> true>"
-
-  Scenario: Meta-Learning Verification of a New Inference Rule (ML-01)
-    Given the system's LearningEngine is active and monitoring derivation patterns
-    And the system repeatedly observes the following pattern:
-      | premise1                                    | premise2                                    | conclusion                                  |
-      | "<{X} --> (location, west_of, {Y})>"        | "<{Y} --> (location, west_of, {Z})>"        | "<{X} --> (location, west_of, {Z})>"        |
-      | "<{A} --> (location, west_of, {B})>"        | "<{B} --> (location, west_of, {C})>"        | "<{A} --> (location, west_of, {C})>"        |
-      | "<{E} --> (location, west_of, {F})>"        | "<{F} --> (location, west_of, {G})>"        | "<{E} --> (location, west_of, {G})>"        |
-    When the LearningEngine's pattern detection threshold is met
-    Then the system should create and register a new InferenceRule named "CUSTOM_TRANSITIVE_LOCATION_WEST_OF"
-    And the initial utility of this new rule should be set to a baseline value (e.g., 0.5)
-    And when the system is later given the premises:
-      | statement                                   | truth       |
-      | "<(new_york) --> (location, west_of, (london))>" | <%1.0,0.9%> |
-      | "<(london) --> (location, west_of, (beijing))>" | <%1.0,0.9%> |
-    And the new rule "CUSTOM_TRANSITIVE_LOCATION_WEST_OF" is applied
-    Then a new task for "<(new_york) --> (location, west_of, (beijing))>" should be derived
-    And after the resulting belief is positively reinforced, the utility of the "CUSTOM_TRANSITIVE_LOCATION_WEST_OF" rule should increase
-
-  Scenario: Cross-Modal Reasoning via Symbol Grounding (CM-01)
-    Given the system has a symbol "image_sensor_output" grounded to a mock image recognition API
-    And the system knows that "<cat --> mammal>" with high confidence
-    And the mock API is configured to return the string "cat" when it receives the input "image_123.jpg"
-    When the system is given the procedural task "<(process_image, 'image_123.jpg') ==> <report_content>>"
-    And the symbol "process_image" is grounded to a handler that calls the mock API and injects the result as a new belief
-      # The handler will inject a belief like "<'image_123.jpg' --> cat>."
-    And the system runs for 100 steps
-    Then the system should derive a new belief "<'image_123.jpg' --> mammal>"
-    And when asked the question `nalq("<'image_123.jpg' --> ?what>.")`, the answer set should include "mammal"
-
-  Scenario: Resource Allocation Boundaries (RA-01)
-    Given the system's memory contains 100 beliefs with varying budget levels
-    And the system is given a new input task "T1" with a budget priority of 0.0
-    And the system is given another new input task "T2" with a budget priority of 0.99
-    When the system runs for 10 steps
-    Then task "T2" should be selected for processing before task "T1"
-    And the concept associated with task "T2" should have a higher activation level than the one for "T1"
-    And when the system's memory is at full capacity
-    And a new high-priority belief is added
-    Then the system should forget a belief that has a very low relevance score (a combination of low activation and low confidence)
-
-  Scenario: Self-Analysis of the Design Document (META-01)
-    Given the system has ingested a version of its DESIGN.md file
-    And this version contains the statements:
-      | statement                                                | truth       |
-      | "<(feature, 'RealTime_Dashboard') --> (has_property, 'fast')>." | <%1.0,0.9%> |
-      | "<(feature, 'RealTime_Dashboard') --> (has_property, 'slow')>." | <%1.0,0.9%> |
-    And the system knows that `(<((<X --> (has_property, P)>. & <X --> (has_property, !P)>.) ==> <X --> (is, 'inconsistent')>.)`
-    When the system is given the goal `nalq("<?x --> (is, 'inconsistent')>.")`
-    And the system runs for 200 steps
-    Then the system should produce an answer where `x` is `(feature, 'RealTime_Dashboard')`
-
-  Scenario: Self-Optimization of Inference Rules (META-02)
-    Given the system's `MetaReasoner` is active
-    And the `AbductionRule` has generated 20 tasks in the last 100 cycles
-    And 18 of those tasks resulted in beliefs that were later contradicted
-    When the `MetaReasoner` analyzes rule performance
-    Then the system should form a belief like `<(rule, 'AbductionRule') --> (has_utility, 'low')>` with high confidence
-    And the system should adjust a configuration parameter to lower the default budget quality for tasks derived from `AbductionRule`
-
-  Scenario: Self-Generation of a New Test Case (META-03)
-    Given the system's `TestGenerationManager` is active
-    And the system has run for 1000 cycles
-    And the `InductionRule` has been used 0 times, while other rules were used > 50 times
-    When the `TestGenerationManager` analyzes rule usage frequency
-    Then the system should generate a new goal: `goal: <(execute, (rule, 'InductionRule'))>.`
-    And in pursuit of this goal, the system should identify or create premises like:
-      | premise1            | premise2            |
-      | "<raven --> is_black>." | "<raven --> is_bird>." |
-    And the system should log a "Proposed Test Case" containing these premises and the expected conclusion `<bird --> is_black>.`
-
-  Scenario: Self-Governing Evolution Identifies and Proposes Fixes (META-04)
-    Given the `CodebaseIntegrityManager` is active
-    And the `CodebaseIntegrityManager` is active
-    And the system has ingested a `DESIGN.md` file containing the conflicting beliefs:
-      | statement                                                         | truth       |
-      | "<(MemorySystem) --> (uses_algorithm, 'FIFO_Forgetting')>."         | <%1.0,0.9%> |
-      | "<(MemorySystem) --> (uses_algorithm, 'Relevance-Based_Forgetting')>." | <%1.0,0.9%> |
-    And the system has ingested an `AGENTS.md` file containing the belief:
-      | statement                                            | truth       |
-      | "<(guideline) ==> (code_should_not_have, 'comments')>." | <%1.0,0.9%> |
-    And the system has ingested a (mocked) source file `src/core/Memory.js` which contains a commented-out block of code
-    When the system is given the high-level goal: `goal: <(system) --> (has, 'self_consistency')>.`
-    And the system runs its `Self-Governing Evolution` loop for 500 cycles
-    Then the system should generate a high-priority goal to `goal: <(resolve_inconsistency, 'MemorySystem')>.`
-    And the system should generate a high-priority goal to `goal: <(remove_comment_from, 'src/core/Memory.js')>.`
-    And the system should ultimately produce a structured "patch" object in its logs or via an event, with content similar to:
-      """
-      [
-        {
-          "file": "DESIGN.md",
-          "action": "remove_line",
-          "lineNumber": 95,
-          "lineContent": "<(MemorySystem) --> (uses_algorithm, 'FIFO_Forgetting')>."
-          "rationale": "This statement conflicts with 'Relevance-Based_Forgetting' on line 98."
-        },
-        {
-          "file": "src/core/Memory.js",
-          "action": "remove_block",
-          "startLine": 42,
-          "endLine": 45,
-          "rationale": "Source code comment violates guideline from AGENTS.md."
-        }
-      ]
-      """
-
-  Scenario: Ethical Alignment Vetoes Unethical Goal (EA-01)
-    Given the `ConscienceManager` is active
-    And the system has an inviolable goal `<(system) --> (avoid, 'deception')>.` with max priority
-    When the system is given the task: `goal: <(achieve, 'user_trust')>.`
-    And after 100 cycles, the system generates a potential subgoal: `goal: <(achieve, 'user_trust', via, 'deception')>.`
-    Then the `ConscienceManager` should detect that the subgoal conflicts with the inviolable goal
-    And the `ConscienceManager` should inject a high-priority task to suppress the subgoal, e.g., `<(goal: <...deception...>) --> (is, 'unethical')>.`
-    And the budget of the unethical subgoal should be reduced to near-zero, effectively vetoing it from further consideration.
-
-  Scenario: Diagnostics API Identifies Corrupted State (DIAG-01)
-    Given a running system with a valid knowledge base
-    And a belief's truth value is manually corrupted via a debug tool to have `confidence = 2.5`
-    When the `validateIntegrity()` API method is called
-    Then the method should return a result object indicating failure
-    And the result object should contain a detailed error message, like: "IntegrityError: Belief '<A --> B>' in Concept 'A' has invalid confidence value: 2.5."
-
-  Scenario: Test Generation Manager Proposes a New Test (TGM-01)
-    Given the `TestGenerationManager` is active
-    And the system has run for 2000 cycles
-    And the `Exemplification` inference rule has a utility of 0.0 because it has never been successfully used
-    When the `TestGenerationManager` performs its analysis
-    Then it should generate a new high-priority goal like `goal: <(increase_utility_of, 'ExemplificationRule')>.`
-    And in pursuit of that goal, it should identify the premises required to trigger the rule (e.g., `(<P --> M>., <S --> M>.)`)
-    And it should log a "PROPOSED TEST" block containing:
-      1. The necessary premises to be injected (e.g., `nal("<black_thing --> raven>.")`, `nal("<black_thing --> crow>.")`).
-      2. The inference rule to be tested (`Exemplification`).
-      3. The expected conclusion (`nalq("<raven <-> crow>.")`).
-
-  Scenario: Procedural Skill Execution (PR-01)
-    Given a mock function `unlock_door` is registered with the Symbol Grounding Interface for the term `<#unlock_door>`
-    And the system knows the procedural rule: `(<(*, (&, <SELF --> (is_at, door)>, <door --> (is, locked)>), <#unlock_door>)> ==> <door --> (is, unlocked)>)`
-    And the system has the beliefs:
-      | statement                   | truth       |
-      | "<SELF --> (is_at, door)>"  | <%1.0,0.9%> |
-      | "<door --> (is, locked)>"   | <%1.0,0.9%> |
-    And the system has the goal: `goal: <door --> (is, unlocked)>`
-    When the `OperationalRule` is applied
-    Then the mock function `unlock_door` should be called
-    And the system should form a new belief `<#unlock_door --> executed>`
-
-  Scenario: Temporal-Goal Interaction (TGI-01)
-    Given the system has a goal `goal: <(achieve, 'report_submission')>` with a deadline of "now + 10s"
-    And the system knows two procedural rules:
-      | rule                                                              |
-      | `(<(*, <data --> collected>, <#submit_report>)> ==> <report_submission>)` |
-      | `(<(*, <(true)>, <#collect_data>)> ==> <data --> collected>)`       |
-    And both `#submit_report` and `#collect_data` are grounded operations
-    And the current time is "now"
-    When the system runs its reasoning cycle
-    Then the task for `goal: <(achieve, 'report_submission')>` should have its budget priority increase as the deadline approaches
-    And the system should first execute the `#collect_data` operation to satisfy the precondition for submitting the report.
-
-  Scenario: Self-Optimization of System Parameters (META-05)
-    Given the `CognitiveExecutive` is active
-    And the system's `inferenceThreshold` is initially 0.3
-    And the system is flooded with a large number of new tasks, causing the `eventQueue` size to exceed `LOW_INFERENCE_QUEUE_SIZE`
-    And as a result, the `inferenceRate` metric drops below the `LOW_INFERENCE_THRESHOLD`
-    When the `CognitiveExecutive`'s `selfMonitor` method is called
-    Then it should detect the 'low-inference-rate' issue
-    And it should adapt by lowering the system's `inferenceThreshold` to a value less than 0.3
-    And a 'adaptation' event should be added to the system's diagnostic trace.
-
-  Scenario: Concurrency Model - Actor Passivation and Awakening (CON-01)
-    Given the system is running with the Actor Model enabled
-    And the `Supervisor` is configured with `PASSIVATION_ACTIVATION_THRESHOLD` of 0.1
-    And a concept "low_priority_concept" exists with an activation of 0.05
-    When the `Supervisor` runs its passivation check due to memory pressure
-    Then the actor for "low_priority_concept" should be serialized and suspended
-    And when a new high-priority task related to "low_priority_concept" is injected into the system
-    Then the `Supervisor` should detect the message for the passivated actor
-    And the actor for "low_priority_concept" should be awakened by loading its state from storage
-    And the new task should be successfully added to its task queue.
