@@ -217,6 +217,22 @@ This section provides the formal MeTTa-style type definitions for all primary da
    (Example (define-configuration contradiction-rate-threshold
       "The KPI threshold that triggers contradiction management."
       (Value 0.05))))
+
+(define-type define-bootstrap-sequence
+   (Schema (: define-bootstrap-sequence (-> Symbol (List (-> Number Symbol String)) define-bootstrap-sequence)))
+   (Purpose "A schema for defining the ordered steps of the system bootstrap process.")
+   (Plain-English "A formal definition of how the system starts up.")
+   (Example (define-bootstrap-sequence System-Startup
+      ((1 Load-Configuration "Load all `Config` atoms.")
+       (2 Initialize-Memory "Initialize the Memory system and its indexes.")))))
+
+(define-type define-reasoning-cycle
+   (Schema (: define-reasoning-cycle (-> Symbol (List (-> Number Symbol String)) define-reasoning-cycle)))
+   (Purpose "A schema for formally defining the ordered steps of a reasoning cycle or cognitive process.")
+   (Plain-English "A formal definition of a multi-step thinking process.")
+   (Example (define-reasoning-cycle Reflexive-Reasoning-Cycle
+      ((1 Select-Concept "Select a Concept from Memory's concept bag based on priority.")
+       (2 Select-Active-Sentence "Select a high-priority Sentence from the Concept's local sentence bag.")))))
 ```
 
 ---

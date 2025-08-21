@@ -65,6 +65,23 @@ function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting
 }
 ```
 
+```metta
+;;;
+;;; Formal Definition of the System's Core Reasoning Loop (System 1)
+;;;
+(define-reasoning-cycle Reflexive-Reasoning-Cycle
+   (
+      (1 Select-Concept "Select a Concept from Memory's concept bag based on priority.")
+      (2 Select-Active-Sentence "Select a high-priority Sentence from the Concept's local sentence bag.")
+      (3 Select-Relevant-Belief "Select a relevant belief from the same Concept's knowledge bag.")
+      (4 Formulate-Inference-Expression "Formulate an Inference Expression by selecting a rule and wrapping the two sentences in it.")
+      (5 Invoke-MeTTa-Interpreter "Invoke the MeTTa Interpreter to evaluate the expression against its knowledge base.")
+      (6 Process-Derived-Sentences "Process the derived sentences by calculating budget, creating stamps, and dispatching them to memory.")
+      (7 Perform-Housekeeping "Perform system-level housekeeping, such as budget updates and event emissions.")
+   )
+)
+```
+
 ### 1.2. The Deliberative Reasoning Process (System 2)
 
 This is a resource-intensive, goal-driven process initiated by the `CognitiveExecutive`. It operates on a temporary, scoped workspace to conduct focused thought and is the primary mode for Layer 2 and 3 Cognitive Functions.

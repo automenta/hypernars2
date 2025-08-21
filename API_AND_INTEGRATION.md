@@ -46,6 +46,22 @@ The system follows a well-defined sequence to ensure a stable startup. While the
 5.  **Register Cognitive Functions**: Load the atoms for all configured Cognitive Functions.
 6.  **Start Reasoning Loop**: Begin the main control unit's reasoning cycle.
 
+```metta
+;;;
+;;; Formal Definition of the System Bootstrap Sequence
+;;;
+(define-bootstrap-sequence System-Startup
+   (
+      (1 Load-Configuration "Load all `Config` atoms from a file or environment.")
+      (2 Initialize-Memory "Initialize the Memory system and its indexes.")
+      (3 Initialize-MeTTa-Interpreter "Start the interpreter.")
+      (4 Load-Foundational-Knowledge "Load a base set of inference rules and ontological atoms.")
+      (5 Register-Cognitive-Functions "Load the atoms for all configured Cognitive Functions.")
+      (6 Start-Reasoning-Loop "Begin the main control unit's reasoning cycle.")
+   )
+)
+```
+
 ### 2.2. Architectural Perspective
 From a purely architectural standpoint, steps 1, 4, and 5 are all simply "loading atoms into Memory." This metaprogramming approach ensures that the system's capabilities are determined by its knowledge, not by its compiled code.
 
