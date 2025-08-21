@@ -32,6 +32,53 @@ To improve usability, the system can provide a higher-level, intention-driven AP
 ### 1.5. Hypothetical Reasoning
 The API should provide a method for creating isolated "sandbox" instances of the reasoner. This allows for hypothetical or "what-if" reasoning without polluting the main knowledge base.
 
+```metta
+;;;
+;;; Formal Definitions for the Public API
+;;;
+;;; The following definitions use the define-api-method schema to specify
+;;; the purpose of key methods in the system's public API.
+;;;
+
+;; Core I/O
+(define-api-method Input-Sentence
+  (Purpose "Inputs a complete MeTTa Sentence (e.g., a belief, goal, or question) into the system."))
+
+(define-api-method Subscribe-To-Event
+  (Purpose "Subscribes a listener to a specific system event type (e.g., answer-generated, contradiction-detected)."))
+
+;; Control & Configuration
+(define-api-method Set-Reasoner-State
+  (Purpose "Runs, pauses, or resumes the main reasoning loop."))
+
+(define-api-method Get-Config-Parameter
+  (Purpose "Retrieves the value of a system configuration parameter."))
+
+(define-api-method Set-Config-Parameter
+  (Purpose "Dynamically sets the value of a system configuration parameter at runtime."))
+
+;; Inspection & Explainability
+(define-api-method Get-Concept-State
+  (Purpose "Retrieves the full state of a Concept, including its knowledge and sentence bags."))
+
+(define-api-method Get-KPI-Value
+  (Purpose "Retrieves the current value of a specific Key Performance Indicator."))
+
+(define-api-method Request-Explanation
+  (Purpose "Requests a structured, human-readable explanation for a derived Sentence."))
+
+;; Semantic Layer
+(define-api-method Add-Belief
+  (Purpose "A high-level method to add a new belief to the knowledge base (e.g., by wrapping a raw Sentence)."))
+
+(define-api-method Add-Goal
+  (Purpose "A high-level method to add a new goal for the system to pursue."))
+
+;; Hypothetical Reasoning
+(define-api-method Create-Sandbox-Reasoner
+  (Purpose "Creates an isolated 'sandbox' instance of the reasoner for hypothetical 'what-if' scenarios."))
+```
+
 ---
 
 ## 2. System Initialization
@@ -88,3 +135,17 @@ To support long-running operation and recovery from shutdowns, the system must b
 -   **Event Queues**: A snapshot of any pending events or `Sentences` to ensure a seamless restart.
 
 This capability is also essential for debugging, as it allows developers to capture and replay the exact state of the system at a specific moment.
+
+```metta
+;;;
+;;; Formal Definition of the System State Snapshot Schema
+;;;
+(define-system-snapshot Complete-System-State
+  (
+    (Memory-Content "All atoms, Sentences, Concepts, and their associated metadata.")
+    (Cognitive-Function-State "The internal state of all stateful cognitive functions.")
+    (System-Configuration "The Config atoms the system is currently running with.")
+    (Event-Queues "A snapshot of any pending events or Sentences to ensure a seamless restart.")
+  )
+)
+```

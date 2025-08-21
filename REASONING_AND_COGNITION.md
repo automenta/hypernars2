@@ -126,6 +126,20 @@ function deliberative_reasoning_process(memory: Memory, interpreter: MeTTa, trig
 }
 ```
 
+```metta
+;;;
+;;; Formal Definition of the System's Goal-Driven Reasoning Process (System 2)
+;;;
+(define-reasoning-cycle Deliberative-Reasoning-Process
+   (
+      (1 Initiation-and-Context-Scoping "Create a temporary workspace and populate it with knowledge relevant to the trigger sentence.")
+      (2 Focused-Iterative-Reasoning "Run a high-budget reasoning loop within the workspace to find a solution.")
+      (3 Resolution-and-Integration "Extract the solution from the workspace and inject it back into main memory.")
+      (4 Decommissioning "Dissolve the temporary workspace.")
+   )
+)
+```
+
 ---
 
 ## 2. Cognitive Function Specifications
@@ -202,21 +216,27 @@ The core Layer 2 cognitive functions are formally defined below using the `defin
 ;;;
 
 (define-cognitive-function Cognitive-Executive
-  "The system's master control program, responsible for self-monitoring and initiating deliberation by tracking KPIs and triggering Layer 3 functions when thresholds are crossed."
+  "The system's master control program, responsible for self-monitoring and initiating deliberation by tracking KPIs and triggering Layer 3 functions when thresholds are crossed.")
+
+(define-function-interface Cognitive-Executive
   (Interface
     (Triggers (Event system-cycle-complete _))
     (Reads (has-value (kpi $name) $value))
     (Writes (! (Layer-3-Goal)))))
 
 (define-cognitive-function Contradiction-Management
-  "Implements strategies for resolving contradictions between beliefs."
+  "Implements strategies for resolving contradictions between beliefs.")
+
+(define-function-interface Contradiction-Management
   (Interface
     (Triggers (! (resolve-contradictions)) (Event contradiction-detected _ _))
     (Reads (Sentence-A) (Sentence-B) (Stamp-A) (Stamp-B))
     (Writes (! (revise (belief-to-weaken))))))
 
 (define-cognitive-function Explanation
-  "Generates human-readable explanations for the system's conclusions by tracing their derivational history."
+  "Generates human-readable explanations for the system's conclusions by tracing their derivational history.")
+
+(define-function-interface Explanation
   (Interface
     (Triggers (! (explain (. $atom ...))))
     (Reads (Sentence) (Stamp))
@@ -249,7 +269,9 @@ This function enforces ethical constraints and safety protocols. It is not a sou
 
 ```metta
 (define-cognitive-function Conscience
-  "Enforces ethical constraints and safety protocols by evaluating potential actions and goals against a set of inviolable, architect-defined rules."
+  "Enforces ethical constraints and safety protocols by evaluating potential actions and goals against a set of inviolable, architect-defined rules.")
+
+(define-function-interface Conscience
   (Interface
     (Triggers (Event goal-proposed $g) (Event sentence-selected $s))
     (Reads (. (Constraint (Forbid (action-pattern))) ...))
@@ -263,6 +285,23 @@ A suite of functions for analyzing and improving the system's own knowledge and 
 -   **Test Generation Function**: Proactively generates tests to verify the system's reasoning and the correctness of proposed self-modifications.
 -   **Codebase Integrity Function**: Reasons about the system's own design documents and source code to find inconsistencies.
 -   **Implementation Assistance Function**: Assists developers by automating parts of the implementation process.
+
+```metta
+;;;
+;;; Formal stubs for Layer 3 Self-Modification functions
+;;;
+(define-cognitive-function Self-Optimization-Function
+  "Analyzes and refactors the system's own reasoning rules for better performance.")
+
+(define-cognitive-function Test-Generation-Function
+  "Proactively generates tests to verify the system's reasoning and the correctness of proposed self-modifications.")
+
+(define-cognitive-function Codebase-Integrity-Function
+  "Reasons about the system's own design documents and source code to find inconsistencies.")
+
+(define-cognitive-function Implementation-Assistance-Function
+  "Assists developers by automating parts of the implementation process.")
+```
 
 ---
 
