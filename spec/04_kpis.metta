@@ -26,6 +26,7 @@
 
 (define-kpi Reasoning rule_cost
    (Description "Average execution time for a specific inference rule, in seconds.")
+   (Unit seconds)
    (SourceType Sentence)
    (Example (has-value (kpi (rule_cost Abduce)) 0.000150)))
 
@@ -59,8 +60,9 @@
 
 (define-kpi Memory index_lookup_time
    (Description "The average time taken to retrieve an item from a memory index.")
+   (Unit milliseconds)
    (SourceType Concept)
-   (Example (has-value (kpi index_lookup_time) (2 milliseconds))))
+   (Example (has-value (kpi index_lookup_time) 2)))
 
 (define-kpi Memory lti_distribution
    (Description "A histogram of the Long-Term Importance (LTI) values of all items in memory.")
@@ -87,8 +89,9 @@
 
 (define-kpi GoalManagement avg_goal_processing_time
    (Description "The average time from goal creation to achievement or abandonment.")
+   (Unit seconds)
    (SourceType Sentence)
-   (Example (has-value (kpi avg_goal_processing_time) (12 seconds))))
+   (Example (has-value (kpi avg_goal_processing_time) 12)))
 
 ;;;
 ;;; 4. Grounding & API KPIs
@@ -100,8 +103,9 @@
 
 (define-kpi Grounding avg_grounding_latency
    (Description "The average time taken for a `GroundedAtom` to execute, in milliseconds.")
+   (Unit milliseconds)
    (SourceType GroundedAtom)
-   (Example (has-value (kpi avg_grounding_latency) (150 milliseconds))))
+   (Example (has-value (kpi avg_grounding_latency) 150)))
 
 (define-kpi Grounding api_requests_per_second
    (Description "The number of incoming requests to the public API per second.")
