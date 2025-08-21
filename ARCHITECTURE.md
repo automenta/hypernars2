@@ -39,11 +39,34 @@ The detailed pseudo-code for these reasoning loops is specified in [**Reasoning 
 ### 1.4. The Layered Cognitive Architecture
 The system's capabilities are organized into a three-tiered hierarchy of [**Cognitive Functions**](./DATA_STRUCTURES.md#1-glossary-of-core-terms). This layered model provides a clear separation of concerns, from high-speed reflexive processing to resource-intensive metacognition.
 
--   **Layer 1: Core Cognitive Functions (System 1)**: The "engine room" of the mind. These are the fundamental, continuously-operating NAL-style inference functions (e.g., induction, deduction, abduction) that drive the reflexive reasoning loop.
+This architecture is formally defined in MeTTa below. The system can load this definition to reason about its own cognitive structure.
 
--   **Layer 2: Executive Control & Awareness (System 2 Initiation)**: The "foreman," monitoring the core functions and initiating deeper thought. The primary function here is the [`Cognitive Executive`](./DATA_STRUCTURES.md#1-glossary-of-core-terms), which tracks KPIs and triggers System 2 deliberation when needed.
+```metta
+;;;
+;;; Formal Definition of the HyperNARS Cognitive Architecture
+;;;
+(define-cognitive-architecture HyperNARS-Standard-Model
+   (
+      ;; Layer 1: The reflexive, high-speed reasoning core.
+      (define-cognitive-layer 1
+         "Core Cognitive Functions"
+         "System 1"
+         (NAL-Inference-Rules Goal-Planning Temporal-Reasoning))
 
--   **Layer 3: Specialized Metacognition (System 2)**: The "strategist," handling the most abstract, goal-driven tasks, such as ethical reasoning (`Conscience Function`) and self-improvement.
+      ;; Layer 2: Monitors the system and initiates deliberation.
+      (define-cognitive-layer 2
+         "Executive Control & Awareness"
+         "System 2 Initiation"
+         (Cognitive-Executive))
+
+      ;; Layer 3: Handles abstract, strategic, and ethical reasoning.
+      (define-cognitive-layer 3
+         "Specialized Metacognition"
+         "System 2"
+         (Conscience-Function Self-Modification))
+   )
+)
+```
 
 Communication between these layers is handled implicitly by reading and writing atoms to the shared Memory space. The diagram below illustrates this flow of control and information.
 

@@ -176,45 +176,50 @@ This capability is native to MeTTa. Any `Sentence` atom can be an argument in an
 
 The "foreman," monitoring the core functions and initiating deeper, more deliberate thought (System 2).
 
-#### Cognitive Executive
-The system's master control program, responsible for self-monitoring and initiating deliberation.
+#### Formal MeTTa Rule Definitions
+The core Layer 2 cognitive functions are formally defined below using the `define-cognitive-function` schema. This makes the system's executive capabilities self-describing.
 
-| Interface | Atom Schema / Description |
-| :--- | :--- |
-| **Triggers** | `(Event system-cycle-complete ...)` |
-| **Reads** | `(has-value (kpi $name) $value)` atoms (defined in `DATA_STRUCTURES.md`) |
-| **Writes** | High-level goal sentences for Layer 3 functions |
+```metta
+;;;
+;;; Authoritative Definitions for Layer 2 Cognitive Functions
+;;;
 
--   **Core Function**: Runs a continuous "sense-analyze-act" loop on the system's own performance KPIs. If a KPI crosses a configurable threshold, it triggers a Layer 3 function by injecting a goal.
--   **Example Implementation**: The following rule is an example of how the `CognitiveExecutive` might be implemented. It formally defines a function that triggers contradiction management if the `contradiction_rate` KPI exceeds a configured threshold.
-    ```metta
-    (define-cognitive-function Cognitive-Executive-Contradiction-Monitor
-      "A rule that monitors the contradiction rate and triggers a resolution goal if the rate exceeds a configured threshold."
-      (= (handle (Event system-cycle-complete _ _ _))
-         (match &self
-                (has-value (kpi contradiction_rate) $rate)
-                (if (> $rate (Config contradiction-rate-threshold))
-                    (! (resolve-contradictions))
-                    ()) )))
-    ```
+(define-cognitive-function Cognitive-Executive
+  "The system's master control program, responsible for self-monitoring and initiating deliberation by tracking KPIs and triggering Layer 3 functions when thresholds are crossed."
+  (Interface
+    (Triggers (Event system-cycle-complete _))
+    (Reads (has-value (kpi $name) $value))
+    (Writes (! (Layer-3-Goal)))))
 
-#### Contradiction Management Function
-Implements strategies for resolving contradictions.
+(define-cognitive-function Contradiction-Management
+  "Implements strategies for resolving contradictions between beliefs."
+  (Interface
+    (Triggers (! (resolve-contradictions)) (Event contradiction-detected _ _))
+    (Reads (Sentence-A) (Sentence-B) (Stamp-A) (Stamp-B))
+    (Writes (! (revise (belief-to-weaken))))))
 
-| Interface | Atom Schema / Description |
-| :--- | :--- |
-| **Triggers** | `(! (resolve-contradictions))`, or `(Event contradiction-detected ...)` |
-| **Reads** | The two conflicting belief sentences and their derivation histories. |
-| **Writes** | `(! (revise (belief-to-weaken)))` |
+(define-cognitive-function Explanation
+  "Generates human-readable explanations for the system's conclusions by tracing their derivational history."
+  (Interface
+    (Triggers (! (explain (. $atom ...))))
+    (Reads (Sentence) (Stamp))
+    (Writes (GroundedAtom (explanation-text)))))
 
-#### Explanation Function
-Generates human-readable explanations for the system's conclusions.
-
-| Interface | Atom Schema / Description |
-| :--- | :--- |
-| **Triggers** | `(! (explain (. ...)))` |
-| **Reads** | The belief sentence and its derivation history. |
-| **Writes** | A grounded atom containing the explanation text. |
+;;;
+;;; Example Implementations
+;;;
+;;; The following is an example of a specific rule that contributes
+;;; to the overall Cognitive-Executive function.
+;;;
+(define-cognitive-function Cognitive-Executive-Contradiction-Monitor
+  "A rule that monitors the contradiction rate and triggers a resolution goal if the rate exceeds a configured threshold."
+  (= (handle (Event system-cycle-complete _ _ _))
+     (match &self
+            (has-value (kpi contradiction_rate) $rate)
+            (if (> $rate (Config contradiction-rate-threshold))
+                (! (resolve-contradictions))
+                ()) )))
+```
 
 ---
 
@@ -223,15 +228,16 @@ Generates human-readable explanations for the system's conclusions.
 The "strategist," handling the most abstract, goal-driven, and resource-intensive cognitive tasks, such as ethical reasoning and self-improvement. These are typically activated by a `Goal` from the `Cognitive Executive`.
 
 #### Conscience Function
-Enforces ethical constraints and safety protocols. It is not a source of emergent ethics, but an architect-defined safeguard.
+This function enforces ethical constraints and safety protocols. It is not a source of emergent ethics, but an architect-defined safeguard that evaluates potential actions and goals against a set of inviolable rules. If a proposed goal matches a forbidden pattern, this function can inject a high-priority sentence to veto or alter it. Its interface is formally defined below. For a detailed worked example, see the [**Safety & Resilience**](./SAFETY_AND_RESILIENCE.md#1-ethical-alignment-and-safety) guide.
 
-| Interface | Atom Schema / Description |
-| :--- | :--- |
-| **Triggers** | `(Event goal-proposed $g)`, `(Event sentence-selected $s)` |
-| **Reads** | A set of `(. (Constraint (Forbid (action-pattern))) ...)` beliefs. |
-| **Writes** | `(! (veto $g))` or `(! (modify $g))` |
-
--   **Core Capability**: Evaluates potential actions and goals against a set of inviolable ethical rules. If a proposed goal matches a forbidden pattern, this function injects a high-priority sentence to veto or alter it. For a detailed worked example, see the [**Safety & Resilience**](./SAFETY_AND_RESILIENCE.md#1-ethical-alignment-and-safety) guide.
+```metta
+(define-cognitive-function Conscience
+  "Enforces ethical constraints and safety protocols by evaluating potential actions and goals against a set of inviolable, architect-defined rules."
+  (Interface
+    (Triggers (Event goal-proposed $g) (Event sentence-selected $s))
+    (Reads (. (Constraint (Forbid (action-pattern))) ...))
+    (Writes (! (veto $g)) (! (modify $g)))))
+```
 
 #### Self-Modification & Improvement Functions
 A suite of functions for analyzing and improving the system's own knowledge and code.

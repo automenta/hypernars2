@@ -184,6 +184,32 @@ This section provides the formal MeTTa-style type definitions for all primary da
       (= (deduce (. ($a --> $b) $t1 . $any) (. ($b --> $c) $t2 . $any))
          (. ($a --> $c) (deduction-truth-fn $t1 $t2))))))
 
+(define-type define-cognitive-layer
+   (Schema (: define-cognitive-layer (-> Number Symbol Symbol (List Symbol) define-cognitive-layer)))
+   (Purpose "A schema for defining a single layer of the cognitive architecture.")
+   (Plain-English "A formal definition of a cognitive layer and the functions within it.")
+   (Example (define-cognitive-layer 1
+      "Core Cognitive Functions"
+      "System 1"
+      (NAL-Inference-Rules Goal-Planning Temporal-Reasoning))))
+
+(define-type define-cognitive-architecture
+   (Schema (: define-cognitive-architecture (-> Symbol (List define-cognitive-layer) define-cognitive-architecture)))
+   (Purpose "A schema for defining the complete, layered cognitive architecture.")
+   (Plain-English "A formal definition of the system's entire cognitive structure.")
+   (Example (define-cognitive-architecture HyperNARS-Standard-Model
+      ((define-cognitive-layer ...)
+       (define-cognitive-layer ...)))))
+
+(define-type define-sentence-distinction
+   (Schema (: define-sentence-distinction (-> Symbol Symbol String Atom String define-sentence-distinction)))
+   (Purpose "A schema for formally comparing the roles of different sentence types.")
+   (Plain-English "A formal definition of what a sentence type means and how the system should react to it, for comparative purposes.")
+   (Example (define-sentence-distinction . Belief
+      "This is a fact."
+      (. (sky-is-blue) ...)
+      "Store this information; use it as a premise in future reasoning.")))
+
 (define-type define-configuration
    (Schema (: define-configuration (-> Symbol String Atom define-configuration)))
    (Purpose "A schema for defining a configuration parameter, its purpose, and its default value.")
@@ -320,15 +346,34 @@ To enable self-awareness, the system materializes its own state and performance 
 
 ## 6. Conceptual Distinctions
 
-To clarify the roles of the primary sentence types, this section provides a direct comparison.
+To clarify the roles of the primary sentence types, this section provides a formal, machine-readable comparison. While all are types of `Sentence` atoms, they represent fundamentally different intentions and drive different system behaviors. This formalization makes those distinctions queryable by the system itself.
 
-### 6.1. Belief vs. Goal vs. Question vs. Quest
+```metta
+;;;
+;;; Formal Comparison of Sentence Types
+;;;
+;;; This knowledge base uses the `define-sentence-distinction` schema
+;;; to formally capture the different roles and behaviors of the
+;;; primary sentence types in HyperNARS.
+;;;
 
-While all are types of `Sentence` atoms, they represent fundamentally different intentions and drive different system behaviors.
+(define-sentence-distinction . Belief
+   "This is a fact."
+   (. (sky-is-blue) ...)
+   "Store this information; use it as a premise in future reasoning.")
 
-| Sentence Type | System's Stance | Example | Typical System Response |
-| :--- |:---|:---|:---|
-| **Belief (.)** | "This is a fact." | `(. (sky-is-blue) ...)` | Store this information; use it as a premise in future reasoning. |
-| **Goal (!)** | "I want this to be true." | `(! (light-is-on) ...)` | Find a sequence of actions (a plan) to make the content true. |
-| **Question (?)** | "What is the answer to this?" | `(? (what-color-is sky) ...)` | Search memory for relevant beliefs to derive a specific answer. |
-| **Quest (@)** | "Explore this concept." | `(@ (explore-concept bird) ...)` | Initiate open-ended reasoning about the concept to discover new knowledge and connections, without a single correct answer. |
+(define-sentence-distinction ! Goal
+   "I want this to be true."
+   (! (light-is-on) ...)
+   "Find a sequence of actions (a plan) to make the content true.")
+
+(define-sentence-distinction ? Question
+   "What is the answer to this?"
+   (? (what-color-is sky) ...)
+   "Search memory for relevant beliefs to derive a specific answer.")
+
+(define-sentence-distinction @ Quest
+   "How can a goal be achieved?"
+   (@ (achieve-goal (light-is-on)) ...)
+   "Search for procedural knowledge (rules, operations) that can satisfy the goal.")
+```
