@@ -163,35 +163,48 @@ The system's entire configuration is defined by a set of [`Config` atoms](./DATA
 -   **System Parameter Tuning**: Set specific thresholds, default `Budget` values, etc.
 
 ### 4.2. Example: `minimalist-reasoner.metta`
-This configuration file defines a simple reasoner with only the most basic cognitive functions enabled.
+This configuration file defines a simple reasoner with only the most basic cognitive functions enabled. It uses the formal `define-configuration` schema to make the parameters self-describing.
 
 ```metta
-;; --- minimalist-reasoner.metta ---
+;;;
+;;; Example Configuration: minimalist-reasoner
+;;;
 
-;; Define the 'personality' of this instance
-(Config personality "Minimalist Reasoner")
+;; == System Personality ==
+(define-configuration personality
+  "Define the 'personality' of this instance."
+  (Value "Minimalist Reasoner"))
 
 ;; == Component Selection ==
-;; Select the implementation for the core budgeting strategy.
-(Config BudgetingStrategy (GroundedAtom "SimpleBudgetingStrategy"))
+(define-configuration BudgetingStrategy
+  "Select the implementation for the core budgeting strategy."
+  (Value (GroundedAtom "SimpleBudgetingStrategy")))
 
 ;; == Cognitive Function Activation ==
-;; Define which cognitive functions are active for this run.
-(Config (active-cognitive-function GoalManager) True)
-(Config (active-cognitive-function ContradictionManager) True)
-(Config (active-cognitive-function TemporalReasoner) False)       ; Disabled
+(define-configuration (active-cognitive-function GoalManager)
+  "Define which cognitive functions are active for this run."
+  (Value True))
+
+(define-configuration (active-cognitive-function ContradictionManager)
+  "Define which cognitive functions are active for this run."
+  (Value True))
+
+(define-configuration (active-cognitive-function TemporalReasoner)
+  "Define which cognitive functions are active for this run. This one is disabled."
+  (Value False))
 
 ;; == System Parameter Tuning ==
-;; Define the system's operational parameters.
+(define-configuration default-belief-budget
+  "Default budget for new beliefs asserted from outside (uses Budget schema)."
+  (Value (Budget 0.9 0.9 0.5)))
 
-;; Default budget for new beliefs asserted from outside (uses Budget schema)
-(Config default-belief-budget (Budget 0.9 0.9 0.5))
+(define-configuration default-goal-budget
+  "Default budget for new goals asserted from outside (uses Budget schema)."
+  (Value (Budget 0.99 0.9 0.9)))
 
-;; Default budget for new goals asserted from outside (uses Budget schema)
-(Config default-goal-budget (Budget 0.99 0.9 0.9))
-
-;; Threshold for the CognitiveExecutive to trigger contradiction management
-(Config contradiction-rate-threshold 0.05)
+(define-configuration contradiction-rate-threshold
+  "Threshold for the CognitiveExecutive to trigger contradiction management."
+  (Value 0.05))
 
 ;; == Initial Knowledge ==
 ;; The configuration can also include initial Sentences to seed the system's memory.

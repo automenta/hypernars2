@@ -119,31 +119,47 @@ This section provides the detailed specifications for the **Cognitive Functions*
 
 The "engine room" of the mind. These fundamental, continuously-operating functions drive the reflexive, System 1 reasoning loop. They are implemented as MeTTa rewrite rules that correspond to the levels of Non-Axiomatic Logic (NAL).
 
-#### NAL 1-4: Inductive & Conceptual Learning Function
-Responsible for abstracting knowledge and forming new concepts through basic inference.
+#### NAL 1-9: Formal MeTTa Rule Definitions
+The core Layer 1 cognitive functions are implemented as a set of MeTTa rewrite rules. These rules correspond to the levels of Non-Axiomatic Logic (NAL) and are formally defined below using the `define-cognitive-function` schema.
 
-| Interface | Atom Schema / Description |
-| :--- | :--- |
-| **Triggers** | Co-occurring beliefs, e.g., `(. (A --> B) ...)` and `(. (A --> C) ...)` |
-| **Reads** | Patterns of beliefs in memory |
-| **Writes** | New, higher-level beliefs, e.g., `(. (C --> B) ...)` (Induction) |
+```metta
+;;;
+;;; Authoritative Definitions for Layer 1 Cognitive Functions
+;;;
 
--   **Implementation as MeTTa Rules**: The hierarchy of Non-Axiomatic Logic (NAL) is implemented as sets of MeTTa rewrite rules that operate on `Sentence` atoms.
-    -   **Deduction**: `(A --> B), (B --> C) ==> (A --> C)`
-        ```metta
-        (= (deduce (. ($a --> $b) $t1 . $any) (. ($b --> $c) $t2 . $any))
-           (. ($a --> $c) (deduction-truth-fn $t1 $t2)))
-        ```
-    -   **Abduction**: `(A --> B), (C --> B) ==> (C --> A)` (a possible explanation)
-        ```metta
-        (= (abduce (. ($a --> $b) $t1 . $any) (. ($c --> $b) $t2 . $any))
-           (. ($c --> $a) (abduction-truth-fn $t1 $t2)))
-        ```
-    -   **Induction**: `(A --> B), (A --> C) ==> (C --> B)`
-        ```metta
-        (= (induce (. ($a --> $b) $t1 . $any) (. ($a --> $c) $t2 . $any))
-           (. ($c --> $b) (induction-truth-fn $t1 $t2)))
-        ```
+;; NAL 1-4: Inductive & Conceptual Learning
+(define-cognitive-function Deduction
+  "The core NAL deduction rule: (A --> B), (B --> C) ==> (A --> C)"
+  (= (deduce (. ($a --> $b) $t1 . $any) (. ($b --> $c) $t2 . $any))
+     (. ($a --> $c) (deduction-truth-fn $t1 $t2))))
+
+(define-cognitive-function Abduction
+  "The core NAL abduction rule: (A --> B), (C --> B) ==> (C --> A) (a possible explanation)"
+  (= (abduce (. ($a --> $b) $t1 . $any) (. ($c --> $b) $t2 . $any))
+     (. ($c --> $a) (abduction-truth-fn $t1 $t2))))
+
+(define-cognitive-function Induction
+  "The core NAL induction rule: (A --> B), (A --> C) ==> (C --> B)"
+  (= (induce (. ($a --> $b) $t1 . $any) (. ($a --> $c) $t2 . $any))
+     (. ($c --> $b) (induction-truth-fn $t1 $t2))))
+
+;; NAL 7: Temporal Reasoning
+(define-cognitive-function Temporal-Deduction
+  "The core temporal deduction rule: If (A happens before B) and (B happens before C), then (A happens before C)."
+  (= (deduce-temporal (. ((A </> B)) $t1 . $any) (. ((B </> C)) $t2 . $any))
+     (. ((A </> C)) (temporal-deduction-truth-fn $t1 $t2))))
+
+;; NAL 8-9: Goal & Planning
+(define-cognitive-function Backward-Chaining-Planner
+  "The core backward-chaining planner rule. When a goal (! G) is processed, it looks for an operation (Op) that results in G, and then sets the preconditions (P) of that operation as a new subgoal."
+  (= (handle (! $g))
+     (match &self
+            (. (($op ==> $g)) %true . $any)
+            (match &self
+                   (. ((has-precondition $op $p)) %true . $any)
+                   (! $p)
+                   (! (execute $op))))))
+```
 
 #### NAL 5: Statements as Terms
 This capability is native to MeTTa. Any `Sentence` atom can be an argument in another expression, allowing for higher-order reasoning.
@@ -153,44 +169,6 @@ This capability is native to MeTTa. Any `Sentence` atom can be an argument in an
   (. (bird --> flyer) (Truth 1.0 0.9))
   (! (check-the-sky)))
 ```
-
-#### NAL 7: Temporal Reasoning Function
-Provides a framework for understanding and reasoning about time.
-
-| Interface | Atom Schema / Description |
-| :--- | :--- |
-| **Triggers** | `(. ((A </> B)) ...)` (A is followed by B) |
-| **Reads** | Beliefs about temporal sequences, e.g., `(. ((B </> C)) ...)` |
-| **Writes** | New inferred temporal beliefs, e.g., `(. ((A </> C)) ...)` |
-
--   **Implementation as MeTTa Rules**:
-    ```metta
-    ;; If (A happens before B) and (B happens before C), then (A happens before C).
-    (= (deduce-temporal (. ((A </> B)) $t1 . $any) (. ((B </> C)) $t2 . $any))
-       (. ((A </> C)) (temporal-deduction-truth-fn $t1 $t2)))
-    ```
-
-#### NAL 8-9: Goal & Planning Function
-Responsible for goal-oriented behavior, planning, and skill acquisition.
-
-| Interface | Atom Schema / Description |
-| :--- | :--- |
-| **Triggers** | `(! (desired-state))` |
-| **Reads** | Beliefs of the form `(. ((operation) ==> (desired-state)) ...)` |
-| **Writes** | `(! (precondition))` (sub-goals), `(! (execute (operation)))` |
-
--   **Core Capability**: Implements a backward-chaining planner. When a `(! G)` sentence is processed, it queries memory for procedural beliefs of the form `(. ((Op) ==> G) ...)` If found, it injects a new sub-goal `(! P)` for the operation's preconditions.
--   **Example Implementation**:
-    ```metta
-    ;; Rule for backward chaining
-    (= (handle (! $g))
-       (match &self
-              (. (($op ==> $g)) %true . $any)
-              (match &self
-                     (. ((has-precondition $op $p)) %true . $any)
-                     (! $p)
-                     (! (execute $op)))))
-    ```
 
 ---
 
@@ -208,15 +186,16 @@ The system's master control program, responsible for self-monitoring and initiat
 | **Writes** | High-level goal sentences for Layer 3 functions |
 
 -   **Core Function**: Runs a continuous "sense-analyze-act" loop on the system's own performance KPIs. If a KPI crosses a configurable threshold, it triggers a Layer 3 function by injecting a goal.
--   **Example Implementation**:
+-   **Example Implementation**: The following rule is an example of how the `CognitiveExecutive` might be implemented. It formally defines a function that triggers contradiction management if the `contradiction_rate` KPI exceeds a configured threshold.
     ```metta
-    ;; Rule to initiate contradiction management when rate is too high
-    (= (handle (Event system-cycle-complete _ _ _))
-       (match &self
-              (has-value (kpi contradiction_rate) $rate)
-              (if (> $rate (Config contradiction-rate-threshold))
-                  (! (resolve-contradictions))
-                  ()) ))
+    (define-cognitive-function Cognitive-Executive-Contradiction-Monitor
+      "A rule that monitors the contradiction rate and triggers a resolution goal if the rate exceeds a configured threshold."
+      (= (handle (Event system-cycle-complete _ _ _))
+         (match &self
+                (has-value (kpi contradiction_rate) $rate)
+                (if (> $rate (Config contradiction-rate-threshold))
+                    (! (resolve-contradictions))
+                    ()) )))
     ```
 
 #### Contradiction Management Function

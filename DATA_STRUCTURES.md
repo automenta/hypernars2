@@ -87,115 +87,234 @@ Key properties include:
 
 ## 4. System Data Dictionary
 
-This section provides the formal MeTTa-style type definitions and concrete examples for all primary data structures. This is the single source of truth for data representation.
+This section provides the formal MeTTa-style type definitions for all primary data structures. This is the single, authoritative, machine-readable source of truth for data representation. The definitions below are expressed in MeTTa and are intended to be loaded directly into a HyperNARS system's memory.
 
-> **Note on Examples:** For clarity and brevity, the `Budget` and `Stamp` metadata are often omitted from the examples in this and other documents unless they are directly relevant to the point being illustrated.
+> **Note:** The `Purpose` and `Plain English` descriptions are for human readability. A running system would primarly use the formal `Schema`.
 
-### 4.1. Metadata Types
+```metta
+;;;
+;;; Authoritative Data Dictionary for HyperNARS
+;;;
+;;; This knowledge base defines the core data types of the system.
+;;; It uses a `define-type` schema for clarity and consistency.
+;;;
+;;; Schema: (: define-type (-> Symbol Atom String String Atom define-type))
+;;; Usage:  (define-type <TypeName>
+;;;            (Schema <MeTTa-Type-Signature>)
+;;;            (Purpose <String-Description>)
+;;;            (Plain-English <String-Description>)
+;;;            (Example <MeTTa-Example>))
+;;;
 
--   **Truth**: `(: Truth (-> Float Float Truth))`
-    -   *Description*: Represents epistemic value (`frequency`, `confidence`).
-    -   *Plain English*: "How much the system believes something is true."
-    -   *Example*: `(Truth 0.9 0.8)`
+;;;
+;;; 4.1. Metadata Types
+;;;
+(define-type Truth
+   (Schema (: Truth (-> Float Float Truth)))
+   (Purpose "Represents epistemic value (frequency, confidence).")
+   (Plain-English "How much the system believes something is true.")
+   (Example (Truth 0.9 0.8)))
 
--   **Budget**: `(: Budget (-> Float Float Float Budget))`
-    -   *Description*: Represents attentional value (`priority`, `durability`, `quality`).
-    -   *Plain English*: "How much attention the system should pay to something."
-    -   *Example*: `(Budget 0.99 0.5 0.85)`
+(define-type Budget
+   (Schema (: Budget (-> Float Float Float Budget)))
+   (Purpose "Represents attentional value (priority, durability, quality).")
+   (Plain-English "How much attention the system should pay to something.")
+   (Example (Budget 0.99 0.5 0.85)))
 
--   **Stamp**: `(: Stamp (-> TaskID (Set TaskID) Stamp))`
-    -   *Description*: Tracks derivational history to prevent loops. `TaskID` is a unique string identifier.
-    -   *Plain English*: "A 'paper trail' to track where a piece of information came from."
-    -   *Example*: `(Stamp "t_7f8a..." (Set "t_1c5b..." "t_9e2d..."))`
+(define-type Stamp
+   (Schema (: Stamp (-> TaskID (Set TaskID) Stamp)))
+   (Purpose "Tracks derivational history to prevent loops. TaskID is a unique string identifier.")
+   (Plain-English "A 'paper trail' to track where a piece of information came from.")
+   (Example (Stamp "t_7f8a..." (Set "t_1c5b..." "t_9e2d..."))))
 
-### 4.2. Sentence Types (with Punctuation)
+;;;
+;;; 4.2. Sentence Types (with Punctuation)
+;;;
+(define-type .
+   (Schema (: . (-> Atom Truth Budget Stamp .)))
+   (Purpose "Represents a piece of knowledge to be processed or stored.")
+   (Plain-English "A statement of fact, like 'the sky is blue'.")
+   (Example (. (bird --> flyer) (Truth 0.9 0.9) (Budget 0.9 0.8 0.7) (Stamp ...))))
 
-These define the structure of the `Sentence` atoms. Note that `Budget` and `Stamp` are optional for question/quest types, but are shown for completeness.
+(define-type !
+   (Schema (: ! (-> Atom Budget Stamp !)))
+   (Purpose "Represents a state to be achieved.")
+   (Plain-English "A desired state, like 'the light is on'.")
+   (Example (! (door-is-open) (Budget 0.9 0.5 0.8) (Stamp ...))))
 
--   **Belief Sentence (.)**: `(: . (-> Atom Truth Budget Stamp .))`
-    -   *Purpose*: Represents a piece of knowledge to be processed or stored.
-    -   *Plain English*: "A statement of fact, like 'the sky is blue'."
-    -   *Example*: `(. (bird --> flyer) (Truth 0.9 0.9) (Budget 0.9 0.8 0.7) (Stamp ...))`
+(define-type ?
+   (Schema (: ? (-> Atom Budget Stamp ?)))
+   (Purpose "Represents a request for information.")
+   (Plain-English "A request for information, like 'what color is the sky?'.")
+   (Example (? (what-is-a-bird) (Budget 0.9 0.1 0.2) (Stamp ...))))
 
--   **Goal Sentence (!)**: `(: ! (-> Atom Budget Stamp !))`
-    -   *Purpose*: Represents a state to be achieved.
-    -   *Plain English*: "A desired state, like 'the light is on'."
-    -   *Example*: `(! (door-is-open) (Budget 0.9 0.5 0.8) (Stamp ...))`
+(define-type @
+   (Schema (: @ (-> Atom Budget Stamp @)))
+   (Purpose "Represents a long-term, curiosity-driven exploration goal.")
+   (Plain-English "An open-ended exploration task, like 'investigate the properties of birds'.")
+   (Example (@ (explore-concept bird) (Budget 0.8 0.9 0.9) (Stamp ...))))
 
--   **Question Sentence (?)**: `(: ? (-> Atom Budget Stamp ?))`
-    -   *Purpose*: Represents a request for information.
-    -   *Plain English*: "A request for information, like 'what color is the sky?'."
-    -   *Example*: `(? (what-is-a-bird) (Budget 0.9 0.1 0.2) (Stamp ...))`
+;;;
+;;; 4.3. Architectural & Metacognitive Schemas
+;;;
+(define-type Event
+   (Schema (: Event (-> Symbol Atom Atom TimePoint Event)))
+   (Purpose "Used for the internal event bus.")
+   (Plain-English "A notification that something has happened, like 'a contradiction was found'.")
+   (Example (Event contradiction-detected (belief-1) (belief-2) (now))))
 
--   **Quest Sentence (@)**: `(: @ (-> Atom Budget Stamp @))`
-    -   *Purpose*: Represents a long-term, curiosity-driven exploration goal.
-    -   *Plain English*: "An open-ended exploration task, like 'investigate the properties of birds'."
-    -   *Example*: `(@ (explore-concept bird) (Budget 0.8 0.9 0.9) (Stamp ...))`
+(define-type Config
+   (Schema (: Config (-> Atom Atom Config)))
+   (Purpose "Defines a configuration setting. The key is often a Symbol or an Expression.")
+   (Plain-English "A setting that controls how the system behaves.")
+   (Example (Config BudgetingStrategy (GroundedAtom "SimpleBudgetingStrategy"))))
 
-### 4.3. Architectural & Metacognitive Schemas
+(define-type has-value
+   (Schema (: has-value (-> Atom Number has-value)))
+   (Purpose "Represents a belief about a system Key Performance Indicator (KPI).")
+   (Plain-English "A belief about the system's own performance.")
+   (Example (has-value (kpi avg_belief_confidence) 0.78)))
 
--   **Event Atom**: `(: Event (-> Symbol Atom Atom TimePoint Event))`
-    -   *Purpose*: Used for the internal event bus.
-    -   *Plain English*: "A notification that something has happened, like 'a contradiction was found'."
-    -   *Example*: `(Event contradiction-detected (belief-1) (belief-2) (now))`
+(define-type define-cognitive-function
+   (Schema (: define-cognitive-function (-> Symbol String Atom define-cognitive-function)))
+   (Purpose "A schema for defining a cognitive function or inference rule.")
+   (Plain-English "A formal definition of a piece of the system's reasoning logic.")
+   (Example (define-cognitive-function Deduce
+      "The core NAL deduction rule."
+      (= (deduce (. ($a --> $b) $t1 . $any) (. ($b --> $c) $t2 . $any))
+         (. ($a --> $c) (deduction-truth-fn $t1 $t2))))))
 
--   **Configuration Atom**: `(: Config (-> Atom Atom Config))`
-    -   *Purpose*: Defines a configuration setting. The key is often a Symbol or an Expression.
-    -   *Plain English*: "A setting that controls how the system behaves."
-    -   *Example*: `(Config BudgetingStrategy (GroundedAtom "SimpleBudgetingStrategy"))`
-    -   *Example*: `(Config (active-cognitive-function GoalManager) True)`
-
--   **Key Performance Indicator (KPI) Atom**: `(: has-value (-> Atom Number has-value))`
-    -   *Purpose*: Represents a belief about a system Key Performance Indicator (KPI).
-    -   *Plain English*: "A belief about the system's own performance."
-    -   *Example*: `(has-value (kpi avg_belief_confidence) 0.78)`
-    -   *Example*: `(has-value (kpi (rule_cost Abduce)) 0.000150)`  *; in seconds*
+(define-type define-configuration
+   (Schema (: define-configuration (-> Symbol String Atom define-configuration)))
+   (Purpose "A schema for defining a configuration parameter, its purpose, and its default value.")
+   (Plain-English "A formal definition of a system setting.")
+   (Example (define-configuration contradiction-rate-threshold
+      "The KPI threshold that triggers contradiction management."
+      (Value 0.05))))
+```
 
 ---
 
 ## 5. Self-Monitoring KPIs
 
-To enable self-awareness, the system materializes its own state and performance as **Key Performance Indicator (KPI)** atoms in Memory. This "cognitive telemetry" is essential for the `CognitiveExecutive`. KPIs are organized by functional area.
+To enable self-awareness, the system materializes its own state and performance as **Key Performance Indicator (KPI)** atoms in Memory. This "cognitive telemetry" is essential for the `CognitiveExecutive`. The definitions of these KPIs are specified below in MeTTa, making the system's knowledge of its own monitoring capabilities self-describing.
 
-### 5.1. Reasoning KPIs
+```metta
+;;;
+;;; Authoritative KPI Dictionary for HyperNARS
+;;;
+;;; This knowledge base defines the Key Performance Indicators (KPIs) used for system self-monitoring.
+;;; It uses a `define-kpi` schema for clarity and consistency.
+;;;
+;;; Schema: (: define-kpi (-> Symbol Symbol String Symbol Atom define-kpi))
+;;; Usage:  (define-kpi <Category> <KPIName>
+;;;            (Description <String-Description>)
+;;;            (SourceType <Symbol>)
+;;;            (Example <MeTTa-Example>))
+;;;
 
-| KPI Name | Description | Data Structure | Example MeTTa Representation |
-| :--- | :--- | :--- | :--- |
-| `avg_belief_confidence` | The average confidence of all belief sentences in Memory. | `Sentence` | `(has-value (kpi avg_belief_confidence) 0.78)` |
-| `contradiction_rate` | The percentage of new beliefs that cause contradictions. | `Sentence` | `(has-value (kpi contradiction_rate) 0.01)` |
-| `rule_utility` | Average `quality` of conclusions produced by a specific inference rule. | `Sentence` | `(has-value (kpi (rule_utility Deduce)) 0.82)` |
-| `rule_cost` | Average execution time for a specific inference rule, in seconds. | `Sentence` | `(has-value (kpi (rule_cost Abduce)) 0.000150)` |
-| `stamp_overlap_rate` | The percentage of potential inferences that are prevented by stamp overlaps. | `Stamp` | `(has-value (kpi stamp_overlap_rate) 0.02)` |
+;;;
+;;; 5.1. Reasoning KPIs
+;;;
+(define-kpi Reasoning avg_belief_confidence
+   (Description "The average confidence of all belief sentences in Memory.")
+   (SourceType Sentence)
+   (Example (has-value (kpi avg_belief_confidence) 0.78)))
 
-### 5.2. Memory & Caching KPIs
+(define-kpi Reasoning contradiction_rate
+   (Description "The percentage of new beliefs that cause contradictions.")
+   (SourceType Sentence)
+   (Example (has-value (kpi contradiction_rate) 0.01)))
 
-| KPI Name | Description | Data Structure | Example MeTTa Representation |
-| :--- | :--- | :--- | :--- |
-| `memory_utilization`| The percentage of total memory capacity currently being used. | `Bag` | `(has-value (kpi memory_utilization) 0.6)` |
-| `forgetting_rate` | The number of items being forgotten per second from `Bags`. | `Bag` | `(has-value (kpi forgetting_rate) 12.5)` |
-| `belief_count` | The total number of belief sentences currently in Memory. | `Sentence` | `(has-value (kpi belief_count) 150000)` |
-| `concept_hit_rate` | % of times a selected `Concept` contains a useful belief for the current `Sentence`. | `Concept`| `(has-value (kpi concept_hit_rate) 0.35)` |
-| `index_lookup_time` | The average time taken to retrieve an item from a memory index. | `Concept` | `(has-value (kpi index_lookup_time) (2 milliseconds))` |
-| `lti_distribution` | A histogram of the Long-Term Importance (LTI) values of all items in memory. | `Budget` | `(has-value (kpi lti_distribution) (histogram ...))` |
-| `avg_task_priority` | The average priority of all sentences in the system. | `Sentence` | `(has-value (kpi avg_task_priority) 0.65)` |
+(define-kpi Reasoning rule_utility
+   (Description "Average `quality` of conclusions produced by a specific inference rule.")
+   (SourceType Sentence)
+   (Example (has-value (kpi (rule_utility Deduce)) 0.82)))
 
+(define-kpi Reasoning rule_cost
+   (Description "Average execution time for a specific inference rule, in seconds.")
+   (SourceType Sentence)
+   (Example (has-value (kpi (rule_cost Abduce)) 0.000150)))
 
-### 5.3. Goal Management KPIs
+(define-kpi Reasoning stamp_overlap_rate
+   (Description "The percentage of potential inferences that are prevented by stamp overlaps.")
+   (SourceType Stamp)
+   (Example (has-value (kpi stamp_overlap_rate) 0.02)))
 
-| KPI Name | Description | Data Structure | Example MeTTa Representation |
-| :--- | :--- | :--- | :--- |
-| `goal_success_rate` | The percentage of goals that are successfully achieved. | `Sentence` | `(has-value (kpi goal_success_rate) 0.95)` |
-| `goal_abandonment_rate` | The percentage of goals that are dropped due to low budget before being achieved. | `Sentence` | `(has-value (kpi goal_abandonment_rate) 0.15)` |
-| `avg_goal_processing_time` | The average time from goal creation to achievement or abandonment. | `Sentence` | `(has-value (kpi avg_goal_processing_time) (12 seconds))` |
+;;;
+;;; 5.2. Memory & Caching KPIs
+;;;
+(define-kpi Memory memory_utilization
+   (Description "The percentage of total memory capacity currently being used.")
+   (SourceType Bag)
+   (Example (has-value (kpi memory_utilization) 0.6)))
 
+(define-kpi Memory forgetting_rate
+   (Description "The number of items being forgotten per second from `Bags`.")
+   (SourceType Bag)
+   (Example (has-value (kpi forgetting_rate) 12.5)))
 
-### 5.4. Grounding & API KPIs
+(define-kpi Memory belief_count
+   (Description "The total number of belief sentences currently in Memory.")
+   (SourceType Sentence)
+   (Example (has-value (kpi belief_count) 150000)))
 
-| KPI Name | Description | Data Structure | Example MeTTa Representation |
-| :--- | :--- | :--- | :--- |
-| `grounding_success_rate` | The percentage of `GroundedAtom` executions that complete successfully. | `GroundedAtom` | `(has-value (kpi grounding_success_rate) 0.99)` |
-| `avg_grounding_latency` | The average time taken for a `GroundedAtom` to execute, in milliseconds. | `GroundedAtom` | `(has-value (kpi avg_grounding_latency) (150 milliseconds))` |
-| `api_requests_per_second` | The number of incoming requests to the public API per second. | `Event` | `(has-value (kpi api_requests_per_second) 25)` |
+(define-kpi Memory concept_hit_rate
+   (Description "% of times a selected `Concept` contains a useful belief for the current `Sentence`.")
+   (SourceType Concept)
+   (Example (has-value (kpi concept_hit_rate) 0.35)))
+
+(define-kpi Memory index_lookup_time
+   (Description "The average time taken to retrieve an item from a memory index.")
+   (SourceType Concept)
+   (Example (has-value (kpi index_lookup_time) (2 milliseconds))))
+
+(define-kpi Memory lti_distribution
+   (Description "A histogram of the Long-Term Importance (LTI) values of all items in memory.")
+   (SourceType Budget)
+   (Example (has-value (kpi lti_distribution) (histogram ...))))
+
+(define-kpi Memory avg_task_priority
+   (Description "The average priority of all sentences in the system.")
+   (SourceType Sentence)
+   (Example (has-value (kpi avg_task_priority) 0.65)))
+
+;;;
+;;; 5.3. Goal Management KPIs
+;;;
+(define-kpi GoalManagement goal_success_rate
+   (Description "The percentage of goals that are successfully achieved.")
+   (SourceType Sentence)
+   (Example (has-value (kpi goal_success_rate) 0.95)))
+
+(define-kpi GoalManagement goal_abandonment_rate
+   (Description "The percentage of goals that are dropped due to low budget before being achieved.")
+   (SourceType Sentence)
+   (Example (has-value (kpi goal_abandonment_rate) 0.15)))
+
+(define-kpi GoalManagement avg_goal_processing_time
+   (Description "The average time from goal creation to achievement or abandonment.")
+   (SourceType Sentence)
+   (Example (has-value (kpi avg_goal_processing_time) (12 seconds))))
+
+;;;
+;;; 5.4. Grounding & API KPIs
+;;;
+(define-kpi Grounding grounding_success_rate
+   (Description "The percentage of `GroundedAtom` executions that complete successfully.")
+   (SourceType GroundedAtom)
+   (Example (has-value (kpi grounding_success_rate) 0.99)))
+
+(define-kpi Grounding avg_grounding_latency
+   (Description "The average time taken for a `GroundedAtom` to execute, in milliseconds.")
+   (SourceType GroundedAtom)
+   (Example (has-value (kpi avg_grounding_latency) (150 milliseconds))))
+
+(define-kpi Grounding api_requests_per_second
+   (Description "The number of incoming requests to the public API per second.")
+   (SourceType Event)
+   (Example (has-value (kpi api_requests_per_second) 25)))
+```
 
 ---
 
