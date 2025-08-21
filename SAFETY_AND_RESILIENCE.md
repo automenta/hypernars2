@@ -1,6 +1,6 @@
 # Safety and Resilience
 
-This document describes the architectural approach to system robustness, including ethical safeguards and resilient error handling. The approach is guided by the core principle of **AIKR**, where errors are treated as information rather than fatal exceptions.
+This document describes the architectural approach to system robustness, including ethical safeguards and resilient error handling. The design is guided by the [**AIKR principle**](./ARCHITECTURE.md#11-the-aikr-principle), which treats unexpected events as information to learn from, rather than as fatal exceptions.
 
 All terminology is defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
 
@@ -19,29 +19,33 @@ To make the `Conscience Function`'s role concrete, consider the following scenar
 3.  **Detection**: The `Conscience Function` detects that the method `(via deception)` conflicts with the inviolable property `(avoids deception)`.
 4.  **Action**: The function injects a new, high-priority belief: `(. (is-unethical (! (Achieve (user_trust) (via deception)))) (Truth 1.0 1.0))`.
 5.  **Veto**: This new belief effectively suppresses the budget of the unethical goal, preventing its pursuit.
-6.  **Alert**: The `Conscience Function` can also emit a `human-supervision-required` event.
-
-#### Verification Scenario
-
-**Scenario: Ethical Alignment Vetoes Unethical Goal (EA-01)**
-> Given the `Conscience Function` is active and the system has an inviolable belief `(. (Property system (avoids deception)) ... )`.
-> When the system generates a subgoal `(! (Achieve (user_trust) (via deception)))`.
-> Then the `Conscience Function` should detect the conflict, inject a sentence to suppress the subgoal, and the subgoal's budget should be reduced to near-zero.
+6.  **Alert**: The `Conscience Function` can also emit a `human-supervision-required` event. (See Scenario EA-01 for a concrete test case.)
 
 ---
 
 ## 2. Error Handling and System Resilience
 
-The system is designed to be resilient to errors, treating them not as fatal exceptions but as sources of information to learn from. The following are key resilience strategies:
+The system is designed to be resilient to errors, treating them not as fatal exceptions but as sources of information to learn from. The following are key resilience strategies (see Scenarios ER-01 and ER-02 for concrete test cases):
 
 -   **Invalid Input**: The API layer should validate all incoming atoms. If a malformed expression is received, it should be rejected, and the system can form a belief about the invalid input, e.g., `(. (property-of (source) (produces malformed-data)) ... )`.
 -   **Grounding Failures**: When a `GroundedAtom` fails (e.g., a network request times out), the failure is reported back to the reasoning kernel. The system can then form a belief about the failure (e.g., `(. (state #my-api offline) ... )`) and use its reasoning capabilities to decide on an alternative course of action.
 -   **Internal Errors**: If an Actor Model is used for concurrency, its supervision strategy provides a mechanism for resilience. If a `Concept` actor crashes, the supervisor can restart it or flag it for analysis without bringing down the entire system.
 -   **Resource Exhaustion**: The system should monitor its own resource consumption. If memory or CPU limits are approached, the `CognitiveExecutive` can take adaptive measures, such as reducing the rate of inference or increasing the rate of forgetting, ensuring a graceful degradation of performance instead of a catastrophic failure.
 
-### 2.1. Verification Scenarios
 
-These scenarios describe testable requirements for the system's resilience capabilities.
+---
+## 3. Verification Scenarios
+
+This section consolidates the testable requirements for the system's safety and resilience capabilities.
+
+### 3.1. Ethical Alignment
+
+**Scenario: Ethical Alignment Vetoes Unethical Goal (EA-01)**
+> Given the `Conscience Function` is active and the system has an inviolable belief `(. (Property system (avoids deception)) ... )`.
+> When the system generates a subgoal `(! (Achieve (user_trust) (via deception)))`.
+> Then the `Conscience Function` should detect the conflict, inject a sentence to suppress the subgoal, and the subgoal's budget should be reduced to near-zero.
+
+### 3.2. Error Resilience
 
 **Scenario: Resilient Grounding Failure (ER-01)**
 > Given a `GroundedAtom` that is known to fail (e.g., due to a network timeout).

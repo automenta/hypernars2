@@ -1,12 +1,12 @@
 # Memory and Resource Management
 
-This document describes the structure of the system's memory and the resource management strategies used to govern it. The entire memory system operates under the core principle of **AIKR (Assumption of Insufficient Knowledge and Resources)**.
+This document describes the structure of the system's memory and the resource management strategies used to govern it. The entire memory system operates under the core [**AIKR principle**](./ARCHITECTURE.md#11-the-aikr-principle).
 
 All terminology is formally defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
 
 ## 1. The Memory Hypergraph
 
-The memory is structured as a dynamic **Metagraph** (also known as a hypergraph), where `Concept`s serve as vertices and `Atom`s serve as hyperedges. This structure is ideal for representing complex, compositional, and self-referential knowledge.
+The memory is structured as a dynamic [**Metagraph**](./DATA_STRUCTURES.md#1-glossary-of-core-terms) (also known as a hypergraph), where [`Concept`](./DATA_STRUCTURES.md#1-glossary-of-core-terms)s serve as vertices and [`Atom`](./DATA_STRUCTURES.md#1-glossary-of-core-terms)s serve as hyperedges. This structure is ideal for representing complex, compositional, and self-referential knowledge.
 
 **Hypergraph Visualization:**
 The following diagram illustrates how a complex belief is represented as a single atom/hyperedge connecting multiple concepts. The central diamond represents the hyperedge for the atom `(Implication (And cat mammal) (has_fur true))`.
@@ -62,7 +62,7 @@ interface BudgetingStrategy {
 
 ### 2.2. Example Implementation: Economic Attention Allocation (ECAN)
 
-One possible implementation of `BudgetingStrategy` is based on Hyperon's **Economic Attention Allocation (ECAN)** model. In this model, the `priority` and `durability` of a NARS `Budget` are mapped to an Atom's **Short-Term Importance (STI)** and **Long-Term Importance (LTI)**, which are defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
+One possible implementation of `BudgetingStrategy` is based on Hyperon's [**Economic Attention Allocation (ECAN)**](./DATA_STRUCTURES.md#1-glossary-of-core-terms) model. In this model, the `priority` and `durability` of a NARS [`Budget`](./DATA_STRUCTURES.md#1-glossary-of-core-terms) are mapped to an Atom's [**Short-Term Importance (STI)**](./DATA_STRUCTURES.md#1-glossary-of-core-terms) and [**Long-Term Importance (LTI)**](./DATA_STRUCTURES.md#1-glossary-of-core-terms), which are defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
 
 ***Algorithm for STI Update and Spreading:***
 When a `Sentence` is accessed during an inference step:
@@ -81,7 +81,7 @@ The `perform_housekeeping` function for ECAN would implement a decay formula for
 
 ## 3. Forgetting Algorithms
 
-Forgetting is a natural and essential outcome of resource management under AIKR. These algorithms are typically implemented via the **`Bag`** data structure, which is used within each `Concept` to hold `Sentences`. The `should_forget_item` function of a `BudgetingStrategy` implements the logic for determining which items to remove.
+Forgetting is a natural and essential outcome of resource management under AIKR. These algorithms are typically implemented via the [**`Bag`**](./DATA_STRUCTURES.md#34-bag) data structure, which is used within each `Concept` to hold `Sentences`. The `should_forget_item` function of a `BudgetingStrategy` implements the logic for determining which items to remove.
 
 Below are more detailed, language-agnostic descriptions of common forgetting strategies.
 

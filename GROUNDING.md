@@ -2,7 +2,7 @@
 
 This document describes the **Grounded Atom Interface (GAI)**, the core mechanism responsible for connecting the system's internal symbolic logic to the external world. It details *how* the system interacts with sensors, actuators, and external models.
 
-The primary mechanisms for this are the `GroundedAtom` and the concept of external `Spaces`, both of which are defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms). For a guide to the developer-facing APIs that use this interface, see [**API and Integration Guide**](./API_AND_INTEGRATION.md).
+All terminology is formally defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms). For a guide to the developer-facing APIs that use this interface, see [**API and Integration Guide**](./API_AND_INTEGRATION.md).
 
 ---
 

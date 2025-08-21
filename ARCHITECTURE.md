@@ -15,7 +15,10 @@ All data structures, including the fundamental `Atom` and `Sentence` types, are 
 The design of HyperNARS is guided by a set of foundational concepts that collectively enable its unique capabilities.
 
 ### 1.1. The AIKR Principle
-The entire system operates under the **Assumption of Insufficient Knowledge and Resources (AIKR)**. This principle, inherited from NARS, posits that the system's knowledge is always incomplete and its computational resources are finite. This is not a limitation to be overcome, but a fundamental reality that shapes the system's design, particularly its resource-aware attention allocation and its ability to revise beliefs based on new evidence.
+The entire system operates under the **Assumption of Insufficient Knowledge and Resources (AIKR)**. This principle, inherited from NARS, posits that the system's knowledge is always incomplete and its computational resources are finite. This is not a limitation to be overcome, but a fundamental reality that shapes every aspect of the system's design:
+-   **Resource Management**: It dictates the need for resource-aware attention allocation to focus on the most relevant information.
+-   **Epistemic Openness**: It requires the system to be able to revise its beliefs based on new evidence.
+-   **Resilience**: It informs the error handling philosophy, where unexpected events are treated as information to learn from, not as fatal exceptions.
 
 ### 1.2. Metaprogramming: Everything is an Atom
 The core architectural principle is **metaprogramming**. In HyperNARS, there is no rigid distinction between "data" and "program." All forms of knowledge—declarative facts, procedural rules, goals, and even the system's own logic and configuration—are represented uniformly as **atoms** in the Memory space.
@@ -27,18 +30,18 @@ The core architectural principle is **metaprogramming**. In HyperNARS, there is 
 ### 1.3. The Dual-Process Reasoning Model
 The system's control loop is architected as a **dual-process system** to balance the efficiency of reflexive thought with the thoroughness of deliberate reasoning.
 
--   **System 1 (Reflexive Reasoning)**: This is the default, high-throughput, and efficient mode of operation. It is a continuous, AIKR-driven cycle of selecting relevant sentences from memory and processing them to derive immediate conclusions. It is the engine for the Layer 1 Cognitive Functions.
+-   **[System 1 (Reflexive Reasoning)](./DATA_STRUCTURES.md#1-glossary-of-core-terms)**: This is the default, high-throughput, and efficient mode of operation. It is a continuous, AIKR-driven cycle of selecting relevant sentences from memory and processing them to derive immediate conclusions. It is the engine for the Layer 1 Cognitive Functions.
 
--   **System 2 (Deliberative Reasoning)**: This is a resource-intensive, goal-driven reasoning process initiated by the `CognitiveExecutive` when it detects a situation requiring deeper analysis (e.g., a contradiction or a complex goal). It operates on a temporary, scoped workspace to conduct focused thought and is the primary mode for Layer 2 and 3 Cognitive Functions.
+-   **[System 2 (Deliberative Reasoning)](./DATA_STRUCTURES.md#1-glossary-of-core-terms)**: This is a resource-intensive, goal-driven reasoning process initiated by the `CognitiveExecutive` when it detects a situation requiring deeper analysis (e.g., a contradiction or a complex goal). It operates on a temporary, scoped workspace to conduct focused thought and is the primary mode for Layer 2 and 3 Cognitive Functions.
 
 The detailed pseudo-code for these reasoning loops is specified in [**Reasoning and Cognition**](./REASONING_AND_COGNITION.md).
 
 ### 1.4. The Layered Cognitive Architecture
-The system's capabilities are organized into a three-tiered hierarchy of **Cognitive Functions**. This layered model provides a clear separation of concerns, from high-speed reflexive processing to resource-intensive metacognition.
+The system's capabilities are organized into a three-tiered hierarchy of [**Cognitive Functions**](./DATA_STRUCTURES.md#1-glossary-of-core-terms). This layered model provides a clear separation of concerns, from high-speed reflexive processing to resource-intensive metacognition.
 
 -   **Layer 1: Core Cognitive Functions (System 1)**: The "engine room" of the mind. These are the fundamental, continuously-operating NAL-style inference functions (e.g., induction, deduction, abduction) that drive the reflexive reasoning loop.
 
--   **Layer 2: Executive Control & Awareness (System 2 Initiation)**: The "foreman," monitoring the core functions and initiating deeper thought. The primary function here is the `Cognitive Executive`, which tracks KPIs and triggers System 2 deliberation when needed.
+-   **Layer 2: Executive Control & Awareness (System 2 Initiation)**: The "foreman," monitoring the core functions and initiating deeper thought. The primary function here is the [`Cognitive Executive`](./DATA_STRUCTURES.md#1-glossary-of-core-terms), which tracks KPIs and triggers System 2 deliberation when needed.
 
 -   **Layer 3: Specialized Metacognition (System 2)**: The "strategist," handling the most abstract, goal-driven tasks, such as ethical reasoning (`Conscience Function`) and self-improvement.
 
@@ -146,12 +149,12 @@ The "MeTTa Interpreter" is the symbolic reasoning engine at the heart of the sys
 1.  **Atom Representation**: Representing Symbols, Variables, and Expressions.
 2.  **Pattern Matching**: Matching data atoms against pattern atoms and binding variables.
 3.  **Knowledge Base Search & Rewrite**: Searching the Memory space for matching rules and performing rewrites.
-4.  **Execution of Grounded Atoms**: Calling external code bound to `GroundedAtom`s.
+4.  **Execution of Grounded Atoms**: Calling external code bound to [`GroundedAtom`](./DATA_STRUCTURES.md#1-glossary-of-core-terms)s.
 
 ---
 
 ## 4. System Configuration
-The system's entire configuration is defined by a set of `Config` atoms, typically loaded from a `.metta` file at startup. This makes the system's behavior transparent and dynamically modifiable. The formal schema for `Config` atoms is defined in `DATA_STRUCTURES.md`.
+The system's entire configuration is defined by a set of [`Config` atoms](./DATA_STRUCTURES.md#43-architectural--metacognitive-schemas), typically loaded from a `.metta` file at startup. This makes the system's behavior transparent and dynamically modifiable. The formal schema for `Config` atoms is defined in `DATA_STRUCTURES.md`.
 
 ### 4.1. Configuration Categories
 -   **Core Engine Parameters**: Control the fundamental reasoning process.
