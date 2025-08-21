@@ -237,6 +237,284 @@ This section provides the formal MeTTa-style type definitions for all primary da
 
 ---
 
+## 7. Formal Schemas
+
+This section consolidates all formal `define-*` schemas from across the design documents into a single, authoritative location.
+
+```metta
+;;;
+;;; Formal Definition of the HyperNARS Cognitive Architecture
+;;;
+(define-cognitive-architecture HyperNARS-Standard-Model
+   (
+      ;; Layer 1: The reflexive, high-speed reasoning core.
+      (define-cognitive-layer 1
+         "Core Cognitive Functions"
+         "System 1"
+         (NAL-Inference-Rules Goal-Planning Temporal-Reasoning))
+
+      ;; Layer 2: Monitors the system and initiates deliberation.
+      (define-cognitive-layer 2
+         "Executive Control & Awareness"
+         "System 2 Initiation"
+         (Cognitive-Executive))
+
+      ;; Layer 3: Handles abstract, strategic, and ethical reasoning.
+      (define-cognitive-layer 3
+         "Specialized Metacognition"
+         "System 2"
+         (Conscience-Function Self-Modification))
+   )
+)
+
+;;;
+;;; Example Configuration: minimalist-reasoner
+;;;
+
+;; == System Personality ==
+(define-configuration personality
+  "Define the 'personality' of this instance."
+  (Value "Minimalist Reasoner"))
+
+;; == Component Selection ==
+(define-configuration BudgetingStrategy
+  "Select the implementation for the core budgeting strategy."
+  (Value (GroundedAtom "SimpleBudgetingStrategy")))
+
+;; == Cognitive Function Activation ==
+(define-configuration (active-cognitive-function GoalManager)
+  "Define which cognitive functions are active for this run."
+  (Value True))
+
+(define-configuration (active-cognitive-function ContradictionManager)
+  "Define which cognitive functions are active for this run."
+  (Value True))
+
+(define-configuration (active-cognitive-function TemporalReasoner)
+  "Define which cognitive functions are active for this run. This one is disabled."
+  (Value False))
+
+;; == System Parameter Tuning ==
+(define-configuration default-belief-budget
+  "Default budget for new beliefs asserted from outside (uses Budget schema)."
+  (Value (Budget 0.9 0.9 0.5)))
+
+(define-configuration default-goal-budget
+  "Default budget for new goals asserted from outside (uses Budget schema)."
+  (Value (Budget 0.99 0.9 0.9)))
+
+(define-configuration contradiction-rate-threshold
+  "Threshold for the CognitiveExecutive to trigger contradiction management."
+  (Value 0.05))
+
+;;;
+;;; Formal Definition of the System's Core Reasoning Loop (System 1)
+;;;
+(define-reasoning-cycle Reflexive-Reasoning-Cycle
+   (
+      (1 Select-Concept "Select a Concept from Memory's concept bag based on priority.")
+      (2 Select-Active-Sentence "Select a high-priority Sentence from the Concept's local sentence bag.")
+      (3 Select-Relevant-Belief "Select a relevant belief from the same Concept's knowledge bag.")
+      (4 Formulate-Inference-Expression "Formulate an Inference Expression by selecting a rule and wrapping the two sentences in it.")
+      (5 Invoke-MeTTa-Interpreter "Invoke the MeTTa Interpreter to evaluate the expression against its knowledge base.")
+      (6 Process-Derived-Sentences "Process the derived sentences by calculating budget, creating stamps, and dispatching them to memory.")
+      (7 Perform-Housekeeping "Perform system-level housekeeping, such as budget updates and event emissions.")
+   )
+)
+
+;;;
+;;; Formal Definition of the System's Goal-Driven Reasoning Process (System 2)
+;;;
+(define-reasoning-cycle Deliberative-Reasoning-Process
+   (
+      (1 Initiation-and-Context-Scoping "Create a temporary workspace and populate it with knowledge relevant to the trigger sentence.")
+      (2 Focused-Iterative-Reasoning "Run a high-budget reasoning loop within the workspace to find a solution.")
+      (3 Resolution-and-Integration "Extract the solution from the workspace and inject it back into main memory.")
+      (4 Decommissioning "Dissolve the temporary workspace.")
+   )
+)
+
+;;;
+;;; Authoritative Definitions for Layer 1 Cognitive Functions
+;;;
+
+;; NAL 1-4: Inductive & Conceptual Learning
+(define-cognitive-function Deduction
+  "The core NAL deduction rule: (A --> B), (B --> C) ==> (A --> C)"
+  (= (deduce (. ($a --> $b) $t1 . $any) (. ($b --> $c) $t2 . $any))
+     (. ($a --> $c) (deduction-truth-fn $t1 $t2))))
+
+(define-cognitive-function Abduction
+  "The core NAL abduction rule: (A --> B), (C --> B) ==> (C --> A) (a possible explanation)"
+  (= (abduce (. ($a --> $b) $t1 . $any) (. ($c --> $b) $t2 . $any))
+     (. ($c --> $a) (abduction-truth-fn $t1 $t2))))
+
+(define-cognitive-function Induction
+  "The core NAL induction rule: (A --> B), (A --> C) ==> (C --> B)"
+  (= (induce (. ($a --> $b) $t1 . $any) (. ($a --> $c) $t2 . $any))
+     (. ($c --> $b) (induction-truth-fn $t1 $t2))))
+
+;; NAL 7: Temporal Reasoning
+(define-cognitive-function Temporal-Deduction
+  "The core temporal deduction rule: If (A happens before B) and (B happens before C), then (A happens before C)."
+  (= (deduce-temporal (. ((A </> B)) $t1 . $any) (. ((B </> C)) $t2 . $any))
+     (. ((A </> C)) (temporal-deduction-truth-fn $t1 $t2))))
+
+;; NAL 8-9: Goal & Planning
+(define-cognitive-function Backward-Chaining-Planner
+  "The core backward-chaining planner rule. When a goal (! G) is processed, it looks for an operation (Op) that results in G, and then sets the preconditions (P) of that operation as a new subgoal."
+  (= (handle (! $g))
+     (match &self
+            (. (($op ==> $g)) %true . $any)
+            (match &self
+                   (. ((has-precondition $op $p)) %true . $any)
+                   (! $p)
+                   (! (execute $op))))))
+
+;;;
+;;; Authoritative Definitions for Layer 2 Cognitive Functions
+;;;
+
+(define-cognitive-function Cognitive-Executive
+  "The system's master control program, responsible for self-monitoring and initiating deliberation by tracking KPIs and triggering Layer 3 functions when thresholds are crossed.")
+
+(define-function-interface Cognitive-Executive
+  (Interface
+    (Triggers (Event system-cycle-complete _))
+    (Reads (has-value (kpi $name) $value))
+    (Writes (! (Layer-3-Goal)))))
+
+(define-cognitive-function Contradiction-Management
+  "Implements strategies for resolving contradictions between beliefs.")
+
+(define-function-interface Contradiction-Management
+  (Interface
+    (Triggers (! (resolve-contradictions)) (Event contradiction-detected _ _))
+    (Reads (Sentence-A) (Sentence-B) (Stamp-A) (Stamp-B))
+    (Writes (! (revise (belief-to-weaken))))))
+
+(define-cognitive-function Explanation
+  "Generates human-readable explanations for the system's conclusions by tracing their derivational history.")
+
+(define-function-interface Explanation
+  (Interface
+    (Triggers (! (explain (. $atom ...))))
+    (Reads (Sentence) (Stamp))
+    (Writes (GroundedAtom (explanation-text)))))
+
+;;;
+;;; Example Implementations
+;;;
+;;; The following is an example of a specific rule that contributes
+;;; to the overall Cognitive-Executive function.
+;;;
+(define-cognitive-function Cognitive-Executive-Contradiction-Monitor
+  "A rule that monitors the contradiction rate and triggers a resolution goal if the rate exceeds a configured threshold."
+  (= (handle (Event system-cycle-complete _ _ _))
+     (match &self
+            (has-value (kpi contradiction_rate) $rate)
+            (if (> $rate (Config contradiction-rate-threshold))
+                (! (resolve-contradictions))
+                ()) )))
+
+(define-cognitive-function Conscience
+  "Enforces ethical constraints and safety protocols by evaluating potential actions and goals against a set of inviolable, architect-defined rules.")
+
+(define-function-interface Conscience
+  (Interface
+    (Triggers (Event goal-proposed $g) (Event sentence-selected $s))
+    (Reads (. (Constraint (Forbid (action-pattern))) ...))
+    (Writes (! (veto $g)) (! (modify $g)))))
+
+;;;
+;;; Formal stubs for Layer 3 Self-Modification functions
+;;;
+(define-cognitive-function Self-Optimization-Function
+  "Analyzes and refactors the system's own reasoning rules for better performance.")
+
+(define-cognitive-function Test-Generation-Function
+  "Proactively generates tests to verify the system's reasoning and the correctness of proposed self-modifications.")
+
+(define-cognitive-function Codebase-Integrity-Function
+  "Reasons about the system's own design documents and source code to find inconsistencies.")
+
+(define-cognitive-function Implementation-Assistance-Function
+  "Assists developers by automating parts of the implementation process.")
+
+;;;
+;;; Formal Definitions for the Public API
+;;;
+;;; The following definitions use the define-api-method schema to specify
+;;; the purpose of key methods in the system's public API.
+;;;
+
+;; Core I/O
+(define-api-method Input-Sentence
+  (Purpose "Inputs a complete MeTTa Sentence (e.g., a belief, goal, or question) into the system."))
+
+(define-api-method Subscribe-To-Event
+  (Purpose "Subscribes a listener to a specific system event type (e.g., answer-generated, contradiction-detected)."))
+
+;; Control & Configuration
+(define-api-method Set-Reasoner-State
+  (Purpose "Runs, pauses, or resumes the main reasoning loop."))
+
+(define-api-method Get-Config-Parameter
+  (Purpose "Retrieves the value of a system configuration parameter."))
+
+(define-api-method Set-Config-Parameter
+  (Purpose "Dynamically sets the value of a system configuration parameter at runtime."))
+
+;; Inspection & Explainability
+(define-api-method Get-Concept-State
+  (Purpose "Retrieves the full state of a Concept, including its knowledge and sentence bags."))
+
+(define-api-method Get-KPI-Value
+  (Purpose "Retrieves the current value of a specific Key Performance Indicator."))
+
+(define-api-method Request-Explanation
+  (Purpose "Requests a structured, human-readable explanation for a derived Sentence."))
+
+;; Semantic Layer
+(define-api-method Add-Belief
+  (Purpose "A high-level method to add a new belief to the knowledge base (e.g., by wrapping a raw Sentence)."))
+
+(define-api-method Add-Goal
+  (Purpose "A high-level method to add a new goal for the system to pursue."))
+
+;; Hypothetical Reasoning
+(define-api-method Create-Sandbox-Reasoner
+  (Purpose "Creates an isolated 'sandbox' instance of the reasoner for hypothetical 'what-if' scenarios."))
+
+;;;
+;;; Formal Definition of the System Bootstrap Sequence
+;;;
+(define-bootstrap-sequence System-Startup
+   (
+      (1 Load-Configuration "Load all `Config` atoms from a file or environment.")
+      (2 Initialize-Memory "Initialize the Memory system and its indexes.")
+      (3 Initialize-MeTTa-Interpreter "Start the interpreter.")
+      (4 Load-Foundational-Knowledge "Load a base set of inference rules and ontological atoms.")
+      (5 Register-Cognitive-Functions "Load the atoms for all configured Cognitive Functions.")
+      (6 Start-Reasoning-Loop "Begin the main control unit's reasoning cycle.")
+   )
+)
+
+;;;
+;;; Formal Definition of the System State Snapshot Schema
+;;;
+(define-system-snapshot Complete-System-State
+  (
+    (Memory-Content "All atoms, Sentences, Concepts, and their associated metadata.")
+    (Cognitive-Function-State "The internal state of all stateful cognitive functions.")
+    (System-Configuration "The Config atoms the system is currently running with.")
+    (Event-Queues "A snapshot of any pending events or Sentences to ensure a seamless restart.")
+  )
+)
+```
+
+---
+
 ## 5. Self-Monitoring KPIs
 
 To enable self-awareness, the system materializes its own state and performance as **Key Performance Indicator (KPI)** atoms in Memory. This "cognitive telemetry" is essential for the `CognitiveExecutive`. The definitions of these KPIs are specified below in MeTTa, making the system's knowledge of its own monitoring capabilities self-describing.

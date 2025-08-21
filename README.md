@@ -6,30 +6,27 @@ This project outlines the architecture for HyperNARS, a next-generation reasonin
 
 The goal is to specify a robust, transparent, and self-improving platform for Artificial General Intelligence (AGI) that is defined not by rigid code, but by the contents of its own knowledge base.
 
-This repository contains a set of documents that serve as the primary architectural and conceptual specification for the HyperNARS system.
+This repository contains a consolidated set of documents that serve as the primary architectural and conceptual specification for the HyperNARS system. The design has been aggressively deduplicated to provide a clear and implementable guide.
 
 ---
 
-## How to Read These Documents
+## Documentation Structure
 
-This specification is detailed and interconnected. For the best understanding, we recommend the following reading path:
+The specification is now organized into four primary documents, designed to be read in order:
 
-1.  **Start Here:** `README.md` (this file)
-2.  **For a Quick Overview:** [**`TUTORIAL.md`**](./TUTORIAL.md) provides a high-level conceptual walkthrough.
-3.  **For the Core Concepts:** [**`ARCHITECTURE.md`**](./ARCHITECTURE.md) is the main document describing the foundational principles, including the metaprogramming approach, the dual-process reasoning model, and the layered cognitive architecture.
-4.  **For Data Schemas & Terms:** [**`DATA_STRUCTURES.md`**](./DATA_STRUCTURES.md) is the authoritative reference for all data types and contains the complete project **Glossary**.
-5.  **For Deeper Detail:** The remaining documents provide detailed specifications for each component of the system.
+1.  [**`1_Architecture.md`**](./1_Architecture.md): The primary and most comprehensive document. It describes the complete system architecture, from core principles and memory management to reasoning, symbol grounding, safety, and advanced topics. **Start here for a deep understanding of the system.**
+
+2.  [**`2_Data_Model.md`**](./2_Data_Model.md): The authoritative reference for all data structures and formal, machine-readable schemas. This includes the project glossary, core type definitions, and all `define-*` schemas that specify the system's cognitive functions, APIs, and configurations.
+
+3.  [**`3_API_and_Usage.md`**](./3_API_and_Usage.md): A practical guide for developers. It begins with a conceptual walkthrough for new users and then provides a detailed reference for the public API, system initialization, and extension points.
+
+4.  [**`4_Verification.md`**](./4_Verification.md): A set of concrete, testable scenarios that verify the system's safety and resilience requirements.
 
 ---
 
 ## Table of Contents
 
-1.  [**Tutorial**](./TUTORIAL.md): A high-level conceptual walkthrough.
-2.  [**Architecture**](./ARCHITECTURE.md): The core principles, component diagrams, and high-level design.
-3.  [**Data Structures**](./DATA_STRUCTURES.md): The authoritative reference for all data types and the project glossary.
-4.  [**Reasoning and Cognition**](./REASONING_AND_COGNITION.md): The detailed specification of the reasoning loops and cognitive functions.
-5.  [**Memory and Resource Management**](./MEMORY.md): The structure of the knowledge base and attention allocation mechanisms.
-6.  [**Symbol Grounding**](./GROUNDING.md): The interface to the external world, including sensors, actuators, and ML models.
-7.  [**API & Integration**](./API_AND_INTEGRATION.md): Details on the public API, system initialization, and extension points.
-8.  [**Safety & Resilience**](./SAFETY_AND_RESILIENCE.md): The approach to ethical alignment and robust error handling.
-9.  [**Advanced Topics**](./ADVANCED_TOPICS.md): Forward-looking subjects like concurrency, self-evolution, and system bootstrapping.
+1.  [**System Architecture**](./1_Architecture.md): The complete, consolidated system design.
+2.  [**Data Model & Schemas**](./2_Data_Model.md): The authoritative reference for all data types and formal definitions.
+3.  [**API and Usage Guide**](./3_API_and_Usage.md): A developer's guide to using and extending the system.
+4.  [**Verification Scenarios**](./4_Verification.md): Testable requirements for system safety and resilience.
