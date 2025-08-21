@@ -2,6 +2,10 @@
 
 This tutorial provides a high-level, conceptual walkthrough of how one might interact with a running HyperNARS system. The goal is to illustrate the flow of information and the roles of the core data types, without getting into implementation-specific details.
 
+For formal definitions of any terms used here, please consult the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
+
+---
+
 ## The Goal: Teaching and Querying
 
 Our goal is simple:

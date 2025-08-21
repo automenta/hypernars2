@@ -1,10 +1,12 @@
 # Memory and Resource Management
 
-The Memory System is the core of the system's knowledge base. The AIKR principle is implemented through a sophisticated resource management system that governs how knowledge is stored, prioritized, and forgotten.
+This document describes the structure of the system's memory and the resource management strategies used to govern it. The entire memory system operates under the core principle of **AIKR (Assumption of Insufficient Knowledge and Resources)**.
 
-## The Memory Hypergraph
+All terminology is formally defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
 
-The memory is structured as a dynamic **hypergraph** (specifically, a Hyperon Atomspace or Metagraph), where `Concept`s (representing key atoms) are vertices and all other `Atoms` are hyperedges that can connect any number of vertices. This allows for representing complex, compositional knowledge. Unlike a traditional hypergraph, the metagraph's edges (Links) can connect to other Links, allowing for the representation of nested and self-referential knowledge.
+## 1. The Memory Hypergraph
+
+The memory is structured as a dynamic **Metagraph** (also known as a hypergraph), where `Concept`s serve as vertices and `Atom`s serve as hyperedges. This structure is ideal for representing complex, compositional, and self-referential knowledge.
 
 **Hypergraph Visualization:**
 The following diagram illustrates how a complex belief is represented as a single atom/hyperedge connecting multiple concepts. The central diamond represents the hyperedge for the atom `(Implication (And cat mammal) (has_fur true))`.
@@ -32,11 +34,11 @@ graph TD
     style L2 fill:#ccf,stroke:#333,stroke-width:2px,rx:5px,ry:5px
 ```
 
-## Pluggable Attention Allocation
+## 2. Pluggable Attention Allocation
 
 A key aspect of the architecture's flexibility is its pluggable model for attention allocation. The system is not hard-coded to a single resource management algorithm. Instead, it defines a standard interface, `BudgetingStrategy`, that different allocation models can implement. The system can be configured to use a specific strategy at startup.
 
-### The `BudgetingStrategy` Interface
+### 2.1. The `BudgetingStrategy` Interface
 This is a language-agnostic interface that any budgeting model must adhere to. It defines the core operations for managing the lifecycle of `Budget`s and an item's importance in memory.
 
 ```
@@ -58,12 +60,9 @@ interface BudgetingStrategy {
 }
 ```
 
-### Example Implementation: Economic Attention Allocation (ECAN)
+### 2.2. Example Implementation: Economic Attention Allocation (ECAN)
 
-One possible implementation of `BudgetingStrategy` is based on Hyperon's **Economic Attention Allocation (ECAN)** model. In this model, the `priority` and `durability` of a NARS `Budget` correspond to an Atom's **Short-Term Importance (STI)** and **Long-Term Importance (LTI)**.
-
--   **STI (Short-Term Importance)**: Represents the immediate relevance of an item. It spikes when an item is used in reasoning and decays over time. This maps to a `Budget`'s `priority`.
--   **LTI (Long-Term Importance)**: Represents the long-term value or usefulness of an item. It increases when an item is involved in successful, high-quality inferences. This maps to a `Budget`'s `durability`.
+One possible implementation of `BudgetingStrategy` is based on Hyperon's **Economic Attention Allocation (ECAN)** model. In this model, the `priority` and `durability` of a NARS `Budget` are mapped to an Atom's **Short-Term Importance (STI)** and **Long-Term Importance (LTI)**, which are defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
 
 ***Algorithm for STI Update and Spreading:***
 When a `Sentence` is accessed during an inference step:
@@ -80,9 +79,9 @@ When a derived `Sentence` is created:
 The `perform_housekeeping` function for ECAN would implement a decay formula for all STI values in memory:
 `new_STI = current_STI * (1 - decay_factor)`
 
-## Forgetting Algorithms
+## 3. Forgetting Algorithms
 
-Forgetting is a natural and essential outcome of resource management under AIKR. These algorithms are typically implemented via the **`Bag`** data structure (defined in `DATA_STRUCTURES.md`), which is used within each `Concept` to hold `Sentences`. The `should_forget_item` function of a `BudgetingStrategy` then implements the logic for determining which items to remove. This ensures that the system's finite resources are focused on the most relevant and important knowledge.
+Forgetting is a natural and essential outcome of resource management under AIKR. These algorithms are typically implemented via the **`Bag`** data structure, which is used within each `Concept` to hold `Sentences`. The `should_forget_item` function of a `BudgetingStrategy` implements the logic for determining which items to remove.
 
 Below are more detailed, language-agnostic descriptions of common forgetting strategies.
 
@@ -110,12 +109,12 @@ Below are more detailed, language-agnostic descriptions of common forgetting str
     ```
 -   **Dynamic Forgetting Rate**: The `CognitiveExecutive` can adjust the forgetting thresholds based on system load. If memory utilization is high, it might increase the `IMPORTANCE_THRESHOLD` to be more aggressive in its forgetting, and vice-versa.
 
-## Memory Performance Monitoring
+## 4. Memory Performance Monitoring
 
-The system must be able to reason about the efficiency of its own memory system. The `CognitiveExecutive` monitors memory-related KPIs, which are stored as beliefs in Memory, to detect problems and guide optimization. The authoritative list of all system KPIs is defined in `DATA_STRUCTURES.md`.
+The `CognitiveExecutive` monitors memory-related KPIs to detect problems and guide optimization. The authoritative list of all system KPIs is defined in [**`DATA_STRUCTURES.md`**](./DATA_STRUCTURES.md#5-self-monitoring-kpis).
 
 
-## Indexing Strategies
+## 5. Indexing Strategies
 
 To ensure efficient retrieval of information from Memory, the system should employ specialized index data structures, such as:
 

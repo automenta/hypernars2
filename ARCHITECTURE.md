@@ -1,36 +1,99 @@
 # System Architecture
 
-The HyperNARS architecture is a modular, dynamic system designed around the core principle of metaprogramming. Its behavior is defined not by rigid, hard-coded components, but by the **atoms** held in its memory.
+This document outlines the high-level architecture of HyperNARS, a next-generation reasoning system designed for metaprogrammability, cognitive flexibility, and robust operation under the **Assumption of Insufficient Knowledge and Resources (AIKR)**.
 
-The fundamental data structures, including the `Atom` and the processable `Sentence`, are formally defined in the [**Data Structures**](./DATA_STRUCTURES.md#2-the-conceptual-hierarchy) document. This approach creates an exceptionally flexible, transparent, and self-modifiable system.
+The architecture is centered on two primary components:
+1.  A **Memory space**, structured as a Metagraph, which holds all knowledge.
+2.  A **MeTTa Interpreter**, which continuously evaluates atomic expressions to drive the reasoning process.
 
-The architecture is centered on two core components: a **Memory** space, which holds all data, and a **MeTTa Interpreter**, which continuously evaluates atoms to drive the reasoning process.
+All data structures, including the fundamental `Atom` and `Sentence` types, are formally defined in the [**Data Structures**](./DATA_STRUCTURES.md) document. All terminology is defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
 
 ---
 
-## 1. Architectural Principles
+## 1. Core Concepts
 
-The system's design is guided by a set of core principles that enable its flexibility and power.
+The design of HyperNARS is guided by a set of foundational concepts that collectively enable its unique capabilities.
 
--   **Metaprogramming as a First Principle**: Traditional architectures have hard-coded components (e.g., event buses, configuration parsers, inference engines). In HyperNARS, these are all implemented as MeTTa programs and data. They can be modified at runtime simply by changing the atoms in Memory, without recompiling or restarting the system. For a detailed guide on the practical startup sequence and its relationship to this architectural philosophy, see the [**System Initialization Guide**](./API_AND_INTEGRATION.md#22-bootstrap-process).
+### 1.1. The AIKR Principle
+The entire system operates under the **Assumption of Insufficient Knowledge and Resources (AIKR)**. This principle, inherited from NARS, posits that the system's knowledge is always incomplete and its computational resources are finite. This is not a limitation to be overcome, but a fundamental reality that shapes the system's design, particularly its resource-aware attention allocation and its ability to revise beliefs based on new evidence.
 
--   **Deep Introspection**: Because the system's own logic and configuration are represented as data, it can "reason about itself." A Cognitive Function can be written to analyze the performance of inference rules, inspect the event stream, or check its own configuration for inconsistencies.
+### 1.2. Metaprogramming: Everything is an Atom
+The core architectural principle is **metaprogramming**. In HyperNARS, there is no rigid distinction between "data" and "program." All forms of knowledge—declarative facts, procedural rules, goals, and even the system's own logic and configuration—are represented uniformly as **atoms** in the Memory space.
 
--   **Simplicity and Elegance**: By using a single representation for content (Atoms) and a single processing mechanism (the MeTTa Interpreter), the overall complexity is dramatically reduced. The architecture is defined by the *content* of its Memory, not by a rigid, external structure.
+-   **Inference is Interpretation**: The system has no hard-coded inference engine. "Reasoning" is the process of the MeTTa interpreter evaluating expressions against other expressions that represent the laws of logic.
+-   **Deep Introspection**: Because the system's own structure and processes are represented as data, it can "reason about itself." A Cognitive Function can be written to analyze the performance of inference rules or inspect its own configuration for inconsistencies.
+-   **Runtime Modifiability**: The system's behavior can be modified at runtime simply by adding or removing atoms from Memory, without recompiling or restarting.
 
--   **Cognitive Functions as Atom Collections**: Higher-level capabilities are not implemented as separate software modules, but as collections of MeTTa atoms. A function like "Goal Planning" is simply a set of inference rules loaded into memory that know how to manipulate `Goal` sentences.
+### 1.3. The Dual-Process Reasoning Model
+The system's control loop is architected as a **dual-process system** to balance the efficiency of reflexive thought with the thoroughness of deliberate reasoning.
 
-### 1.1. Concurrency Model
+-   **System 1 (Reflexive Reasoning)**: This is the default, high-throughput, and efficient mode of operation. It is a continuous, AIKR-driven cycle of selecting relevant sentences from memory and processing them to derive immediate conclusions. It is the engine for the Layer 1 Cognitive Functions.
 
-The primary reasoning process, described in `REASONING_AND_COGNITION.md`, is the conceptually sequential `reflexive_reasoning_cycle`. However, the architecture is compatible with advanced concurrency models like the **Actor Model** (as discussed in `ADVANCED_TOPICS.md`) as an implementation strategy.
+-   **System 2 (Deliberative Reasoning)**: This is a resource-intensive, goal-driven reasoning process initiated by the `CognitiveExecutive` when it detects a situation requiring deeper analysis (e.g., a contradiction or a complex goal). It operates on a temporary, scoped workspace to conduct focused thought and is the primary mode for Layer 2 and 3 Cognitive Functions.
 
-In such a model, each `Concept` could be implemented as a lightweight, parallel actor. The `reflexive_reasoning_cycle` would then represent the logic running *inside* each actor. This allows for massive parallelism at the concept level while maintaining the logical integrity of the reasoning process for each step. This specification does not mandate an Actor Model but highlights it as a viable path for high-performance implementations.
+The detailed pseudo-code for these reasoning loops is specified in [**Reasoning and Cognition**](./REASONING_AND_COGNITION.md).
+
+### 1.4. The Layered Cognitive Architecture
+The system's capabilities are organized into a three-tiered hierarchy of **Cognitive Functions**. This layered model provides a clear separation of concerns, from high-speed reflexive processing to resource-intensive metacognition.
+
+-   **Layer 1: Core Cognitive Functions (System 1)**: The "engine room" of the mind. These are the fundamental, continuously-operating NAL-style inference functions (e.g., induction, deduction, abduction) that drive the reflexive reasoning loop.
+
+-   **Layer 2: Executive Control & Awareness (System 2 Initiation)**: The "foreman," monitoring the core functions and initiating deeper thought. The primary function here is the `Cognitive Executive`, which tracks KPIs and triggers System 2 deliberation when needed.
+
+-   **Layer 3: Specialized Metacognition (System 2)**: The "strategist," handling the most abstract, goal-driven tasks, such as ethical reasoning (`Conscience Function`) and self-improvement.
+
+Communication between these layers is handled implicitly by reading and writing atoms to the shared Memory space. The diagram below illustrates this flow of control and information.
+
+```mermaid
+graph TD
+    subgraph Layer3 [Layer 3: Specialized Metacognition]
+        direction LR
+        Conscience("Conscience Function")
+        SelfMod("Self-Modification")
+    end
+
+    subgraph Layer2 [Layer 2: Executive Control]
+        direction LR
+        CognitiveExecutive("Cognitive Executive")
+    end
+
+    subgraph Layer1 [Layer 1: Core Cognitive Functions]
+        direction LR
+        NAL("NAL Inference Rules")
+        Planning("Goal & Planning")
+        Temporal("Temporal Reasoning")
+    end
+
+    subgraph Memory [Memory Space]
+        S[/"Sentences (Beliefs, Goals, etc.)"/]
+    end
+
+    NAL <--> S
+    Planning <--> S
+    Temporal <--> S
+
+    CognitiveExecutive -- "Monitors KPIs from" --> Layer1
+    CognitiveExecutive -- "Monitors KPIs from" --> Memory
+    S -- "Triggers Events for" --> CognitiveExecutive
+
+    CognitiveExecutive -- "Delegates complex goals to" --> Layer3
+    Conscience -- "Injects vetoes/constraints into" --> S
+    SelfMod -- "Injects revised rules/beliefs into" --> S
+
+
+    style Layer1 fill:#e6f3ff,stroke:#333
+    style Layer2 fill:#d4edda,stroke:#333
+    style Layer3 fill:#fff3cd,stroke:#333
+    style Memory fill:#f8f9fa,stroke:#333
+```
+
+The detailed specification for each function is in [**Reasoning and Cognition**](./REASONING_AND_COGNITION.md).
 
 ---
 
 ## 2. Component Diagram
 
-This diagram illustrates the flow of information and control. It is a conceptual map of the primary data structures and processes in the HyperNARS ecosystem.
+This diagram illustrates the flow of information and control in the HyperNARS ecosystem.
 
 ```mermaid
 graph TD
@@ -78,49 +141,25 @@ graph TD
 
 ---
 
-## 3. The Role of the MeTTa Interpreter
-
-While the specification refers to a "MeTTa Interpreter," the system does not necessarily depend on a full-featured MeTTa (Meta Type Talk) language implementation. Rather, it depends on a symbolic reasoning engine that provides a specific, minimal set of capabilities. This clarifies the boundary between the HyperNARS specification and the underlying interpreter, allowing for a wider range of implementation choices.
-
-An interpreter suitable for HyperNARS must provide the following core features:
-
-1.  **Atom Representation**: The ability to represent knowledge using the fundamental types of symbolic AI:
-    -   **Symbols**: Atomic, indivisible identifiers (e.g., `cat`, `blue`).
-    -   **Variables**: Placeholders that can be bound to other atoms during pattern matching (e.g., `$x`).
-    -   **Expressions**: Compositions of other atoms, forming structured data (e.g., `(Inheritance cat animal)`).
-
-2.  **Pattern Matching with Variable Binding**: The interpreter must be able to match a data atom against a pattern (or rule) atom, and bind variables in the pattern to the corresponding parts of the data atom. For example, matching `(Inheritance cat animal)` against `(Inheritance $x animal)` should succeed, binding `$x` to `cat`.
-
-3.  **Knowledge Base Search & Rewrite**: The interpreter must be able to take an input expression and search a knowledge base (the `Memory` space) for a matching rule. Upon finding a match, it must perform a rewrite, replacing the input expression with the body of the rule, substituting any bound variables. This is the fundamental mechanism of inference.
-
-4.  **Execution of Grounded Atoms**: The interpreter needs a mechanism to treat certain atoms as "grounded," meaning they are bound to external, non-symbolic code (e.g., a Python function). When the interpreter encounters a grounded atom in an expression to be evaluated, it should execute the corresponding code. This is critical for:
-    -   Performing mathematical calculations (e.g., for truth functions).
-    -   Interacting with the environment (e.g., sensors and actuators).
-    -   Calling out to specialized models (e.g., LLMs).
-
-These capabilities define a powerful, generic symbolic rule engine. A full MeTTa implementation would provide these, but a custom-built engine focused on just these features would also be sufficient to implement the HyperNARS specification.
+## 3. The MeTTa Interpreter
+The "MeTTa Interpreter" is the symbolic reasoning engine at the heart of the system. It is not necessarily a full language implementation, but an engine that provides a minimal set of capabilities:
+1.  **Atom Representation**: Representing Symbols, Variables, and Expressions.
+2.  **Pattern Matching**: Matching data atoms against pattern atoms and binding variables.
+3.  **Knowledge Base Search & Rewrite**: Searching the Memory space for matching rules and performing rewrites.
+4.  **Execution of Grounded Atoms**: Calling external code bound to `GroundedAtom`s.
 
 ---
 
-## 4. Event-Driven Communication via MeTTa
+## 4. System Configuration
+The system's entire configuration is defined by a set of `Config` atoms, typically loaded from a `.metta` file at startup. This makes the system's behavior transparent and dynamically modifiable. The formal schema for `Config` atoms is defined in `DATA_STRUCTURES.md`.
 
-The system avoids a traditional, external event bus. Instead, eventing and messaging are handled directly within the Memory space using `Event` atoms, making the communication process itself introspectable and modifiable. The formal schema for these atoms is defined in `DATA_STRUCTURES.md`.
+### 4.1. Configuration Categories
+-   **Core Engine Parameters**: Control the fundamental reasoning process.
+-   **Memory Management**: Control memory size, forgetting rates, etc.
+-   **Cognitive Function Activation**: Enable or disable specific functions.
+-   **System Parameter Tuning**: Set specific thresholds, default `Budget` values, etc.
 
-Cognitive Functions "handle" events by defining MeTTa rules that match on these `Event` atoms. They are, in effect, a persistent query over the event stream.
-    ```metta
-    ;; The ContradictionManager function is just a MeTTa rule.
-    (= (handle (Event contradiction-detected $s1 $s2 $t))
-       (! (resolve-contradiction $s1 $s2)))
-    ```
-
----
-
-## 5. Configurable Architecture via MeTTa
-
-The system's entire configuration is defined by a set of `Config` atoms, typically loaded from a `.metta` file at startup. This allows the system's behavior, capabilities, and even its "personality" to be defined and modified using its own native language. The formal schema for `Config` atoms is defined in `DATA_STRUCTURES.md`.
-
-### Example: `minimalist-reasoner.metta`
-
+### 4.2. Example: `minimalist-reasoner.metta`
 This configuration file defines a simple reasoner with only the most basic cognitive functions enabled.
 
 ```metta
@@ -138,12 +177,9 @@ This configuration file defines a simple reasoner with only the most basic cogni
 (Config (active-cognitive-function GoalManager) True)
 (Config (active-cognitive-function ContradictionManager) True)
 (Config (active-cognitive-function TemporalReasoner) False)       ; Disabled
-(Config (active-cognitive-function SelfOptimizationManager) False) ; Disabled
-(Config (active-cognitive-function Conscience) False)             ; Disabled
 
 ;; == System Parameter Tuning ==
 ;; Define the system's operational parameters.
-;; All schemas are formally defined in DATA_STRUCTURES.md.
 
 ;; Default budget for new beliefs asserted from outside (uses Budget schema)
 (Config default-belief-budget (Budget 0.9 0.9 0.5))
@@ -160,3 +196,7 @@ This configuration file defines a simple reasoner with only the most basic cogni
 ;; A foundational ethical principle, as a belief sentence.
 (. (Forbid (! (cause-harm-to-human))) (Truth 1.0 0.99) (Budget 0.99 0.99 0.99))
 ```
+---
+
+## 5. Concurrency Model
+The primary reasoning process is conceptually sequential. However, the architecture is compatible with advanced concurrency models like the **Actor Model** for high-performance implementations. In such a model, each `Concept` could be a lightweight, parallel actor, allowing for massive parallelism while maintaining logical integrity. This specification does not mandate a specific concurrency model. For more details, see [**Advanced Topics**](./ADVANCED_TOPICS.md).

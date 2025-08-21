@@ -7,22 +7,30 @@ A core principle is the unification of the **content** of a thought (an Atom) an
 ---
 ## 1. Glossary of Core Terms
 
-This glossary provides concise definitions for the core concepts used throughout the HyperNARS specification.
+This glossary provides authoritative definitions for the core concepts used throughout the HyperNARS specification. It is the single source of truth for all terminology.
 
 | Term | Definition |
 | :--- | :--- |
 | **AIKR** | **Assumption of Insufficient Knowledge and Resources**. The core NARS principle that the system must operate with finite computational resources and incomplete knowledge. This guides the entire attention and resource allocation process. |
-| **Atom** | The fundamental, context-free unit of information, equivalent to a MeTTa atom (Symbol, Variable, Expression). It represents the raw content of thought before it is contextualized in a `Sentence`. |
-| **Bag** | A probabilistic data structure with limited capacity used to hold items (like `Sentences` or `Concepts`) and sample from them based on priority. It is the primary mechanism for implementing forgetting. |
-| **Budget** | An attentional value attached to a `Sentence`, typically composed of `priority`, `durability`, and `quality`. It determines how much processing resources should be allocated to the sentence. |
-| **Concept** | An emergent organizational structure in memory, identified by an `Atom`, that serves as an index for all knowledge (`Sentences`) related to that `Atom`. |
-| **Cognitive Function** | A system capability, such as Goal Planning or Contradiction Management, implemented not as a rigid software module but as a collection of MeTTa atoms (rules and goals). |
-| **Grounded Atom** | A special `Atom` that is bound to external, non-symbolic code (e.g., a Python function or a call to a web API). This is the primary mechanism for connecting the system's symbolic logic to the outside world. |
-| **Punctuation** | A symbol (`.`, `!`, `?`, `@`) that defines the role of a `Sentence` (e.g., a Belief, Goal, Question, or Quest). |
-| **Sentence** | The primary, self-contained unit of knowledge and work in the system. It consists of an `Atom`, a `Punctuation`, and all necessary processing metadata (`Truth`, `Budget`, `Stamp`). |
+| **Atom** | The fundamental, context-free unit of information, equivalent to a MeTTa atom (e.g., a Symbol, Variable, or Expression). It represents the raw content of thought before it is contextualized in a `Sentence`. |
+| **Bag** | A probabilistic data structure with limited capacity used to hold items (like `Sentences` or `Concepts`) and sample from them based on priority. It is the primary mechanism for implementing forgetting under AIKR. |
+| **Budget** | An attentional value attached to a `Sentence` or `Concept`, determining how much processing resources should be allocated to it. It is typically composed of `priority`, `durability`, and `quality`. In some attention allocation models, these correspond to **STI (Short-Term Importance)** and **LTI (Long-Term Importance)**. |
+| **Cognitive Executive** | A Layer 2 cognitive function responsible for monitoring the system's overall performance via KPIs, detecting anomalies (like high contradiction rates), and initiating System 2 deliberative reasoning to address them. |
+| **Cognitive Function** | A system capability (e.g., Goal Planning, Contradiction Management) implemented not as a rigid software module but as a collection of MeTTa atoms (rules and goals) that operate on the shared memory space. |
+| **Concept** | An emergent organizational structure in memory, identified by a unique `Atom`, that serves as an index for all knowledge (`Sentences`) related to that `Atom`. |
+| **ECAN** | **Economic Attention Allocation**. A specific model for attention allocation where `Budget` values (STI/LTI) are managed and distributed in a way that resembles an economy, rewarding useful knowledge. |
+| **Grounded Atom** | A special `Atom` that is bound to external, non-symbolic code (e.g., a Python function, a call to a web API, or an ML model). This is the primary mechanism for connecting the system's symbolic logic to the outside world. |
+| **Hypergraph / Metagraph** | The data structure of the main Memory space. It is a graph where an edge (an `Atom`) can connect any number of vertices (`Concept`s). The term **Metagraph** is used to emphasize that atoms can also connect to other atoms, allowing for nested, self-referential knowledge. |
+| **LTI** | **Long-Term Importance**. A component of some `Budget` models (like ECAN) that represents the long-term value or usefulness of an item. It increases when an item is involved in successful, high-quality inferences and corresponds to NARS's `durability`. |
+| **MeTTa** | **Meta Type Talk**. The core language of Hyperon used in HyperNARS. It is a metaprogrammable, symbolic language designed for representing and transforming knowledge atoms. |
+| **NARS** | **Non-Axiomatic Reasoning System**. A reasoning system designed to work under AIKR. HyperNARS is a next-generation implementation of NARS principles using the MeTTa language. |
+| **Punctuation** | A symbol (`.`, `!`, `?`, `@`) that defines the role and type of a `Sentence`: a Belief (`.`), Goal (`!`), Question (`?`), or Quest (`@`). |
+| **Sentence** | The primary, self-contained unit of knowledge and work in the system. It consists of an `Atom` (the content), a `Punctuation` (the type), and all necessary processing metadata (`Truth`, `Budget`, `Stamp`). |
+| **Space** | A knowledge store. The main memory is a MeTTa `Space`, but the system can interface with other specialized `Spaces`, such as vector databases or external knowledge graphs, typically via `Grounded Atoms`. |
 | **Stamp** | A record of derivational history attached to a `Sentence`. It is used to prevent infinite inference loops by tracking which parent sentences were used to create it. |
-| **System 1** | **Reflexive Reasoning**. The default, high-throughput, and efficient mode of operation. It is a continuous cycle of selecting and processing sentences based on local context and relevance. |
-| **System 2** | **Deliberative Reasoning**. A resource-intensive, goal-driven reasoning process initiated by the `Cognitive Executive` to handle complex situations like contradictions or strategic planning. |
+| **STI** | **Short-Term Importance**. A component of some `Budget` models (like ECAN) that represents the immediate relevance of an item. It spikes when an item is accessed and decays over time, corresponding to NARS's `priority`. |
+| **System 1 (Reflexive Reasoning)** | The default, high-throughput, and efficient mode of operation. It is a continuous cycle of selecting and processing sentences based on local context and relevance. It executes Layer 1 Cognitive Functions. |
+| **System 2 (Deliberative Reasoning)** | A resource-intensive, goal-driven reasoning process initiated by the `Cognitive Executive` to handle complex situations like contradictions or strategic planning. It executes Layer 2 and 3 Cognitive Functions. |
 | **Truth** | An epistemic value attached to a Belief `Sentence`, typically composed of `frequency` and `confidence`. It represents the system's degree of belief in the sentence's content. |
 
 ---
@@ -147,23 +155,47 @@ These define the structure of the `Sentence` atoms. Note that `Budget` and `Stam
 
 ## 5. Self-Monitoring KPIs
 
-To enable self-awareness, the system materializes its own state and performance as **Key Performance Indicator (KPI)** atoms in Memory. This "cognitive telemetry" is essential for the `CognitiveExecutive`.
+To enable self-awareness, the system materializes its own state and performance as **Key Performance Indicator (KPI)** atoms in Memory. This "cognitive telemetry" is essential for the `CognitiveExecutive`. KPIs are organized by functional area.
+
+### 5.1. Reasoning KPIs
 
 | KPI Name | Description | Data Structure | Example MeTTa Representation |
 | :--- | :--- | :--- | :--- |
 | `avg_belief_confidence` | The average confidence of all belief sentences in Memory. | `Sentence` | `(has-value (kpi avg_belief_confidence) 0.78)` |
-| `avg_task_priority` | The average priority of all sentences in the system. | `Sentence` | `(has-value (kpi avg_task_priority) 0.65)` |
-| `stamp_overlap_rate` | The percentage of potential inferences that are prevented by stamp overlaps. | `Stamp` | `(has-value (kpi stamp_overlap_rate) 0.02)` |
-| `belief_count` | The total number of belief sentences currently in Memory. | `Sentence` | `(has-value (kpi belief_count) 150000)` |
-| `memory_utilization`| The percentage of total memory capacity currently being used. | `Bag` | `(has-value (kpi memory_utilization) 0.6)` |
-| `concept_hit_rate` | % of times a selected `Concept` contains a useful belief for the current `Sentence`. | `Concept`| `(has-value (kpi concept_hit_rate) 0.35)` |
-| `forgetting_rate` | The number of items being forgotten per second from `Bags`. | `Bag` | `(has-value (kpi forgetting_rate) 12.5)` |
+| `contradiction_rate` | The percentage of new beliefs that cause contradictions. | `Sentence` | `(has-value (kpi contradiction_rate) 0.01)` |
 | `rule_utility` | Average `quality` of conclusions produced by a specific inference rule. | `Sentence` | `(has-value (kpi (rule_utility Deduce)) 0.82)` |
 | `rule_cost` | Average execution time for a specific inference rule, in seconds. | `Sentence` | `(has-value (kpi (rule_cost Abduce)) 0.000150)` |
-| `goal_success_rate` | The percentage of goals that are successfully achieved. | `Sentence` | `(has-value (kpi goal__success_rate) 0.95)` |
-| `contradiction_rate` | The percentage of new beliefs that cause contradictions. | `Sentence` | `(has-value (kpi contradiction_rate) 0.01)` |
+| `stamp_overlap_rate` | The percentage of potential inferences that are prevented by stamp overlaps. | `Stamp` | `(has-value (kpi stamp_overlap_rate) 0.02)` |
+
+### 5.2. Memory & Caching KPIs
+
+| KPI Name | Description | Data Structure | Example MeTTa Representation |
+| :--- | :--- | :--- | :--- |
+| `memory_utilization`| The percentage of total memory capacity currently being used. | `Bag` | `(has-value (kpi memory_utilization) 0.6)` |
+| `forgetting_rate` | The number of items being forgotten per second from `Bags`. | `Bag` | `(has-value (kpi forgetting_rate) 12.5)` |
+| `belief_count` | The total number of belief sentences currently in Memory. | `Sentence` | `(has-value (kpi belief_count) 150000)` |
+| `concept_hit_rate` | % of times a selected `Concept` contains a useful belief for the current `Sentence`. | `Concept`| `(has-value (kpi concept_hit_rate) 0.35)` |
 | `index_lookup_time` | The average time taken to retrieve an item from a memory index. | `Concept` | `(has-value (kpi index_lookup_time) (2 milliseconds))` |
 | `lti_distribution` | A histogram of the Long-Term Importance (LTI) values of all items in memory. | `Budget` | `(has-value (kpi lti_distribution) (histogram ...))` |
+| `avg_task_priority` | The average priority of all sentences in the system. | `Sentence` | `(has-value (kpi avg_task_priority) 0.65)` |
+
+
+### 5.3. Goal Management KPIs
+
+| KPI Name | Description | Data Structure | Example MeTTa Representation |
+| :--- | :--- | :--- | :--- |
+| `goal_success_rate` | The percentage of goals that are successfully achieved. | `Sentence` | `(has-value (kpi goal_success_rate) 0.95)` |
+| `goal_abandonment_rate` | The percentage of goals that are dropped due to low budget before being achieved. | `Sentence` | `(has-value (kpi goal_abandonment_rate) 0.15)` |
+| `avg_goal_processing_time` | The average time from goal creation to achievement or abandonment. | `Sentence` | `(has-value (kpi avg_goal_processing_time) (12 seconds))` |
+
+
+### 5.4. Grounding & API KPIs
+
+| KPI Name | Description | Data Structure | Example MeTTa Representation |
+| :--- | :--- | :--- | :--- |
+| `grounding_success_rate` | The percentage of `GroundedAtom` executions that complete successfully. | `GroundedAtom` | `(has-value (kpi grounding_success_rate) 0.99)` |
+| `avg_grounding_latency` | The average time taken for a `GroundedAtom` to execute, in milliseconds. | `GroundedAtom` | `(has-value (kpi avg_grounding_latency) (150 milliseconds))` |
+| `api_requests_per_second` | The number of incoming requests to the public API per second. | `Event` | `(has-value (kpi api_requests_per_second) 25)` |
 
 ---
 

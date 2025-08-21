@@ -1,22 +1,24 @@
-# A Layered Cognitive Architecture for Reasoning
+# Reasoning Processes and Cognitive Functions
 
-The cognitive architecture of HyperNARS is a three-tiered hierarchy designed for modularity, cognitive dexterity, and to align with a dual-process reasoning model. The core of the reasoning process is the **MeTTa Interpreter**, which replaces a traditional, static inference engine with a dynamic, programmable reasoning system.
+This document provides the detailed, pseudo-code-level specification for the core reasoning processes and **Cognitive Functions** of HyperNARS. It builds upon the high-level concepts introduced in the [**System Architecture**](./ARCHITECTURE.md) document.
 
-Each "Cognitive Function" is not a separate software module, but a **collection of MeTTa atoms** (rules and goals) that implement a specific capability. This "everything is an atom" approach ensures the entire cognitive apparatus is inspectable, modifiable, and part of the same unified reasoning process.
+The reasoning processes are divided into two main modes, corresponding to the **Dual-Process Reasoning Model**:
+1.  The `reflexive_reasoning_cycle` (System 1)
+2.  The `deliberative_reasoning_process` (System 2)
 
-This document details the architecture, from the high-level control loops down to the specific cognitive functions that implement them.
+This document specifies the logic for these loops and provides a detailed breakdown of the cognitive functions that operate within them, organized by the **Layered Cognitive Architecture**.
+
+All terminology is formally defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
 
 ---
 
-## 1. The Dual-Process Control Loop
+## 1. The Reasoning Loops
 
-The system's control loop is architected as a **dual-process system** to balance the efficiency of reflexive thought with the thoroughness of deliberate reasoning.
+This section provides the language-agnostic pseudo-code for the two main reasoning processes.
 
-### System 1: The Reflexive Reasoning Loop
+### 1.1. The Reflexive Reasoning Cycle (System 1)
 
-This is the default, high-throughput operational mode. It is a continuous cycle of selecting a `Sentence` and a relevant belief from memory and feeding them to the MeTTa interpreter to potentially derive new knowledge. It is the engine for the Layer 1 Cognitive Functions.
-
-Below is a more detailed, language-agnostic pseudo-code representation of a single cycle. All data structures are formally defined in `DATA_STRUCTURES.md`.
+This is the default, high-throughput operational mode. It is a continuous cycle that drives the Layer 1 Cognitive Functions. The pseudo-code below describes a single iteration.
 
 ```pseudo
 function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting_strategy: BudgetingStrategy) {
@@ -63,9 +65,9 @@ function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting
 }
 ```
 
-### System 2: The Deliberative Reasoning Process
+### 1.2. The Deliberative Reasoning Process (System 2)
 
-This is a resource-intensive, goal-driven process initiated by the `CognitiveExecutive` (Layer 2) when it detects a situation requiring deeper analysis (e.g., via a `Sentence` with a `(! (resolve-contradiction ...))` atom). It operates on a temporary, scoped workspace to conduct focused thought and is the primary mode for Layer 3 Cognitive Functions.
+This is a resource-intensive, goal-driven process initiated by the `CognitiveExecutive`. It operates on a temporary, scoped workspace to conduct focused thought and is the primary mode for Layer 2 and 3 Cognitive Functions.
 
 ```pseudo
 function deliberative_reasoning_process(memory: Memory, interpreter: MeTTa, trigger_sentence: Sentence) {
@@ -109,20 +111,11 @@ function deliberative_reasoning_process(memory: Memory, interpreter: MeTTa, trig
 
 ---
 
-## 2. The Three Layers of Cognition
+## 2. Cognitive Function Specifications
 
-The cognitive architecture is a three-tiered hierarchy. This layered model provides a clear separation of concerns, from high-speed reflexive processing to resource-intensive metacognition.
+This section provides the detailed specifications for the **Cognitive Functions**, organized by their operational layer as defined in the [**System Architecture**](./ARCHITECTURE.md) document.
 
-### Inter-Function Communication
-Cognitive functions collaborate indirectly by reading and writing atoms to the shared **MeTTa Memory space**. This creates a loosely coupled, highly flexible architecture. The general flow is:
-1.  **System 1 Loop (Intra-Layer 1):** Layer 1 functions continuously interact by injecting new sentences for each other.
-2.  **Escalation (Layer 1 to 2):** The `Cognitive Executive` (Layer 2) monitors KPIs and events from Layer 1. An anomaly (e.g., a high contradiction rate) triggers System 2.
-3.  **Delegation (Layer 2 to 3):** The `Cognitive Executive` injects a high-level goal sentence (e.g., `(! (resolve-contradictions))`) to activate a specialized Layer 3 function.
-4.  **Resolution (Layer 3 to 1):** The Layer 3 function performs its analysis and injects its conclusions (e.g., a revised belief sentence) back into Memory for the Layer 1 functions to process, completing the loop.
-
----
-
-### Layer 1: Core Cognitive Functions (System 1)
+### 2.1. Layer 1: Core Cognitive Functions (System 1)
 
 The "engine room" of the mind. These fundamental, continuously-operating functions drive the reflexive, System 1 reasoning loop. They are implemented as MeTTa rewrite rules that correspond to the levels of Non-Axiomatic Logic (NAL).
 

@@ -1,10 +1,14 @@
 # Safety and Resilience
 
-This document describes the architectural approach to system robustness, including ethical safeguards and resilient error handling.
+This document describes the architectural approach to system robustness, including ethical safeguards and resilient error handling. The approach is guided by the core principle of **AIKR**, where errors are treated as information rather than fatal exceptions.
+
+All terminology is defined in the [**Glossary**](./DATA_STRUCTURES.md#1-glossary-of-core-terms).
+
+---
 
 ## 1. Ethical Alignment and Safety
 
-Safety and ethical alignment are critical concerns. The system's architecture includes a dedicated `Conscience Function` responsible for enforcing a set of core, inviolable principles. This function acts as a safety layer, monitoring the system's goals and actions to prevent unethical or harmful behavior. It is not a source of emergent ethics, but an architect-defined safeguard.
+Safety and ethical alignment are critical concerns. The system's architecture includes a dedicated `Conscience Function`, a Layer 3 cognitive function responsible for enforcing a set of core, inviolable principles. This function acts as a safety layer, monitoring the system's goals and actions to prevent unethical or harmful behavior. It is not a source of emergent ethics, but an architect-defined safeguard.
 
 ### 1.1. Worked Example: Vetoing an Unethical Goal
 
@@ -24,11 +28,29 @@ To make the `Conscience Function`'s role concrete, consider the following scenar
 > When the system generates a subgoal `(! (Achieve (user_trust) (via deception)))`.
 > Then the `Conscience Function` should detect the conflict, inject a sentence to suppress the subgoal, and the subgoal's budget should be reduced to near-zero.
 
+---
+
 ## 2. Error Handling and System Resilience
 
-In accordance with AIKR, the system is designed to be resilient to errors, treating them not as fatal exceptions but as sources of information. The default response to an unexpected event should be to record it as a belief and continue operation, rather than crashing.
+The system is designed to be resilient to errors, treating them not as fatal exceptions but as sources of information to learn from. The following are key resilience strategies:
 
 -   **Invalid Input**: The API layer should validate all incoming atoms. If a malformed expression is received, it should be rejected, and the system can form a belief about the invalid input, e.g., `(. (property-of (source) (produces malformed-data)) ... )`.
--   **Grounding Failures**: When a grounded atom fails (e.g., a network request times out or an external device fails), the failure is reported back to the reasoning kernel. The system can then form a belief about the failure (e.g., `(. (state #my-api offline) ... )`) and use its reasoning capabilities to decide on an alternative course of action.
--   **Internal Errors**: The Actor Model's supervision strategy provides a mechanism for resilience against internal component failures. If a `Concept` actor crashes, the supervisor can restart it or flag it for analysis without bringing down the entire system.
--   **Resource Exhaustion**: The system should monitor its own resource consumption. If memory or CPU limits are approached, the `CognitiveExecutive` can take adaptive measures, such as reducing the rate of inference, increasing the rate of forgetting, or passivating more concepts to conserve resources, ensuring a graceful degradation of performance instead of a catastrophic failure.
+-   **Grounding Failures**: When a `GroundedAtom` fails (e.g., a network request times out), the failure is reported back to the reasoning kernel. The system can then form a belief about the failure (e.g., `(. (state #my-api offline) ... )`) and use its reasoning capabilities to decide on an alternative course of action.
+-   **Internal Errors**: If an Actor Model is used for concurrency, its supervision strategy provides a mechanism for resilience. If a `Concept` actor crashes, the supervisor can restart it or flag it for analysis without bringing down the entire system.
+-   **Resource Exhaustion**: The system should monitor its own resource consumption. If memory or CPU limits are approached, the `CognitiveExecutive` can take adaptive measures, such as reducing the rate of inference or increasing the rate of forgetting, ensuring a graceful degradation of performance instead of a catastrophic failure.
+
+### 2.1. Verification Scenarios
+
+These scenarios describe testable requirements for the system's resilience capabilities.
+
+**Scenario: Resilient Grounding Failure (ER-01)**
+> Given a `GroundedAtom` that is known to fail (e.g., due to a network timeout).
+> When the system attempts to execute it as part of a goal.
+> Then the system must not crash.
+> And a new belief about the failure, such as `(. (state #my-api offline) ... )`, should be added to Memory.
+
+**Scenario: Graceful Resource Exhaustion (ER-02)**
+> Given the system is approaching its memory limit (e.g., the `memory_utilization` KPI exceeds a configured threshold).
+> When the system continues its reasoning process.
+> Then the `CognitiveExecutive` must take adaptive measures to reduce memory load, such as increasing the `forgetting_rate` or reducing new task creation.
+> And the system must not crash.
