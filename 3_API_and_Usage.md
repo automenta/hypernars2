@@ -108,7 +108,7 @@ To improve usability, the system can provide a higher-level, intention-driven AP
 ### 2.5. Hypothetical Reasoning
 The API should provide a method for creating isolated "sandbox" instances of the reasoner. This allows for hypothetical or "what-if" reasoning without polluting the main knowledge base.
 
-The formal definitions for the public API methods can be found in the [**Data Model**](./2_Data_Model.md) document.
+The formal definitions for the public API methods can be found in [`spec/05_api.metta`](./spec/05_api.metta).
 
 ---
 
@@ -124,7 +124,7 @@ The system follows a well-defined sequence to ensure a stable startup. While the
 5.  **Register Cognitive Functions**: Load the atoms for all configured Cognitive Functions.
 6.  **Start Reasoning Loop**: Begin the main control unit's reasoning cycle.
 
-The formal MeTTa definition for the bootstrap sequence can be found in the [**Data Model**](./2_Data_Model.md) document.
+The formal MeTTa definition for the bootstrap sequence can be found in [`spec/06_bootstrap.metta`](./spec/06_bootstrap.metta).
 
 ### 3.2. Architectural Perspective
 From a purely architectural standpoint, steps 1, 4, and 5 are all simply "loading atoms into Memory." This metaprogramming approach ensures that the system's capabilities are determined by its knowledge, not by its compiled code.
@@ -153,4 +153,4 @@ To support long-running operation and recovery from shutdowns, the system must b
 
 This capability is also essential for debugging, as it allows developers to capture and replay the exact state of the system at a specific moment.
 
-The formal MeTTa definition for the system state snapshot can be found in the [**Data Model**](./2_Data_Model.md) document.
+The formal MeTTa definition for the system state snapshot can be found in [`spec/07_system_state.metta`](./spec/07_system_state.metta).

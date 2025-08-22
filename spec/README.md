@@ -32,4 +32,8 @@ The files are numbered to indicate the recommended loading sequence. A system lo
 
 ### 7. `06_bootstrap.metta`
 - **Purpose**: Defines the final `System-Startup` sequence, which orchestrates the entire initialization process.
+- **Loads Seventh.**
+
+### 8. `07_system_state.metta`
+- **Purpose**: Defines the schema for capturing a complete snapshot of the system's internal state.
 - **Loads Last.**

@@ -6,7 +6,7 @@ The architecture is centered on two primary components:
 1.  A **Memory space**, structured as a Metagraph, which holds all knowledge.
 2.  A **MeTTa Interpreter**, which continuously evaluates atomic expressions to drive the reasoning process.
 
-All data structures, including the fundamental `Atom` and `Sentence` types, are formally defined in the [**2_Data_Model.md**](./2_Data_Model.md) document. All terminology is defined in the [**Glossary**](./2_Data_Model.md#1-glossary-of-core-terms).
+All data structures, including the fundamental `Atom` and `Sentence` types, are formally defined in the [`spec/00_core_types.metta`](./spec/00_core_types.metta) file. All terminology is defined in the [**Glossary**](./2_Data_Model.md#1-glossary-of-core-terms).
 
 ---
 
@@ -39,7 +39,7 @@ The detailed pseudo-code for these reasoning loops is specified later in this do
 ### 1.4. The Layered Cognitive Architecture
 The system's capabilities are organized into a three-tiered hierarchy of **Cognitive Functions**. This layered model provides a clear separation of concerns, from high-speed reflexive processing to resource-intensive metacognition.
 
-This architecture is formally defined in MeTTa. The system can load this definition to reason about its own cognitive structure. The authoritative definition is in the central [**Data Model**](./2_Data_Model.md).
+This architecture is formally defined in MeTTa. The system can load this definition to reason about its own cognitive structure. The authoritative definition is in [`spec/02_architecture.metta`](./spec/02_architecture.metta).
 
 Communication between these layers is handled implicitly by reading and writing atoms to the shared Memory space. The diagram below illustrates this flow of control and information.
 
@@ -219,98 +219,13 @@ This section provides the language-agnostic pseudo-code for the two main reasoni
 
 This is the default, high-throughput operational mode. It is a continuous cycle that drives the Layer 1 Cognitive Functions. The pseudo-code below describes a single iteration.
 
-```pseudo
-function reflexive_reasoning_cycle(memory: Memory, interpreter: MeTTa, budgeting_strategy: BudgetingStrategy) {
-    // 1. Select a Concept from Memory's concept bag based on priority.
-    concept = memory.select_concept_from_bag();
-    if (!concept) { return; }
-
-    // 2. Select a high-priority Sentence from the Concept's local sentence bag.
-    active_sentence = concept.select_sentence_from_bag();
-    if (!active_sentence) { return; }
-
-    // 3. Select a relevant belief from the same Concept's knowledge bag.
-    // Relevance can be determined by shared atoms between the active_sentence and the belief.
-    belief_sentence = concept.select_belief_from_bag(active_sentence);
-    if (!belief_sentence) { return; }
-
-    // 4. Formulate an Inference Expression.
-    // This involves selecting an inference rule (e.g., deduce, abduce, induce)
-    // and wrapping the two sentences in it.
-    inference_rule = select_inference_rule(); // e.g., returns 'deduce'
-    inference_expression = (inference_rule active_sentence belief_sentence);
-
-    // 5. Invoke MeTTa Interpreter.
-    // The interpreter finds a matching rule in its knowledge base (see "NAL on MeTTa")
-    // and executes it. The rule itself is responsible for calculating the new Truth
-    // and returning one or more complete, new Sentences.
-    derived_raw_sentences = interpreter.evaluate(inference_expression);
-
-    // 6. Process Derived Sentences.
-    for (new_raw_sentence in derived_raw_sentences) {
-        // The new sentence from the rule already contains the derived truth value.
-        // We now calculate the budget and stamp for the new sentence.
-        new_budget = budgeting_strategy.calculate_derived_budget(active_sentence.budget, belief_sentence.budget);
-        new_stamp = create_stamp_from_parents({active_sentence.stamp, belief_sentence.stamp});
-
-        // Assemble the final, complete sentence and dispatch it to the appropriate concept(s).
-        final_sentence = append_metadata(new_raw_sentence, new_budget, new_stamp);
-        memory.dispatch_sentence(final_sentence);
-    }
-
-    // 7. System-level housekeeping.
-    budgeting_strategy.perform_housekeeping(memory);
-    memory.emit_event( (Event system-cycle-complete active_sentence.id) );
-}
-```
-
-The formal MeTTa definition for this reasoning cycle can be found in the [**Data Model**](./2_Data_Model.md) document.
+The authoritative, step-by-step definition of this process is specified in [`spec/02_architecture.metta`](./spec/02_architecture.metta).
 
 #### 3.1.2. The Deliberative Reasoning Process (System 2)
 
 This is a resource-intensive, goal-driven process initiated by the `CognitiveExecutive`. It operates on a temporary, scoped workspace to conduct focused thought and is the primary mode for Layer 2 and 3 Cognitive Functions.
 
-```pseudo
-function deliberative_reasoning_process(memory: Memory, interpreter: MeTTa, trigger_sentence: Sentence) {
-    // 1. Initiation & Context Scoping
-    // A workspace is a temporary, isolated memory space with its own bags.
-    workspace = memory.create_workspace(name="deliberation_space");
-
-    // Gather highly relevant knowledge from main memory and copy it into the workspace.
-    relevant_knowledge = memory.find_relevant_knowledge(trigger_sentence);
-    workspace.add_sentences(relevant_knowledge);
-    workspace.add_sentence(trigger_sentence); // Add the main goal to the workspace
-
-    // 2. Focused, Iterative Reasoning
-    // Run a high-budget, iterative reasoning loop within the isolated workspace.
-    deliberation_budget = get_high_budget();
-    while (deliberation_budget > 0 && !workspace.has_solution(trigger_sentence)) {
-        // A solution is typically a new, high-confidence belief that directly
-        // satisfies the initial goal (e.g., a plan, or a revised belief).
-        reflexive_reasoning_cycle(workspace, interpreter, get_deliberation_budgeting_strategy());
-        deliberation_budget--;
-    }
-
-    // 3. Resolution and Integration
-    // Extract the final solution from the workspace.
-    solution_sentence = workspace.get_solution(trigger_sentence);
-
-    if (solution_sentence) {
-        // Inject the high-confidence solution back into main memory
-        // with a very high budget to ensure it gets processed immediately.
-        solution_sentence.budget = get_very_high_budget();
-        memory.dispatch_sentence(solution_sentence);
-    }
-
-    // 4. Decommissioning
-    // The temporary workspace is dissolved.
-    memory.destroy_workspace(workspace);
-
-    return solution_sentence;
-}
-```
-
-The formal MeTTa definition for this reasoning cycle can be found in the [**Data Model**](./2_Data_Model.md) document.
+The authoritative, step-by-step definition of this process is specified in [`spec/02_architecture.metta`](./spec/02_architecture.metta).
 
 ### 3.2. Cognitive Function Specifications
 
@@ -318,7 +233,7 @@ This section provides the detailed specifications for the **Cognitive Functions*
 
 #### 3.2.1. Layer 1: Core Cognitive Functions (System 1)
 
-The "engine room" of the mind. These fundamental, continuously-operating functions drive the reflexive, System 1 reasoning loop. They are implemented as MeTTa rewrite rules that correspond to the levels of Non-Axiomatic Logic (NAL). Their formal definitions can be found in the [**Data Model**](./2_Data_Model.md) document.
+The "engine room" of the mind. These fundamental, continuously-operating functions drive the reflexive, System 1 reasoning loop. They are implemented as MeTTa rewrite rules that correspond to the levels of Non-Axiomatic Logic (NAL). Their formal definitions can be found in [`spec/03_cognitive_functions.metta`](./spec/03_cognitive_functions.metta).
 
 ##### NAL 5: Statements as Terms
 This capability is native to MeTTa. Any `Sentence` atom can be an argument in another expression, allowing for higher-order reasoning.
@@ -331,14 +246,14 @@ This capability is native to MeTTa. Any `Sentence` atom can be an argument in an
 
 #### 3.2.2. Layer 2: Executive Control & Awareness (System 2 Initiation)
 
-The "foreman," monitoring the core functions and initiating deeper, more deliberate thought (System 2). The core Layer 2 cognitive functions are formally defined in the [**Data Model**](./2_Data_Model.md) document. This makes the system's executive capabilities self-describing.
+The "foreman," monitoring the core functions and initiating deeper, more deliberate thought (System 2). The core Layer 2 cognitive functions are formally defined in the [`spec/03_cognitive_functions.metta`](./spec/03_cognitive_functions.metta) file. This makes the system's executive capabilities self-describing.
 
 #### 3.2.3. Layer 3: Specialized Metacognition (System 2)
 
 The "strategist," handling the most abstract, goal-driven, and resource-intensive cognitive tasks, such as ethical reasoning and self-improvement. These are typically activated by a `Goal` from the `Cognitive Executive`.
 
 ##### Conscience Function
-This function enforces ethical constraints and safety protocols. It is not a source of emergent ethics, but an architect-defined safeguard that evaluates potential actions and goals against a set of inviolable rules. If a proposed goal matches a forbidden pattern, this function can inject a high-priority sentence to veto or alter it. Its interface is formally defined in the [**Data Model**](./2_Data_Model.md).
+This function enforces ethical constraints and safety protocols. It is not a source of emergent ethics, but an architect-defined safeguard that evaluates potential actions and goals against a set of inviolable rules. If a proposed goal matches a forbidden pattern, this function can inject a high-priority sentence to veto or alter it. Its interface is formally defined in [`spec/03_cognitive_functions.metta`](./spec/03_cognitive_functions.metta).
 
 ##### Self-Modification & Improvement Functions
 A suite of functions for analyzing and improving the system's own knowledge and code.
@@ -348,7 +263,7 @@ A suite of functions for analyzing and improving the system's own knowledge and 
 -   **Codebase Integrity Function**: Reasons about the system's own design documents and source code to find inconsistencies.
 -   **Implementation Assistance Function**: Assists developers by automating parts of the implementation process.
 
-The formal definitions for these functions can be found in the [**Data Model**](./2_Data_Model.md) document.
+The formal definitions for these functions can be found in [`spec/03_cognitive_functions.metta`](./spec/03_cognitive_functions.metta).
 
 ---
 
@@ -527,7 +442,7 @@ The "MeTTa Interpreter" is the symbolic reasoning engine at the heart of the sys
 ---
 
 ## 8. System Configuration
-The system's entire configuration is defined by a set of `Config` atoms, typically loaded from a `.metta` file at startup. This makes the system's behavior transparent and dynamically modifiable. The formal schema for `Config` atoms is defined in [**2_Data_Model.md**](./2_Data_Model.md).
+The system's entire configuration is defined by a set of `Config` atoms, typically loaded from a `.metta` file at startup. This makes the system's behavior transparent and dynamically modifiable. The formal schema for `Config` atoms is defined in [`spec/00_core_types.metta`](./spec/00_core_types.metta).
 
 ### 8.1. Configuration Categories
 -   **Core Engine Parameters**: Control the fundamental reasoning process.
@@ -536,7 +451,7 @@ The system's entire configuration is defined by a set of `Config` atoms, typical
 -   **System Parameter Tuning**: Set specific thresholds, default `Budget` values, etc.
 
 ### 8.2. Example Configuration
-An example configuration file (`minimalist-reasoner.metta`) shows how to define a simple reasoner. It uses the formal `define-configuration` schema to make the parameters self-describing. The full, authoritative definition for these schemas can be found in the [**Data Model**](./2_Data_Model.md) document.
+An example configuration file (`minimalist-reasoner.metta`) shows how to define a simple reasoner. It uses the formal `define-configuration` schema to make the parameters self-describing. The full, authoritative definition for these schemas can be found in [`spec/01_schemas.metta`](./spec/01_schemas.metta).
 ---
 
 The primary reasoning process is conceptually sequential. However, the architecture is compatible with advanced concurrency models like the **Actor Model** for high-performance implementations. In such a model, each `Concept` could be a lightweight, parallel actor, allowing for massive parallelism while maintaining logical integrity. This specification does not mandate a specific concurrency model.
